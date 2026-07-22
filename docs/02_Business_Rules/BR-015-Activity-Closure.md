@@ -12,12 +12,12 @@ Close operational Activities.
 
 Only completed Activities may be closed.
 
-Closed Activities shall automatically disappear from the Open Activity list.
+Closed Activities shall automatically disappear from the Outstanding Activity query.
 
 ## Acceptance Criteria
 
 - Activity closed.
-- Open Activity removed.
+- Activity removed from outstanding query results.
 
 ## Related Domain Model
 

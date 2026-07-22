@@ -1,73 +1,35 @@
-# AD-004: Component Diagram
-
-Status: Active
-
-## Purpose
-
-Illustrate the internal business components of the JKR Site Diary Platform and their relationships.
-
-## Component Diagram
+# AD-004 — Component Diagram
 
 ```mermaid
-flowchart LR
+flowchart TD
 
-subgraph Planning["Zon Penjadualan"]
+ProgrammeEngine[Programme Engine]
 
-PE[Programme Engine]
-ME[MSP Engine]
-TE[Task Engine]
+MSPEngine[MSP Engine]
 
-end
+TaskEngine[Task Engine]
 
-subgraph Operation["Zon Operasi"]
+ActivityEngine[Activity Engine]
 
-AE[Activity Engine]
-OAE[Open Activities Engine]
-PGE[Progress Engine]
-WFE[Workforce Engine]
-APE[Approval Engine]
-AUE[Audit Engine]
+ProgressEngine[Progress Engine]
 
-end
+WorkforceEngine[Workforce Engine]
 
-subgraph Output
+ApprovalEngine[Approval Engine]
 
-PDF[PDF Engine]
-MSPX[MSP Export Engine]
-VE[Validation Engine]
+AuditEngine[Audit Engine]
 
-end
+ProgrammeEngine --> MSPEngine
 
-PE --> ME
-ME --> TE
+MSPEngine --> TaskEngine
 
-TE --> AE
-AE --> OAE
+TaskEngine --> ActivityEngine
 
-AE --> PGE
+ActivityEngine --> ProgressEngine
 
-TE --> WFE
+ActivityEngine --> WorkforceEngine
 
-PGE --> APE
+ActivityEngine --> ApprovalEngine
 
-APE --> AUE
-
-PGE --> PDF
-
-PE --> MSPX
-
-PGE --> VE
+ApprovalEngine --> AuditEngine
 ```
-
-## Notes
-
-- Programme Engine orchestrates planning activities.
-- MSP Engine manages Microsoft Project integration.
-- Task Engine creates operational work packages.
-- Activity Engine records execution.
-- Open Activities Engine manages unfinished work across reporting periods.
-- Progress Engine consolidates site progress.
-- Workforce Engine records manpower allocation.
-- Approval Engine validates operational submissions.
-- Audit Engine maintains immutable audit records.
-- Output Engines generate reports and exports.

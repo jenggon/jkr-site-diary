@@ -1,35 +1,57 @@
-# BR-005: Activity
+# BR-005 — Activity Behaviour
 
-Status: Active
+## Status
 
-Priority: Critical
+Approved
 
-## Purpose
+---
 
-Define Activity behaviour.
+# Objective
 
-## Rule Statement
+Define the operational behaviour of Activities throughout their lifecycle.
 
-Every Activity shall belong to exactly one Task.
+---
 
-An Activity represents actual work execution and shall be recorded in the Site Diary.
+# Rules
 
-Activities may only exist after the parent Task has been created.
+## BR-005.1 Create
 
-## Acceptance Criteria
+An Activity shall be created only from an approved Task.
 
-- Activity created.
-- Activity linked to Task.
-- Activity recorded in Site Diary.
+---
 
-## Related Domain Model
+## BR-005.2 Resume
 
-DM-005
+Outstanding Activities may be resumed in future Site Diary entries.
 
-## Related ADR
+---
 
-ADR-006
+## BR-005.3 Complete
 
-## Related Glossary
+Completed Activities shall no longer appear in Outstanding Activity queries.
 
-G-005
+---
+
+## BR-005.4 Carry Forward
+
+If an Activity is not completed, it remains available for continuation.
+
+---
+
+## BR-005.5 Outstanding Query
+
+Outstanding Activities shall be determined dynamically.
+
+Criteria:
+
+- Status != Completed
+
+No separate entity or engine shall exist for Outstanding Activities.
+
+---
+
+## BR-005.6 Update
+
+Activity information may be updated while the Activity remains Outstanding.
+
+Completed Activities require formal correction workflow.

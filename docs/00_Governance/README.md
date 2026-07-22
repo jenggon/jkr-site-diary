@@ -92,7 +92,6 @@ Contoh:
 
 - Task Engine
 - Activity Engine
-- Open Activities
 - Progress Engine
 - Validation Engine
 - Approval Engine

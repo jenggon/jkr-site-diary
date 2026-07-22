@@ -22,7 +22,6 @@ subgraph ZO["Zon Operasi"]
     PK[Program Kerja]
     T[Task]
     A[Activity]
-    OA[Open Activity]
     SD[Site Diary]
     PG[Progress]
     WF[Workforce]
@@ -35,8 +34,7 @@ PB --> PK
 
 PK --> T
 T --> A
-A --> OA
-OA --> SD
+A --> SD
 A --> PG
 T --> WF
 ```

@@ -94,7 +94,6 @@ Creates opportunities for historical manipulation.
 This decision affects:
 
 - Programme Revision
-- Open Activities
 - Site Diary
 - Progress Engine
 - Approval Engine

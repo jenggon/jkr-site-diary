@@ -92,7 +92,6 @@ Examples:
 - Activity Management
 - Progress Recording
 - Workforce
-- Open Activities
 
 ---
 
