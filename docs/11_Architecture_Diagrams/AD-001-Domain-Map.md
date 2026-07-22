@@ -1,57 +1,48 @@
-# AD-001 Domain Map
+# AD-001: Domain Map
 
+Status: Active
+
+## Purpose
+
+Illustrate the high-level domain boundaries of the JKR Site Diary Platform.
+
+## Domain Map
+
+```mermaid
+flowchart LR
+
+subgraph ZP["Zon Penjadualan"]
+    P[Programme]
+    PR[Programme Revision]
+    MSP[MSP Import]
+    PB[Programme Builder]
+end
+
+subgraph ZO["Zon Operasi"]
+    PK[Program Kerja]
+    T[Task]
+    A[Activity]
+    OA[Open Activity]
+    SD[Site Diary]
+    PG[Progress]
+    WF[Workforce]
+end
+
+MSP --> PR
+P --> PR
+PR --> PB
+PB --> PK
+
+PK --> T
+T --> A
+A --> OA
+OA --> SD
+A --> PG
+T --> WF
 ```
 
-```
-                             PROJECT
+## Notes
 
-                                │
-
-        ┌───────────────────────┴────────────────────────┐
-
-        │                                                │
-
-  Zon Penjadualan                                 Zon Operasi
-
-        │                                                │
-
- Programme Engine                               Site Diary Engine
-
-        │                                                │
-
- Programme Revision                        Open Activity Engine
-
-        │                                                │
-
- Program Kerja ───────────────► Task Engine ─────► Activity
-
-                                             │
-
-                          ┌──────────────────┴──────────────────┐
-
-                          │                                     │
-
-                     Workforce                            Progress
-
-                          │                                     │
-
-                          └──────────────► Site Diary ◄──────────┘
-
-                                              │
-
-                                         Approval Engine
-
-                                              │
-
-                                           Audit Engine
-```
-
----
-
-## Related ADR
-
-ADR-001
-
-ADR-002
-
-ADR-006
+- Zon Penjadualan manages planning activities.
+- Program Kerja is the operational boundary.
+- Zon Operasi executes approved work packages.
