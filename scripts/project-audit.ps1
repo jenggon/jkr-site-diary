@@ -6,6 +6,21 @@ function Get-ProjectRoot {
     return Split-Path -Path $PSScriptRoot -Parent
 }
 
+function Get-AuditLibraryScriptPaths {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$LibraryDirectory
+    )
+
+    return @(
+        Get-ChildItem -LiteralPath $LibraryDirectory -Filter '*.ps1' -File |
+            Where-Object { $_.Name -ne 'config.ps1' } |
+            Sort-Object -Property Name |
+            ForEach-Object { $_.FullName }
+    )
+}
+
 function Import-AuditLibraries {
     [CmdletBinding()]
     param(
@@ -13,12 +28,24 @@ function Import-AuditLibraries {
         [string]$LibraryDirectory
     )
 
-    Get-ChildItem -LiteralPath $LibraryDirectory -Filter '*.ps1' -File |
-        Where-Object { $_.Name -ne 'config.ps1' } |
-        Sort-Object -Property Name |
-        ForEach-Object {
-            . $_.FullName
+    $libraryPaths = @(Get-AuditLibraryScriptPaths -LibraryDirectory $LibraryDirectory)
+    if ($libraryPaths.Count -eq 0) {
+        return
+    }
+
+    # Dot-sourcing inside a function only defines helpers in that function scope.
+    # Load through a temporary module so functions are available to the orchestrator script.
+    $loaderModule = New-Module -ScriptBlock {
+        param([string[]]$LibraryPaths)
+
+        foreach ($libraryPath in $LibraryPaths) {
+            . $libraryPath
         }
+
+        Export-ModuleMember -Function *
+    } -ArgumentList (,$libraryPaths)
+
+    Import-Module -ModuleInfo $loaderModule -Global -DisableNameChecking -Force
 }
 
 function Test-AuditSummaryCheckScript {
@@ -81,7 +108,7 @@ function Find-AuditSummaryCheckScript {
         [string]$ChecksDirectory
     )
 
-    $summaryScripts = Get-AuditSummaryCheckScripts -ChecksDirectory $ChecksDirectory
+    $summaryScripts = @(Get-AuditSummaryCheckScripts -ChecksDirectory $ChecksDirectory)
     if ($summaryScripts.Count -gt 1) {
         $duplicateNames = ($summaryScripts | ForEach-Object { $_.BaseName }) -join ', '
         Write-AuditWarning -Message "Multiple audit summary modules were discovered ($duplicateNames). Using '$($summaryScripts[0].BaseName)'."
@@ -267,7 +294,7 @@ function ConvertTo-NormalizedAuditResult {
         [string]$FallbackCheckName
     )
 
-    $validationErrors = Get-AuditResultValidationErrors -InputObject $InputObject
+    $validationErrors = @(Get-AuditResultValidationErrors -InputObject $InputObject)
     if ($validationErrors.Count -gt 0) {
         $checkName = if ($null -ne $InputObject -and $null -ne $InputObject.CheckName -and -not [string]::IsNullOrWhiteSpace([string]$InputObject.CheckName)) {
             [string]$InputObject.CheckName
@@ -467,7 +494,7 @@ if (-not (Test-AuditDirectory -Path $checksDirectory)) {
     Write-AuditWarning -Message "Audit checks directory was not found: $checksDirectory"
 }
 
-$executableChecks = Find-AuditChecks -ChecksDirectory $checksDirectory -ExcludeSummary
+$executableChecks = @(Find-AuditChecks -ChecksDirectory $checksDirectory -ExcludeSummary)
 if ($executableChecks.Count -eq 0) {
     Write-AuditWarning -Message 'No executable audit modules were discovered.'
 }
