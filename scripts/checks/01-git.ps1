@@ -71,30 +71,82 @@ function Invoke-GitHealthCheck {
             }
 
             $upstream = @(& git -C $projectRoot rev-parse --abbrev-ref '@{upstream}' 2>$null)
-            if ($LASTEXITCODE -eq 0 -and $upstream.Count -gt 0) {
-                $counts = @(& git -C $projectRoot rev-list --left-right --count '@{upstream}...HEAD' 2>$null)
-                $countValues = @()
-                if ($counts.Count -gt 0) {
-                    $countValues = @($counts[0].Trim().Split([char[]]' ', [System.StringSplitOptions]::RemoveEmptyEntries))
-                }
-
-                if ($countValues.Count -eq 2) {
-                    $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = "Ahead $($countValues[1]), behind $($countValues[0])"; Status = if ($countValues[0] -eq '0' -and $countValues[1] -eq '0') { 'PASS' } else { 'WARNING' } })
-                    if (($countValues[0] -ne '0' -or $countValues[1] -ne '0') -and $status -eq 'PASS') {
-                        $status = 'WARNING'
-                        $summary = 'Git repository differs from its configured upstream branch.'
+            if ($LASTEXITCODE -eq 0 -and $upstream.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($upstream[0])) {
+                $revListOutput = @(& git -C $projectRoot rev-list --left-right --count '@{upstream}...HEAD' 2>&1)
+                if ($LASTEXITCODE -eq 0 -and $revListOutput.Count -gt 0) {
+                    $countValues = @([string]$revListOutput[0].Trim() -split '\s+')
+                    if ($countValues.Count -eq 2) {
+                        $behind = 0
+                        $ahead = 0
+                        if ([int]::TryParse($countValues[0], [ref]$behind) -and [int]::TryParse($countValues[1], [ref]$ahead)) {
+                            if ($behind -eq 0 -and $ahead -eq 0) {
+                                $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Up to date'; Status = 'PASS' })
+                            }
+                            elseif ($behind -eq 0 -and $ahead -gt 0) {
+                                $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = "Ahead by $ahead commit(s)"; Status = 'WARNING' })
+                                if ($status -eq 'PASS') {
+                                    $status = 'WARNING'
+                                    $summary = "Git repository is ahead of upstream by $ahead commit(s)."
+                                }
+                            }
+                            elseif ($behind -gt 0 -and $ahead -eq 0) {
+                                $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = "Behind by $behind commit(s)"; Status = 'WARNING' })
+                                if ($status -eq 'PASS') {
+                                    $status = 'WARNING'
+                                    $summary = "Git repository is behind upstream by $behind commit(s)."
+                                }
+                            }
+                            else {
+                                $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Diverged'; Status = 'WARNING' })
+                                if ($status -eq 'PASS') {
+                                    $status = 'WARNING'
+                                    $summary = 'Git repository has diverged from upstream.'
+                                }
+                            }
+                        }
+                        else {
+                            $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Unknown Git error'; Status = 'WARNING' })
+                            if ($status -eq 'PASS') {
+                                $status = 'WARNING'
+                                $summary = 'Git repository upstream status output could not be parsed.'
+                            }
+                        }
+                    }
+                    else {
+                        $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Unknown Git error'; Status = 'WARNING' })
+                        if ($status -eq 'PASS') {
+                            $status = 'WARNING'
+                            $summary = 'Git repository upstream status output format is invalid.'
+                        }
                     }
                 }
                 else {
-                    $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Unable to determine'; Status = 'WARNING' })
-                    if ($status -eq 'PASS') {
-                        $status = 'WARNING'
-                        $summary = 'Git repository upstream status could not be determined.'
+                    $errText = ($revListOutput | Out-String).Trim()
+                    if ($errText -match 'unknown revision|bad revision|needed a single revision') {
+                        $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Fetch required'; Status = 'WARNING' })
+                        if ($status -eq 'PASS') {
+                            $status = 'WARNING'
+                            $summary = 'Git repository upstream branch reference requires fetching.'
+                        }
+                    }
+                    elseif ($errText -match 'Could not resolve host|Connection refused|network|unreachable|Could not read from remote') {
+                        $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Remote unreachable'; Status = 'WARNING' })
+                        if ($status -eq 'PASS') {
+                            $status = 'WARNING'
+                            $summary = 'Git remote is unreachable.'
+                        }
+                    }
+                    else {
+                        $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'Unknown Git error'; Status = 'WARNING' })
+                        if ($status -eq 'PASS') {
+                            $status = 'WARNING'
+                            $summary = 'Git repository upstream status check failed.'
+                        }
                     }
                 }
             }
             else {
-                $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'No upstream branch configured'; Status = 'WARNING' })
+                $details.Add([pscustomobject]@{ Item = 'Ahead / behind'; Value = 'No upstream configured'; Status = 'WARNING' })
                 if ($status -eq 'PASS') {
                     $status = 'WARNING'
                     $summary = 'Git repository has no upstream branch configured.'
