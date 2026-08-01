@@ -113,5 +113,27 @@
       "InvalidMetadataFormat": "FAIL",
       "MetadataConsistency": "WARNING"
     }
+  },
+  "lockedValidation": {
+    "requiredDocuments": [
+      "docs/00_Governance/PROJECT-CONSTITUTION.md",
+      "docs/01_ADR/ADR-001-Separate-Bounded-Contexts.md"
+    ],
+    "ignoredDocuments": [],
+    "ignoredFolders": [],
+    "markerPattern": "^LOCKED$",
+    "modificationIndicators": [
+      "Last modified",
+      "Last updated",
+      "Updated",
+      "Revision"
+    ],
+    "severity": {
+      "MissingLockedMarker": "FAIL",
+      "MultipleLockedMarkers": "FAIL",
+      "LockedNotAtEnd": "FAIL",
+      "ModifiedLockedDocument": "FAIL",
+      "LockedFormatInvalid": "FAIL"
+    }
   }
 }

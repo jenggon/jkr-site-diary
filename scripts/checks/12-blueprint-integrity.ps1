@@ -745,6 +745,130 @@ function Get-BlueprintMetadataPolicy {
     return $policy
 }
 
+function Get-BlueprintLockedPolicy {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Configuration
+    )
+
+    if ($null -eq $Configuration.Values -or $null -eq $Configuration.Values.lockedValidation) {
+        throw 'Locked validation configuration is missing.'
+    }
+
+    $policy = $Configuration.Values.lockedValidation
+    foreach ($propertyName in @('requiredDocuments', 'ignoredDocuments', 'ignoredFolders', 'markerPattern', 'severity')) {
+        if ($null -eq $policy.PSObject.Properties[$propertyName]) {
+            throw "Locked validation configuration is missing '$propertyName'."
+        }
+    }
+
+    foreach ($severityName in @('MissingLockedMarker', 'MultipleLockedMarkers', 'LockedNotAtEnd', 'ModifiedLockedDocument', 'LockedFormatInvalid')) {
+        if ($null -eq $policy.severity.PSObject.Properties[$severityName]) {
+            throw "Locked validation severity configuration is missing '$severityName'."
+        }
+
+        if ([string]$policy.severity.$severityName -notin @('INFO', 'PASS', 'WARNING', 'FAIL')) {
+            throw "Locked validation severity '$severityName' must be INFO, PASS, WARNING, or FAIL."
+        }
+    }
+
+    return $policy
+}
+
+function Invoke-BlueprintLockedValidation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Inventory,
+
+        [Parameter(Mandatory)]
+        [pscustomobject]$Policy
+    )
+
+    $findings = [System.Collections.Generic.List[object]]::new()
+
+    # Resolve required documents: support identifiers or relative paths
+    foreach ($required in @($Policy.requiredDocuments)) {
+        $matches = @()
+        foreach ($doc in @($Inventory.Documents)) {
+            if (-not [string]::IsNullOrWhiteSpace($doc.Identifier) -and $doc.Identifier -eq $required) { $matches += $doc; continue }
+            if ($doc.RelativePath -eq $required) { $matches += $doc; continue }
+            if ($doc.FileName -eq $required) { $matches += $doc; continue }
+        }
+
+        if ($matches.Count -eq 0) {
+            # Required document not found in inventory — report as MissingLockedMarker (document absent)
+            $fakeDoc = [pscustomobject]@{ Identifier = $required; RelativePath = $required }
+            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'MissingLockedMarker' -Document $fakeDoc -Line $null -Expected 'Document present with valid LOCKED marker' -Actual 'Document not found in inventory' -Severity $Policy.severity.MissingLockedMarker))
+            continue
+        }
+
+        foreach ($document in $matches) {
+            # Skip ignored documents/folders
+            if ($Policy.ignoredDocuments -contains $document.RelativePath) { continue }
+            $segments = $document.RelativePath -split '/'
+            $ignored = $false
+            foreach ($f in @($Policy.ignoredFolders)) { if ($segments -contains $f) { $ignored = $true; break } }
+            if ($ignored) { continue }
+
+            $lines = @($document.Lines)
+            $regex = New-Object System.Text.RegularExpressions.Regex($Policy.markerPattern)
+            $matchLines = @()
+            for ($i = 0; $i -lt $lines.Count; $i++) {
+                if ($regex.IsMatch($lines[$i])) { $matchLines += [pscustomobject]@{ Line = $i + 1; Text = $lines[$i] } }
+            }
+
+            if ($matchLines.Count -eq 0) {
+                $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'MissingLockedMarker' -Document $document -Line $null -Expected 'Document ends with LOCKED marker' -Actual 'LOCKED marker not found' -Severity $Policy.severity.MissingLockedMarker))
+                continue
+            }
+
+            if ($matchLines.Count -gt 1) {
+                # Multiple locked markers — report at second occurrence
+                $second = $matchLines[1]
+                $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'MultipleLockedMarkers' -Document $document -Line $second.Line -Expected 'Only one LOCKED marker at document end' -Actual "$($matchLines.Count) LOCKED markers found" -Severity $Policy.severity.MultipleLockedMarkers))
+            }
+
+            # Validate format of the marker (full-line match)
+            foreach ($m in $matchLines) {
+                $lineText = $m.Text.Trim()
+                if (-not ([regex]::IsMatch($lineText, '^' + $Policy.markerPattern + '$'))) {
+                    $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'LockedFormatInvalid' -Document $document -Line $m.Line -Expected "Marker format: $($Policy.markerPattern)" -Actual "Found: $lineText" -Severity $Policy.severity.LockedFormatInvalid))
+                }
+            }
+
+            # LockedNotAtEnd: marker must be the last meaningful content
+            $markerLine = $matchLines[-1].Line
+            $lastMeaningful = $null
+            for ($j = $lines.Count - 1; $j -ge 0; $j--) {
+                $txt = $lines[$j].Trim()
+                if ($txt -eq '' -or $txt -match '^(?:-){3,}$') { continue }
+                $lastMeaningful = $j + 1
+                break
+            }
+
+            if ($null -ne $lastMeaningful -and $lastMeaningful -ne $markerLine) {
+                $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'LockedNotAtEnd' -Document $document -Line $markerLine -Expected 'LOCKED marker as final meaningful content' -Actual "Last meaningful content at line $lastMeaningful" -Severity $Policy.severity.LockedNotAtEnd))
+            }
+
+            # ModifiedLockedDocument: detect indicators of modification per configuration
+            if ($null -ne $Policy.PSObject.Properties['modificationIndicators']) {
+                foreach ($indicator in @($Policy.modificationIndicators)) {
+                    $indicatorRegex = New-Object System.Text.RegularExpressions.Regex($indicator, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                    for ($k = 0; $k -lt $lines.Count; $k++) {
+                        if ($indicatorRegex.IsMatch($lines[$k])) {
+                            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'ModifiedLockedDocument' -Document $document -Line ($k + 1) -Expected 'No modification indicators in locked document' -Actual "Found modification indicator: $indicator" -Severity $Policy.severity.ModifiedLockedDocument))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return New-BlueprintCrossReferenceResult -CheckName 'Blueprint Locked Validation' -Findings $findings.ToArray() -SuccessSummary 'Locked validation passed.'
+}
+
 function Invoke-BlueprintMetadataValidation {
     [CmdletBinding()]
     param(
@@ -898,6 +1022,7 @@ function Invoke-BlueprintInventoryCheck {
     $policy = Get-BlueprintIntegrityPolicy -Configuration $Configuration
     $traceabilityPolicy = Get-BlueprintTraceabilityPolicy -Configuration $Configuration
     $metadataPolicy = Get-BlueprintMetadataPolicy -Configuration $Configuration
+    $lockedPolicy = Get-BlueprintLockedPolicy -Configuration $Configuration
 
     Write-AuditSection -Text 'Blueprint Inventory'
     Write-AuditSuccess -Message 'Blueprint inventory was created successfully.'
@@ -918,6 +1043,7 @@ function Invoke-BlueprintInventoryCheck {
     return @(
         $inventoryResult
         Invoke-BlueprintMetadataValidation -Inventory $inventory -Policy $metadataPolicy
+        Invoke-BlueprintLockedValidation -Inventory $inventory -Policy $lockedPolicy
         Invoke-BlueprintCrossReferenceValidation -Inventory $inventory -Policy $policy
         Invoke-BlueprintStructureAlignmentValidation -Inventory $inventory -Policy $policy
         Invoke-BlueprintNumberingValidation -Inventory $inventory -Policy $policy
