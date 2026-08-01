@@ -807,21 +807,309 @@ function Get-BlueprintOrphanPolicy {
     return $policy
 }
 
-function Invoke-BlueprintOrphanValidation {
+function Get-BlueprintDuplicateContentPolicy {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [pscustomobject]$Inventory,
+    [pscustomobject]$Configuration
+)
 
-        [Parameter(Mandatory)]
-        [pscustomobject]$Policy,
+if ($null -eq $Configuration.Values -or $null -eq $Configuration.Values.duplicateContentValidation) {
+    throw 'Duplicate content validation configuration is missing.'
+}
 
+$policy = $Configuration.Values.duplicateContentValidation
+foreach ($propertyName in @('ignoredDocuments', 'ignoredFolders', 'normalizationOptions', 'similarityThreshold', 'severity')) {
+    if ($null -eq $policy.PSObject.Properties[$propertyName]) {
+        throw "Duplicate content validation configuration is missing '$propertyName'."
+    }
+}
+
+foreach ($optionName in @('ignoreWhitespace', 'ignoreBlankLines', 'ignoreHeadingFormatting', 'decorationPatterns')) {
+    if ($null -eq $policy.normalizationOptions.PSObject.Properties[$optionName]) {
+        throw "Duplicate content validation normalization option is missing '$optionName'."
+    }
+}
+
+foreach ($severityName in @('DuplicateHeading', 'DuplicateDocumentTitle', 'DuplicateNormalizedContent', 'NearDuplicateContent')) {
+    if ($null -eq $policy.severity.PSObject.Properties[$severityName]) {
+        throw "Duplicate content validation severity configuration is missing '$severityName'."
+    }
+
+    if ([string]$policy.severity.$severityName -notin @('INFO', 'PASS', 'WARNING', 'FAIL')) {
+        throw "Duplicate content validation severity '$severityName' must be INFO, PASS, WARNING, or FAIL."
+    }
+}
+
+$thresholdValue = $null
+if (-not [double]::TryParse([string]$policy.similarityThreshold, [ref]$thresholdValue)) {
+    throw 'Duplicate content validation similarityThreshold must be a numeric value.'
+}
+
+$threshold = [double]$policy.similarityThreshold
+if ($threshold -lt 0 -or $threshold -gt 1) {
+    throw 'Duplicate content validation similarityThreshold must be between 0.0 and 1.0.'
+}
+
+return $policy
+}
+
+function Get-BlueprintDuplicateContentNormalizedText {
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$Text,
+
+    [Parameter(Mandatory)]
+    [pscustomobject]$Policy
+)
+
+$normalized = [string]$Text
+$options = $Policy.normalizationOptions
+
+if ($true -eq [bool]$options.ignoreHeadingFormatting) {
+    $normalized = $normalized -replace '^(#{1,6})\s*', ''
+}
+
+foreach ($pattern in @($options.decorationPatterns)) {
+    if (-not [string]::IsNullOrWhiteSpace($pattern)) {
+        try {
+            $normalized = [regex]::Replace($normalized, $pattern, '')
+        }
+        catch {
+            $normalized = $normalized
+        }
+    }
+}
+
+if ($true -eq [bool]$options.ignoreWhitespace) {
+    $normalized = $normalized -replace '\s+', ' '
+}
+
+$normalized = $normalized.Trim()
+return $normalized.ToLowerInvariant()
+}
+
+function Get-BlueprintDuplicateContentNormalizedDocument {
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [pscustomobject]$Document,
+
+    [Parameter(Mandatory)]
+    [pscustomobject]$Policy
+)
+
+$options = $Policy.normalizationOptions
+$resultLines = [System.Collections.Generic.List[string]]::new()
+
+foreach ($line in @($Document.Lines)) {
+    $text = [string]$line
+    if ($true -eq [bool]$options.ignoreHeadingFormatting) {
+        $text = $text -replace '^(#{1,6})\s*', ''
+    }
+
+    foreach ($pattern in @($options.decorationPatterns)) {
+        if (-not [string]::IsNullOrWhiteSpace($pattern)) {
+            try {
+                $text = [regex]::Replace($text, $pattern, '')
+            }
+            catch {
+                $text = $text
+            }
+        }
+    }
+
+    if ($true -eq [bool]$options.ignoreWhitespace) {
+        $text = $text -replace '\s+', ' '
+    }
+
+    $text = $text.Trim()
+    if ($true -eq [bool]$options.ignoreBlankLines -and [string]::IsNullOrWhiteSpace($text)) {
+        continue
+    }
+
+    $resultLines.Add($text)
+}
+
+$normalized = ($resultLines -join "`n").Trim()
+return $normalized.ToLowerInvariant()
+}
+
+function Get-BlueprintDuplicateContentTokenSet {
+    [CmdletBinding()]
+    param(
         [Parameter(Mandatory)]
-        [pscustomobject]$IntegrityPolicy
+        [string]$Text
     )
 
-    # Orphan detection uses both identifier references and resolvable local markdown links
-    $findings = [System.Collections.Generic.List[object]]::new()
+    $tokens = @($Text -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $set = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($token in $tokens) { $set.Add($token) | Out-Null }
+    return $set
+}
+
+function Get-BlueprintDuplicateContentSimilarity {
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$Left,
+
+    [Parameter(Mandatory)]
+    [string]$Right
+)
+
+$leftSet = Get-BlueprintDuplicateContentTokenSet -Text $Left
+$rightSet = Get-BlueprintDuplicateContentTokenSet -Text $Right
+
+if ($leftSet.Count -eq 0 -or $rightSet.Count -eq 0) {
+    return 0.0
+}
+
+$intersection = 0
+foreach ($token in $leftSet) {
+    if ($rightSet.Contains($token)) { $intersection++ }
+}
+
+$union = $leftSet.Count + $rightSet.Count - $intersection
+if ($union -eq 0) { return 0.0 }
+
+return [double]$intersection / [double]$union
+}
+
+function Get-BlueprintDuplicateContentSimilarityFromSets {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [System.Collections.Generic.HashSet[string]]$LeftSet,
+
+        [Parameter(Mandatory)]
+        [System.Collections.Generic.HashSet[string]]$RightSet
+    )
+
+    if ($LeftSet.Count -eq 0 -or $RightSet.Count -eq 0) {
+        return 0.0
+    }
+
+    $intersection = 0
+    foreach ($token in $LeftSet) {
+        if ($RightSet.Contains($token)) { $intersection++ }
+    }
+
+    $union = $LeftSet.Count + $RightSet.Count - $intersection
+    if ($union -eq 0) { return 0.0 }
+
+    return [double]$intersection / [double]$union
+}
+
+function Invoke-BlueprintDuplicateContentValidation {
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [pscustomobject]$Inventory,
+
+    [Parameter(Mandatory)]
+    [pscustomobject]$Policy
+)
+
+$findings = [System.Collections.Generic.List[object]]::new()
+$scopedDocuments = @(Get-BlueprintInventoryScopedDocuments -Inventory $Inventory -Policy $Policy)
+
+$titleMap = @{}
+$contentMap = @{}
+$normalizedContent = @{}
+
+foreach ($document in $scopedDocuments) {
+    if (-not [string]::IsNullOrWhiteSpace($document.Title)) {
+        $title = Get-BlueprintDuplicateContentNormalizedText -Text $document.Title -Policy $Policy
+        if (-not $titleMap.ContainsKey($title)) { $titleMap[$title] = [System.Collections.Generic.List[object]]::new() }
+        $titleMap[$title].Add($document)
+    }
+
+    $normalized = Get-BlueprintDuplicateContentNormalizedDocument -Document $document -Policy $Policy
+    $normalizedContent[$document.RelativePath] = $normalized
+    if (-not $contentMap.ContainsKey($normalized)) { $contentMap[$normalized] = [System.Collections.Generic.List[object]]::new() }
+    $contentMap[$normalized].Add($document)
+}
+
+# Duplicate document title
+foreach ($kv in $titleMap.GetEnumerator()) {
+    if ($kv.Value.Count -gt 1) {
+        foreach ($document in $kv.Value) {
+            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'DuplicateDocumentTitle' -Document $document -Line $null -Expected 'Document titles must be unique' -Actual "Duplicate title: $($document.Title)" -Severity $Policy.severity.DuplicateDocumentTitle))
+        }
+    }
+}
+
+# Duplicate headings within a document
+foreach ($document in $scopedDocuments) {
+    $headingMap = @{}
+    foreach ($heading in @($document.Headings)) {
+        $normalizedHeading = Get-BlueprintDuplicateContentNormalizedText -Text $heading.Text -Policy $Policy
+        if (-not $headingMap.ContainsKey($normalizedHeading)) { $headingMap[$normalizedHeading] = [System.Collections.Generic.List[object]]::new() }
+        $headingMap[$normalizedHeading].Add($heading)
+    }
+
+    foreach ($kv in $headingMap.GetEnumerator()) {
+        if ($kv.Value.Count -gt 1) {
+            foreach ($heading in $kv.Value) {
+                $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'DuplicateHeading' -Document $document -Line $heading.Line -Expected 'Heading text must be unique within the document' -Actual "Duplicate heading: $($heading.Text)" -Severity $Policy.severity.DuplicateHeading))
+            }
+        }
+    }
+}
+
+# Duplicate normalized content across documents
+foreach ($kv in $contentMap.GetEnumerator()) {
+    if ($kv.Value.Count -gt 1) {
+        foreach ($document in $kv.Value) {
+            $related = $kv.Value | Where-Object { $_.RelativePath -ne $document.RelativePath } | ForEach-Object { $_.RelativePath }
+            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'DuplicateNormalizedContent' -Document $document -Line $null -Expected 'Document content must be unique after normalization' -Actual "Identical normalized content with: $($related -join ', ')" -Severity $Policy.severity.DuplicateNormalizedContent))
+        }
+    }
+}
+
+# Near duplicate content
+$keys = @($normalizedContent.Keys)
+$threshold = [double]$Policy.similarityThreshold
+$tokenSets = @{}
+foreach ($key in $keys) {
+    $tokenSets[$key] = Get-BlueprintDuplicateContentTokenSet -Text $normalizedContent[$key]
+}
+
+for ($i = 0; $i -lt $keys.Count; $i++) {
+    for ($j = $i + 1; $j -lt $keys.Count; $j++) {
+        $leftKey = $keys[$i]
+        $rightKey = $keys[$j]
+        $leftText = $normalizedContent[$leftKey]
+        $rightText = $normalizedContent[$rightKey]
+        if ($leftText -eq $rightText) { continue }
+
+        $similarity = Get-BlueprintDuplicateContentSimilarityFromSets -LeftSet $tokenSets[$leftKey] -RightSet $tokenSets[$rightKey]
+        if ($similarity -ge $threshold) {
+            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'NearDuplicateContent' -Document $Inventory.DocumentsByRelativePath[$leftKey] -Line $null -Expected "Document content similarity below threshold $threshold" -Actual "Similarity to ${rightKey}: $([math]::Round($similarity * 100, 1))%" -Severity $Policy.severity.NearDuplicateContent))
+        }
+    }
+}
+
+return New-BlueprintCrossReferenceResult -CheckName 'Blueprint Duplicate Content Detection' -Findings $findings.ToArray() -SuccessSummary 'Duplicate content validation passed.'
+}
+
+function Invoke-BlueprintOrphanValidation {
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [pscustomobject]$Inventory,
+
+    [Parameter(Mandatory)]
+    [pscustomobject]$Policy,
+
+    [Parameter(Mandatory)]
+    [pscustomobject]$IntegrityPolicy
+)
+
+# Orphan detection uses both identifier references and resolvable local markdown links
+$findings = [System.Collections.Generic.List[object]]::new()
     $scopedDocuments = @(Get-BlueprintInventoryScopedDocuments -Inventory $Inventory -Policy $Policy)
 
     # Prepare maps
@@ -945,7 +1233,6 @@ function Invoke-BlueprintOrphanValidation {
 
     # 4) OrphanFolder: folders that contain only orphan documents
     $orphanDocs = @($findings | Where-Object { $_.Rule -eq 'OrphanDocument' } | ForEach-Object { $_.Path })
-    $foldersChecked = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($folder in @($Inventory.Folders)) {
         # skip ignored folders per policy
         if (Test-BlueprintFolderIgnored -Folder $folder -Policy $Policy) { continue }
@@ -1214,6 +1501,7 @@ function Invoke-BlueprintInventoryCheck {
     $metadataPolicy = Get-BlueprintMetadataPolicy -Configuration $Configuration
     $lockedPolicy = Get-BlueprintLockedPolicy -Configuration $Configuration
     $orphanPolicy = Get-BlueprintOrphanPolicy -Configuration $Configuration
+    $duplicateContentPolicy = Get-BlueprintDuplicateContentPolicy -Configuration $Configuration
 
     Write-AuditSection -Text 'Blueprint Inventory'
     Write-AuditSuccess -Message 'Blueprint inventory was created successfully.'
@@ -1236,6 +1524,7 @@ function Invoke-BlueprintInventoryCheck {
         Invoke-BlueprintMetadataValidation -Inventory $inventory -Policy $metadataPolicy
         Invoke-BlueprintLockedValidation -Inventory $inventory -Policy $lockedPolicy
         Invoke-BlueprintOrphanValidation -Inventory $inventory -Policy $orphanPolicy -IntegrityPolicy $policy
+        Invoke-BlueprintDuplicateContentValidation -Inventory $inventory -Policy $duplicateContentPolicy
         Invoke-BlueprintCrossReferenceValidation -Inventory $inventory -Policy $policy
         Invoke-BlueprintStructureAlignmentValidation -Inventory $inventory -Policy $policy
         Invoke-BlueprintNumberingValidation -Inventory $inventory -Policy $policy

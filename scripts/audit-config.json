@@ -147,5 +147,22 @@
       "UnusedIdentifier": "INFO",
       "OrphanFolder": "WARNING"
     }
+  },
+  "duplicateContentValidation": {
+    "ignoredDocuments": [],
+    "ignoredFolders": [],
+    "normalizationOptions": {
+      "ignoreWhitespace": true,
+      "ignoreBlankLines": true,
+      "ignoreHeadingFormatting": true,
+      "decorationPatterns": []
+    },
+    "similarityThreshold": 0.9,
+    "severity": {
+      "DuplicateHeading": "WARNING",
+      "DuplicateDocumentTitle": "WARNING",
+      "DuplicateNormalizedContent": "FAIL",
+      "NearDuplicateContent": "WARNING"
+    }
   }
 }
