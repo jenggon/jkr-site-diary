@@ -135,5 +135,17 @@
       "ModifiedLockedDocument": "FAIL",
       "LockedFormatInvalid": "FAIL"
     }
+  },
+  "orphanValidation": {
+    "rootDocuments": [],
+    "ignoredDocuments": [],
+    "ignoredFolders": [],
+    "ignoredIdentifiers": [],
+    "severity": {
+      "OrphanDocument": "WARNING",
+      "UnreachableDocument": "WARNING",
+      "UnusedIdentifier": "INFO",
+      "OrphanFolder": "WARNING"
+    }
   }
 }

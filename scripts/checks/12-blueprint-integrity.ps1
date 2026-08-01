@@ -776,6 +776,196 @@ function Get-BlueprintLockedPolicy {
     return $policy
 }
 
+function Get-BlueprintOrphanPolicy {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Configuration
+    )
+
+    if ($null -eq $Configuration.Values -or $null -eq $Configuration.Values.orphanValidation) {
+        throw 'Orphan validation configuration is missing.'
+    }
+
+    $policy = $Configuration.Values.orphanValidation
+    foreach ($propertyName in @('rootDocuments', 'ignoredDocuments', 'ignoredFolders', 'ignoredIdentifiers', 'severity')) {
+        if ($null -eq $policy.PSObject.Properties[$propertyName]) {
+            throw "Orphan validation configuration is missing '$propertyName'."
+        }
+    }
+
+    foreach ($severityName in @('OrphanDocument', 'UnreachableDocument', 'UnusedIdentifier', 'OrphanFolder')) {
+        if ($null -eq $policy.severity.PSObject.Properties[$severityName]) {
+            throw "Orphan validation severity configuration is missing '$severityName'."
+        }
+
+        if ([string]$policy.severity.$severityName -notin @('INFO', 'PASS', 'WARNING', 'FAIL')) {
+            throw "Orphan validation severity '$severityName' must be INFO, PASS, WARNING, or FAIL."
+        }
+    }
+
+    return $policy
+}
+
+function Invoke-BlueprintOrphanValidation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Inventory,
+
+        [Parameter(Mandatory)]
+        [pscustomobject]$Policy,
+
+        [Parameter(Mandatory)]
+        [pscustomobject]$IntegrityPolicy
+    )
+
+    # Orphan detection uses both identifier references and resolvable local markdown links
+    $findings = [System.Collections.Generic.List[object]]::new()
+    $scopedDocuments = @(Get-BlueprintInventoryScopedDocuments -Inventory $Inventory -Policy $Policy)
+
+    # Prepare maps
+    $incomingCountByDocument = @{}
+    foreach ($doc in $scopedDocuments) { $incomingCountByDocument[$doc.RelativePath] = 0 }
+
+    # Count incoming references via identifier references
+    foreach ($source in $scopedDocuments) {
+        foreach ($ref in @($source.References)) {
+            if (($ref.Identifier) -and (-not (Test-BlueprintReferenceIgnored -Identifier $ref.Identifier -Policy $IntegrityPolicy))) {
+                if ($Inventory.DocumentsByIdentifier.ContainsKey($ref.Identifier)) {
+                    foreach ($target in $Inventory.DocumentsByIdentifier[$ref.Identifier]) {
+                        if ($scopedDocuments -contains $target) {
+                            $incomingCountByDocument[$target.RelativePath] = $incomingCountByDocument[$target.RelativePath] + 1
+                        }
+                    }
+                }
+            }
+        }
+
+        # Count incoming references via local markdown links
+        foreach ($link in @($source.Links)) {
+            if ($link.IsExternal -or $link.Target -match '^(?i:mailto:)') { continue }
+            $resolvedPath = Resolve-BlueprintLocalMarkdownLinkPath -Document $source -Target $link.Target
+            if ($null -ne $resolvedPath -and $Inventory.DocumentsByRelativePath.ContainsKey($resolvedPath)) {
+                $targetDoc = $Inventory.DocumentsByRelativePath[$resolvedPath]
+                if ($scopedDocuments -contains $targetDoc) {
+                    $incomingCountByDocument[$targetDoc.RelativePath] = $incomingCountByDocument[$targetDoc.RelativePath] + 1
+                }
+            }
+        }
+    }
+
+    # 1) OrphanDocument: no incoming references and not exempted
+    foreach ($doc in $scopedDocuments) {
+        # check ignored identifiers
+        $isIgnored = $false
+        foreach ($ignoredId in @($Policy.ignoredIdentifiers)) {
+            if (-not [string]::IsNullOrWhiteSpace($doc.Identifier) -and $doc.Identifier -eq $ignoredId) { $isIgnored = $true; break }
+        }
+        if ($isIgnored) { continue }
+
+        if ($incomingCountByDocument[$doc.RelativePath] -eq 0) {
+            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'OrphanDocument' -Document $doc -Line $null -Expected 'Document has at least one incoming reference or exemption' -Actual 'No incoming references detected' -Severity $Policy.severity.OrphanDocument))
+        }
+    }
+
+    # 2) UnreachableDocument: not reachable from any configured rootDocuments
+    # Build adjacency for reachability using identifier references and local links
+    $adj = @{}
+    foreach ($d in $scopedDocuments) { $adj[$d.RelativePath] = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) }
+
+    foreach ($source in $scopedDocuments) {
+        foreach ($ref in @($source.References)) {
+            if ($ref.Identifier -and (-not (Test-BlueprintReferenceIgnored -Identifier $ref.Identifier -Policy $IntegrityPolicy)) -and $Inventory.DocumentsByIdentifier.ContainsKey($ref.Identifier)) {
+                foreach ($t in $Inventory.DocumentsByIdentifier[$ref.Identifier]) {
+                    if ($scopedDocuments -contains $t) { $adj[$source.RelativePath].Add($t.RelativePath) | Out-Null }
+                }
+            }
+        }
+
+        foreach ($link in @($source.Links)) {
+            if ($link.IsExternal -or $link.Target -match '^(?i:mailto:)') { continue }
+            $resolvedPath = Resolve-BlueprintLocalMarkdownLinkPath -Document $source -Target $link.Target
+            if ($null -ne $resolvedPath -and $Inventory.DocumentsByRelativePath.ContainsKey($resolvedPath)) {
+                $adj[$source.RelativePath].Add($resolvedPath) | Out-Null
+            }
+        }
+    }
+
+    # Resolve roots
+    $rootSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($root in @($Policy.rootDocuments)) {
+        foreach ($doc in $scopedDocuments) {
+            if ((-not [string]::IsNullOrWhiteSpace($doc.Identifier) -and $doc.Identifier -eq $root) -or $doc.RelativePath -eq $root -or $doc.FileName -eq $root) {
+                $rootSet.Add($doc.RelativePath) | Out-Null
+            }
+        }
+    }
+
+    # If no configured roots, consider documents with no incoming refs as potential roots (to avoid marking everything unreachable)
+    if ($rootSet.Count -eq 0) {
+        foreach ($d in $scopedDocuments) { if ($incomingCountByDocument[$d.RelativePath] -eq 0) { $rootSet.Add($d.RelativePath) | Out-Null } }
+    }
+
+    # BFS from roots
+    $visited = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $queue = [System.Collections.Generic.Queue[string]]::new()
+    foreach ($r in $rootSet) { $visited.Add($r) | Out-Null; $queue.Enqueue($r) }
+    while ($queue.Count -gt 0) {
+        $cur = $queue.Dequeue()
+        foreach ($nbr in $adj[$cur]) {
+            if (-not $visited.Contains($nbr)) { $visited.Add($nbr) | Out-Null; $queue.Enqueue($nbr) }
+        }
+    }
+
+    foreach ($d in $scopedDocuments) {
+        if (-not $visited.Contains($d.RelativePath)) {
+            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'UnreachableDocument' -Document $d -Line $null -Expected 'Document reachable from configured root documents' -Actual 'Document not reachable from configured roots' -Severity $Policy.severity.UnreachableDocument))
+        }
+    }
+
+    # 3) UnusedIdentifier: identifiers declared but never referenced
+    foreach ($identifier in @($Inventory.DocumentsByIdentifier.Keys | Sort-Object)) {
+        if ($Policy.ignoredIdentifiers -contains $identifier) { continue }
+        # compute incoming references to this identifier
+        $incoming = 0
+        foreach ($source in $scopedDocuments) {
+            foreach ($ref in @($source.References)) {
+                if ($ref.Identifier -and (-not (Test-BlueprintReferenceIgnored -Identifier $ref.Identifier -Policy $IntegrityPolicy)) -and $ref.Identifier -eq $identifier) { $incoming++ }
+            }
+        }
+
+        if ($incoming -eq 0) {
+            # Report for each document that declares the identifier
+            foreach ($doc in @($Inventory.DocumentsByIdentifier[$identifier] | Where-Object { $scopedDocuments -contains $_ })) {
+                $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'UnusedIdentifier' -Document $doc -Line $null -Expected 'Identifier is referenced at least once' -Actual "Identifier $identifier is not referenced" -Severity $Policy.severity.UnusedIdentifier))
+            }
+        }
+    }
+
+    # 4) OrphanFolder: folders that contain only orphan documents
+    $orphanDocs = @($findings | Where-Object { $_.Rule -eq 'OrphanDocument' } | ForEach-Object { $_.Path })
+    $foldersChecked = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($folder in @($Inventory.Folders)) {
+        # skip ignored folders per policy
+        if (Test-BlueprintFolderIgnored -Folder $folder -Policy $Policy) { continue }
+        # find docs in folder
+        $docsInFolder = @($Inventory.Documents | Where-Object { $_.RelativePath.StartsWith($folder + '/') -and ($scopedDocuments -contains $_) })
+        if ($docsInFolder.Count -eq 0) { continue }
+        $allOrphans = $true
+        foreach ($doc in $docsInFolder) {
+            if ($orphanDocs -notcontains $doc.RelativePath) { $allOrphans = $false; break }
+        }
+        if ($allOrphans) {
+            # use a pseudo-document object for folder reporting
+            $fakeDoc = [pscustomobject]@{ Identifier = $null; RelativePath = $folder; FileName = $folder }
+            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'OrphanFolder' -Document $fakeDoc -Line $null -Expected 'Folder contains non-orphan documents' -Actual "All documents in folder $folder are orphaned" -Severity $Policy.severity.OrphanFolder))
+        }
+    }
+
+    return New-BlueprintCrossReferenceResult -CheckName 'Blueprint Orphan Detection' -Findings $findings.ToArray() -SuccessSummary 'No orphan-related issues detected.'
+}
+
 function Invoke-BlueprintLockedValidation {
     [CmdletBinding()]
     param(
@@ -1023,6 +1213,7 @@ function Invoke-BlueprintInventoryCheck {
     $traceabilityPolicy = Get-BlueprintTraceabilityPolicy -Configuration $Configuration
     $metadataPolicy = Get-BlueprintMetadataPolicy -Configuration $Configuration
     $lockedPolicy = Get-BlueprintLockedPolicy -Configuration $Configuration
+    $orphanPolicy = Get-BlueprintOrphanPolicy -Configuration $Configuration
 
     Write-AuditSection -Text 'Blueprint Inventory'
     Write-AuditSuccess -Message 'Blueprint inventory was created successfully.'
@@ -1044,6 +1235,7 @@ function Invoke-BlueprintInventoryCheck {
         $inventoryResult
         Invoke-BlueprintMetadataValidation -Inventory $inventory -Policy $metadataPolicy
         Invoke-BlueprintLockedValidation -Inventory $inventory -Policy $lockedPolicy
+        Invoke-BlueprintOrphanValidation -Inventory $inventory -Policy $orphanPolicy -IntegrityPolicy $policy
         Invoke-BlueprintCrossReferenceValidation -Inventory $inventory -Policy $policy
         Invoke-BlueprintStructureAlignmentValidation -Inventory $inventory -Policy $policy
         Invoke-BlueprintNumberingValidation -Inventory $inventory -Policy $policy
