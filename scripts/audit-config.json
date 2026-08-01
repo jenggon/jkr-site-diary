@@ -1,1 +1,117 @@
-{}
+{
+  "blueprintIntegrity": {
+    "ignoredFolders": [],
+    "ignoredDocuments": [],
+    "futureReferences": [
+      "UI-200A",
+      "UI-200B",
+      "UI-230",
+      "UI-231",
+      "UI-232",
+      "UI-233",
+      "UI-234",
+      "UI-235",
+      "UI-236",
+      "UI-237",
+      "UI-238",
+      "UI-239",
+      "UI-240",
+      "UI-241",
+      "UI-242",
+      "UI-243",
+      "UI-244",
+      "UI-250",
+      "UI-251",
+      "UI-252",
+      "UI-253",
+      "UI-254",
+      "UI-255",
+      "UI-260",
+      "UI-261",
+      "UI-262",
+      "UI-263",
+      "UI-264",
+      "UI-270",
+      "UI-271",
+      "UI-272",
+      "UI-273",
+      "UI-274",
+      "UI-275",
+      "UI-276",
+      "UI-277",
+      "UI-280",
+      "UI-281",
+      "UI-282",
+      "UI-283",
+      "UI-284"
+    ],
+    "ignoredReferencePatterns": [],
+    "severity": {
+      "duplicateDocumentIdentifiers": "FAIL",
+      "missingReferencedDocumentIds": "FAIL",
+      "brokenLocalMarkdownLinks": "FAIL",
+      "missingMandatoryFolders": "FAIL",
+      "undocumentedFolders": "WARNING",
+      "indexConsistency": "WARNING",
+      "identifierSyntax": "FAIL",
+      "filenameIdentifier": "FAIL",
+      "headingIdentifier": "FAIL",
+      "numberingGaps": "INFO"
+    }
+  },
+  "traceability": {
+    "requiredRelationships": [
+      { "sourcePrefix": "BR", "targetPrefix": "ADR", "relationship": "parent" },
+      { "sourcePrefix": "BR", "targetPrefix": "DM", "relationship": "dependency" },
+      { "sourcePrefix": "API", "targetPrefix": "DB", "relationship": "dependency" },
+      { "sourcePrefix": "PM", "targetPrefix": "API", "relationship": "dependency" }
+    ],
+    "optionalRelationships": [
+      { "sourcePrefix": "UI", "targetPrefix": "API", "relationship": "dependency" }
+    ],
+    "ignoredRelationships": [
+      { "sourcePrefix": "*", "targetPrefix": "*" }
+    ],
+    "severity": {
+      "missingRequiredParent": "FAIL",
+      "missingRequiredDependency": "FAIL",
+      "invalidDependency": "FAIL",
+      "duplicateDeclaredDependency": "FAIL",
+      "circularDependency": "FAIL",
+      "relationshipDirection": "FAIL",
+      "optionalRelationship": "INFO"
+    }
+  },
+  "metadataValidation": {
+    "mandatoryKeys": [
+      "Project",
+      "Version"
+    ],
+    "allowedKeys": [
+      "Project",
+      "Repository Version",
+      "Version",
+      "Status",
+      "Authority",
+      "Date",
+      "Owner",
+      "Priority",
+      "Decision Type"
+    ],
+    "validationPatterns": {
+      "Version": "^\\d+\\.\\d+\\.\\d+$",
+      "Status": "^(Draft|Review|Locked)$",
+      "Date": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "ignoredDocuments": [],
+    "ignoredFolders": [],
+    "consistencyRules": [],
+    "severity": {
+      "MissingMandatoryMetadata": "FAIL",
+      "DuplicateMetadata": "FAIL",
+      "UnknownMetadata": "WARNING",
+      "InvalidMetadataFormat": "FAIL",
+      "MetadataConsistency": "WARNING"
+    }
+  }
+}
