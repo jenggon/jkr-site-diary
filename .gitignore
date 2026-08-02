@@ -43,3 +43,10 @@ next-env.d.ts
 # Temporary Architecture Review files
 .temp/
 TEMP_AUDIT*.txt
+
+# Temporary Architecture Review
+.temp/
+TEMP_AUDIT*.txt
+
+# IDE
+.vscode/settings.json
