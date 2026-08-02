@@ -10,7 +10,7 @@
 | Status | LOCKED |
 | Owner | JKR Site Diary Platform |
 | Category | UI Foundation |
-| Depends On | ADR-000, System Architecture |
+| Depends On | PM-000, System Architecture |
 | Last Updated | 30 July 2026 |
 
 ---
@@ -1370,7 +1370,7 @@ Future enhancements shall preserve the principles established in this document.
 
 Architecture
 
-- ADR-000 Platform Vision
+- PM-000 Product Vision
 - System Architecture
 - Engineering Standards
 

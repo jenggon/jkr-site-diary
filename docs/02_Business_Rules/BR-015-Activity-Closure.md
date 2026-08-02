@@ -25,7 +25,6 @@ Closed Activities shall automatically disappear from the Outstanding Activity qu
 ## Related Domain Model
 
 DM-005
-DM-006
 
 ## Related ADR
 
