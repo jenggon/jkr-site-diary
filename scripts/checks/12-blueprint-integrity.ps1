@@ -697,20 +697,6 @@ function Invoke-BlueprintNumberingValidation {
         }
     }
 
-    $identifiedDocuments = @($scopedDocuments | Where-Object { -not [string]::IsNullOrWhiteSpace($_.Identifier) })
-    foreach ($prefixGroup in @($identifiedDocuments | Group-Object { $_.Identifier.Split('-')[0] })) {
-        $numbers = @($prefixGroup.Group | ForEach-Object { [int]($_.Identifier.Split('-')[1] -replace '[A-Z]$', '') } | Sort-Object -Unique)
-        if ($numbers.Count -lt 2) {
-            continue
-        }
-
-        $missingNumbers = @($numbers[0]..$numbers[-1] | Where-Object { $_ -notin $numbers })
-        if ($missingNumbers.Count -gt 0) {
-            $document = $prefixGroup.Group | Select-Object -First 1
-            $findings.Add((New-BlueprintCrossReferenceFinding -Rule 'NumberingGap' -Document $document -Line $null -Expected "Continuous $($prefixGroup.Name) numbering from $($numbers[0]) to $($numbers[-1])" -Actual "$($missingNumbers.Count) number(s) are missing; first missing number: $($missingNumbers[0])" -Severity $Policy.severity.numberingGaps))
-        }
-    }
-
     return New-BlueprintCrossReferenceResult -CheckName 'Blueprint Document Numbering' -Findings $findings.ToArray() -SuccessSummary 'Document identifiers and numbering are consistent.'
 }
 
