@@ -1,0 +1,74 @@
+import { NextResponse } from 'next/server';
+import { taskService } from '@/services/taskService';
+
+type RouteParams = {
+  params: Promise<{ taskId: string }>;
+};
+
+/**
+ * GET /api/task/[taskId]
+ * Retrieves a Task by ID.
+ */
+export async function GET(request: Request, context: RouteParams) {
+  try {
+    const { taskId } = await context.params;
+
+    if (!taskId || typeof taskId !== 'string') {
+      return NextResponse.json(
+        { error: 'Missing or invalid route parameter: taskId' },
+        { status: 400 }
+      );
+    }
+
+    const task = await taskService.getTaskById(taskId);
+
+    if (!task) {
+      return NextResponse.json(
+        { error: 'Task not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ data: task }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || 'Failed to retrieve task' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/task/[taskId]
+ * Updates an existing Task.
+ */
+export async function PATCH(request: Request, context: RouteParams) {
+  try {
+    const { taskId } = await context.params;
+
+    if (!taskId || typeof taskId !== 'string') {
+      return NextResponse.json(
+        { error: 'Missing or invalid route parameter: taskId' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json(
+        { error: 'Invalid payload: Request body must be a valid JSON object' },
+        { status: 400 }
+      );
+    }
+
+    const updatedTask = await taskService.updateTask(taskId, body);
+
+    return NextResponse.json({ data: updatedTask }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || 'Failed to update task' },
+      { status: 500 }
+    );
+  }
+}
