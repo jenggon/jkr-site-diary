@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Temporary Architecture Review files
+.temp/
+TEMP_AUDIT*.txt
