@@ -58,3 +58,15 @@ No separate entity or engine shall exist for Outstanding Activities.
 Activity information may be updated while the Activity remains Outstanding.
 
 Completed Activities require formal correction workflow.
+
+---
+
+## Related Domain Model
+
+DM-005
+
+---
+
+## Related ADR
+
+ADR-007

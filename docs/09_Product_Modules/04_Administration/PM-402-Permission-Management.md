@@ -65,7 +65,7 @@ DB-024
 
 ---
 
-# API Reference
+# Dependencies
 
 API-029
 
