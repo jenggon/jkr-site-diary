@@ -1,5 +1,8 @@
 # UI-617 - Command Palette Overlay
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-617 |
 |-------------|---------|
 | Title | Command Palette Overlay |

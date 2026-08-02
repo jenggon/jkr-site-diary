@@ -1,5 +1,8 @@
 # UI-611 - Dialog
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-611 |
 |-------------|---------|
 | Title | Dialog |

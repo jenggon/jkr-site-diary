@@ -1,5 +1,8 @@
 # UI-811 - Page Layout
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-811 |
 |-------------|---------|
 | Title | Page Layout |

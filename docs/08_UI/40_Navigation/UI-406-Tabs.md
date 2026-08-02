@@ -1,5 +1,8 @@
 # UI-406 - Tabs
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-406 |
 |-------------|---------|
 | Title | Tabs |

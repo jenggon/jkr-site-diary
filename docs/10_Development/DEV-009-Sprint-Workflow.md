@@ -1,8 +1,11 @@
 # DEV-009 — Sprint Workflow
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

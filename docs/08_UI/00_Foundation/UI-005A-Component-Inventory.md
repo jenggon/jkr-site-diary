@@ -1,5 +1,8 @@
 # UI-005A - Component Inventory
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-005A |
 |-------------|----------|
 | Title | Component Inventory |

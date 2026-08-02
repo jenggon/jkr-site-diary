@@ -1,5 +1,8 @@
 # UI-515 - Skeleton
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-515 |
 |-------------|---------|
 | Title | Skeleton |

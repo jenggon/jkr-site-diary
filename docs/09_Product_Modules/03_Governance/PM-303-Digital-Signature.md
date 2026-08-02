@@ -1,8 +1,11 @@
 # PM-303 — Digital Signature
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Future Capability
+Draft
 
 ---
 

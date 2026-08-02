@@ -1,5 +1,8 @@
 # UI-404 - Bottom Navigation
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-404 |
 |-------------|---------|
 | Title | Bottom Navigation |

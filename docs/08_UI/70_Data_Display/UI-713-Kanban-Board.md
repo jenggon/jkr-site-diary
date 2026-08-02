@@ -1,5 +1,8 @@
 # UI-713 - Kanban Board
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-713 |
 |-------------|---------|
 | Title | Kanban Board |

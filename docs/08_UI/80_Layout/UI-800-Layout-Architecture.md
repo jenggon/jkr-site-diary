@@ -1,5 +1,8 @@
 # UI-800 - Layout Architecture
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-800 |
 |-------------|---------|
 | Title | Layout Architecture |

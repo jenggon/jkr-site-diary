@@ -1,8 +1,11 @@
 # PM-601 — Daily Summary
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

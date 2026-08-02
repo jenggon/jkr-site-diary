@@ -1,5 +1,8 @@
 # UI-407 - Pagination
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-407 |
 |-------------|---------|
 | Title | Pagination |

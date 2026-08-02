@@ -1,5 +1,8 @@
 # G-012: APK
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 APK (Arahan Perubahan Kerja), also known as Variation Order (VO), is an approved instruction that modifies the original scope of work.

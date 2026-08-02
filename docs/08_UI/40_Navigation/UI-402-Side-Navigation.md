@@ -1,5 +1,8 @@
 # UI-402 - Side Navigation
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-402 |
 |-------------|---------|
 | Title | Side Navigation |

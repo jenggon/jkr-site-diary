@@ -1,5 +1,8 @@
 # UI-408 - Stepper
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-408 |
 |-------------|---------|
 | Title | Stepper |

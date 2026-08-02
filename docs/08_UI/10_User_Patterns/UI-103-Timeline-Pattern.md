@@ -1,5 +1,8 @@
 # UI-103 - Timeline Pattern
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Purpose:
 
 Defines chronological presentation.

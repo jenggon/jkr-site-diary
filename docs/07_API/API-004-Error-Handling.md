@@ -1,9 +1,12 @@
 # API-004
 # Error Handling
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Status
 
-Approved
+Locked
 
 ---
 

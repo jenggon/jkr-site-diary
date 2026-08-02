@@ -1,5 +1,8 @@
 # G-005: Activity
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 An Activity is the smallest executable work performed on site under a Task.

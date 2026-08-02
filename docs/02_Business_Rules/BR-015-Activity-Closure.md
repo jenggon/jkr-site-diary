@@ -1,6 +1,9 @@
 # BR-015: Activity Closure
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 Priority: High
 

@@ -1,5 +1,8 @@
 # UI-202 - Stack
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-202 |
 |-------------|---------|
 | Title | Stack |

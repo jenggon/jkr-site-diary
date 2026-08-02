@@ -1,5 +1,8 @@
 # UI-700 - Data Display Architecture
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-700 |
 |-------------|---------|
 | Title | Data Display Architecture |

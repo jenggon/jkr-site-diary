@@ -1,5 +1,8 @@
 # UI-414 - Navigation Drawer
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-414 |
 |-------------|---------|
 | Title | Navigation Drawer |

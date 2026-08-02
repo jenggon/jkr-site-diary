@@ -1,5 +1,8 @@
 # UI-199A - Component Development Guide
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-199A |
 |-------------|----------|
 | Title | Component Development Guide |

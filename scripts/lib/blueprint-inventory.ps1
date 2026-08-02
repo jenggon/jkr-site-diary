@@ -90,13 +90,21 @@ function Get-BlueprintInventoryMetadata {
     $knownKeys = @('Project', 'Repository Version', 'Version', 'Status', 'Authority', 'Date', 'Owner', 'Priority', 'Decision Type')
     $metadata = [System.Collections.Generic.List[object]]::new()
 
-    for ($index = 0; $index -lt $Lines.Count; $index++) {
+    $metadataEndIndex = $Lines.Count
+    for ($separatorIndex = 0; $separatorIndex -lt $Lines.Count; $separatorIndex++) {
+        if ($Lines[$separatorIndex].Trim() -match '^---+$') {
+            $metadataEndIndex = $separatorIndex
+            break
+        }
+    }
+
+    for ($index = 0; $index -lt $metadataEndIndex; $index++) {
         $line = $Lines[$index].Trim()
         $inlineMatch = [regex]::Match($line, '^(?:\*\*)?(?<Key>Project|Repository Version|Version|Status|Authority|Date|Owner|Priority|Decision Type)(?:\*\*)?\s*:\s*(?<Value>.+?)\s*$')
         if ($inlineMatch.Success) {
             $metadata.Add([pscustomobject]@{
                     Key    = $inlineMatch.Groups['Key'].Value
-                    Value  = $inlineMatch.Groups['Value'].Value.Trim()
+                    Value  = $inlineMatch.Groups['Value'].Value.Trim('*', ' ')
                     Line   = $index + 1
                     Format = 'Inline'
                 })
@@ -110,7 +118,7 @@ function Get-BlueprintInventoryMetadata {
         }
 
         $key = if ($headingMatch.Success) { $headingMatch.Groups['Key'].Value } else { $line }
-        for ($valueIndex = $index + 1; $valueIndex -lt $Lines.Count; $valueIndex++) {
+        for ($valueIndex = $index + 1; $valueIndex -lt $metadataEndIndex; $valueIndex++) {
             $value = $Lines[$valueIndex].Trim()
             if ([string]::IsNullOrWhiteSpace($value) -or $value -match '^---+$') {
                 continue
@@ -118,6 +126,16 @@ function Get-BlueprintInventoryMetadata {
 
             if ($value -match '^#') {
                 break
+            }
+
+            $valueInlineMatch = [regex]::Match($value, '^(?:\*\*)?(?<Key>Project|Repository Version|Version|Status|Authority|Date|Owner|Priority|Decision Type)(?:\*\*)?\s*:\s*(?<Value>.+?)\s*$')
+            if ($valueInlineMatch.Success) {
+                if ($valueInlineMatch.Groups['Key'].Value -ieq $key) {
+                    $value = $valueInlineMatch.Groups['Value'].Value.Trim('*', ' ')
+                }
+                else {
+                    break
+                }
             }
 
             $metadata.Add([pscustomobject]@{

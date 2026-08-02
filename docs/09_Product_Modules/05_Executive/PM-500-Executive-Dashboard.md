@@ -1,8 +1,11 @@
 # PM-500 — Executive Dashboard
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

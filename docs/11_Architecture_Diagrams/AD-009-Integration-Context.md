@@ -1,6 +1,9 @@
 # AD-009: Integration Context
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 ## Purpose
 

@@ -1,5 +1,8 @@
 # UI-213 - Badge
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-213 |
 |-------------|---------|
 | Title | Badge |

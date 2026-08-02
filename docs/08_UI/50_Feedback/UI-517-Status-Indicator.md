@@ -1,5 +1,8 @@
 # UI-517 - Status Indicator
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-517 |
 |-------------|---------|
 | Title | Status Indicator |

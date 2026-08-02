@@ -1,5 +1,8 @@
 # UI-214 - Chip
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-214 |
 |-------------|---------|
 | Title | Chip |

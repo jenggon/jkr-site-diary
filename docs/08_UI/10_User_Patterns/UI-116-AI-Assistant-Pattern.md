@@ -1,5 +1,8 @@
 # UI-116 - AI Assistant Pattern
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-116 |
 |-------------|---------|
 | Title | AI Assistant Pattern |

@@ -1,6 +1,9 @@
 # AD-005: Operational Flow
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 ## Purpose
 

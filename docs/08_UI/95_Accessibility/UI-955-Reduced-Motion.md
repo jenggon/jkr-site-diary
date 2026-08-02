@@ -1,5 +1,8 @@
 # UI-955 - Reduced Motion
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-955 |
 |-------------|---------|
 | Title | Reduced Motion |

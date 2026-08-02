@@ -1,8 +1,11 @@
 # PM-201 — Photo Documentation
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

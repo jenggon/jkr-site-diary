@@ -1,5 +1,8 @@
 # UI-915 - Gesture Navigation
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-915 |
 |-------------|---------|
 | Title | Gesture Navigation |

@@ -1,5 +1,8 @@
 # UI-225 - Empty State
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-225 |
 |-------------|---------|
 | Title | Empty State |

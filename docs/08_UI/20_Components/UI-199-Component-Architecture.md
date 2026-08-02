@@ -1,5 +1,8 @@
 # UI-199 - Component Architecture
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-199 |
 |-------------|---------|
 | Title | Component Architecture |

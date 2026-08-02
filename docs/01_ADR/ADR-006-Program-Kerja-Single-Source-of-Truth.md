@@ -1,6 +1,9 @@
 # ADR-006: Program Kerja as the Single Source of Truth
 
-**Status:** Accepted
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+**Status:** Locked
 
 **Date:** 2026-07-22
 

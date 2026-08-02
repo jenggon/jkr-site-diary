@@ -1,5 +1,8 @@
 # UI-917 - Mobile Camera Flow
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-917 |
 |-------------|---------|
 | Title | Mobile Camera Flow |

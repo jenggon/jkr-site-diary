@@ -1,5 +1,8 @@
 # UI-520 - Confirmation Message
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-520 |
 |-------------|---------|
 | Title | Confirmation Message |

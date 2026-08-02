@@ -1,5 +1,8 @@
 # UI-199C - Extended Component Specification Template
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-199C |
 |-------------|---------|
 | Title | Extended Component Specification Template |

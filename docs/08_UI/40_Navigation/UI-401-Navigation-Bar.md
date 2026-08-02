@@ -1,5 +1,8 @@
 # UI-401 - Navigation Bar
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-401 |
 |-------------|---------|
 | Title | Navigation Bar |

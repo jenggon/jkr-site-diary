@@ -1,5 +1,8 @@
 # UI-004 - Design System
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-004 |
 |-------------|---------|
 | Title | Design System |

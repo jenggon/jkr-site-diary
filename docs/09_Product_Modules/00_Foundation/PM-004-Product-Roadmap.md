@@ -1,8 +1,11 @@
 # PM-004 — Product Roadmap
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

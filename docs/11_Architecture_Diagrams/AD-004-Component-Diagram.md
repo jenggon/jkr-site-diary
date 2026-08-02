@@ -1,5 +1,8 @@
 # AD-004 — Component Diagram
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 ```mermaid
 flowchart TD
 

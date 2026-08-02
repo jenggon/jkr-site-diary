@@ -1,5 +1,8 @@
 # UI-816 - Detail Layout
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-816 |
 |-------------|---------|
 | Title | Detail Layout |

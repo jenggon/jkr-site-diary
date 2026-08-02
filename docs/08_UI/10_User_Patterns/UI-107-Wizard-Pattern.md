@@ -1,5 +1,8 @@
 # UI-107 - Wizard Pattern
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Purpose
 
 Defines guided multi-step workflows.

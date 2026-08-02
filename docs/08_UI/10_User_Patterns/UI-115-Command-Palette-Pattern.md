@@ -1,5 +1,8 @@
 # UI-115 - Command Palette Pattern
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-115 |
 |-------------|---------|
 | Title | Command Palette Pattern |

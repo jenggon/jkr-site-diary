@@ -1,5 +1,8 @@
 # UI-918 - Offline Sync Indicator
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-918 |
 |-------------|---------|
 | Title | Offline Sync Indicator |

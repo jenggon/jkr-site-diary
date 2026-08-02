@@ -1,8 +1,11 @@
 # PM-206 — Offline Synchronisation
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Future Capability
+Draft
 
 ---
 

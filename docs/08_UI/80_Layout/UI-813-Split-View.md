@@ -1,5 +1,8 @@
 # UI-813 - Split View
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-813 |
 |-------------|---------|
 | Title | Split View |

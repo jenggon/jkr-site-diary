@@ -1,5 +1,8 @@
 # UI-352 - Rich Text Editor
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-352 |
 |-------------|---------|
 | Title | Rich Text Editor |

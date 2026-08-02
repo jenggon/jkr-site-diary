@@ -1,5 +1,8 @@
 # UI-916 - Safe Area Layout
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-916 |
 |-------------|---------|
 | Title | Safe Area Layout |

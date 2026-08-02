@@ -1,5 +1,8 @@
 # UI-818 - Inspector Panel
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-818 |
 |-------------|---------|
 | Title | Inspector Panel |

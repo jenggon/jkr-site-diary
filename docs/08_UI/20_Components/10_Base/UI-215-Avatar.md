@@ -1,5 +1,8 @@
 # UI-215 - Avatar
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-215 |
 |-------------|---------|
 | Title | Avatar |

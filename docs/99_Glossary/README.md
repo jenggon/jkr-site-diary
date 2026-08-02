@@ -1,5 +1,8 @@
 # JKR Site Diary Glossary
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Purpose
 
 This glossary defines the official terminology used throughout the JKR Site Diary Platform.

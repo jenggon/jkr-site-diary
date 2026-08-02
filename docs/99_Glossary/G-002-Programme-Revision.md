@@ -1,5 +1,8 @@
 # G-002: Programme Revision
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 A Programme Revision represents a formally approved planning baseline for a project.

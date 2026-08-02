@@ -1,5 +1,8 @@
 # UI-221 - Statistic
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-221 |
 |-------------|---------|
 | Title | Statistic |

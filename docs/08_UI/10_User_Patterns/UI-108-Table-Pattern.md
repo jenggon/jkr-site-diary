@@ -1,5 +1,8 @@
 # UI-108 - Table Pattern
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Purpose
 
 Defines reusable data table behaviour.

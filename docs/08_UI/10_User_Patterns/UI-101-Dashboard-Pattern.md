@@ -1,5 +1,8 @@
 # UI-101 - Dashboard Pattern
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Purpose:
 Defines reusable dashboard behaviour.
 

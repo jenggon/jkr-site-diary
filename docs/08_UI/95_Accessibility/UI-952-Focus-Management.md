@@ -1,5 +1,8 @@
 # UI-952 - Focus Management
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 | Document ID | UI-952 |
 |-------------|---------|
 | Title | Focus Management |
