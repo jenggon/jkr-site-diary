@@ -84,9 +84,9 @@ No additional lifecycle state may be introduced without an Architecture Decision
 
 ---
 
-# 8. Revision Philosophy
+# 8. Baseline Philosophy
 
-Every approved Programme Revision starts a new operational cycle.
+Every approved Programme baseline starts a new operational cycle.
 
 Historical operational records remain immutable.
 
@@ -94,17 +94,17 @@ Historical operational records remain immutable.
 
 # 9. Migration Policy
 
-Migration between Programme Revisions is prohibited.
+Migration between Programme baselines is prohibited.
 
-Operational history shall never be migrated into a new revision.
+Operational history shall never be migrated into a new baseline.
 
 ---
 
 # 10. Merge Policy
 
-Programme Revisions shall never be merged.
+Programme baselines shall never be merged.
 
-Conflict resolution between revisions is outside the architecture scope.
+Conflict resolution between baselines is outside the architecture scope.
 
 ---
 
@@ -178,3 +178,5 @@ Implementation shall comply with approved HQ decisions.
 This Constitution becomes effective immediately upon approval by the Project Owner.
 
 Subsequent architecture documents shall comply with this Constitution.
+
+LOCKED

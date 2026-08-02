@@ -109,3 +109,5 @@ This decision affects:
 
 - PROJECT-CONSTITUTION.md
 - ADR-002 Program Kerja Boundary
+
+LOCKED
