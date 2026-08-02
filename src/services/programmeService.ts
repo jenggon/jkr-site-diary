@@ -4,20 +4,55 @@ import { programmeRepository } from '@/repositories/programmeRepository';
 /**
  * Programme Engine Business Service
  *
- * Specs: DB-011, DB-012
+ * Specs: DB-011, DB-012, PE-001
  * ADRs: ADR-004, ADR-009, ADR-010
  * Business Rules: BR-001, BR-002
  *
- * Responsible for Programme Engine business orchestration, lifecycle status assignment,
+ * Responsible for Programme Engine business operations, lifecycle status assignment,
  * and audit field population. Operates strictly through programmeRepository and performs
  * no direct database or infrastructure operations.
  */
 
 /**
+ * Create a new Programme.
+ * Delegates persistence to programmeRepository.
+ *
+ * Specs: DB-011, PE-001
+ */
+export async function createProgramme(
+  data: Parameters<typeof programmeRepository.createProgramme>[0]
+): Promise<Programme> {
+  return programmeRepository.createProgramme(data);
+}
+
+/**
+ * Retrieve a Programme by its ID.
+ * Delegates persistence to programmeRepository.
+ *
+ * Specs: DB-011, PE-001
+ */
+export async function getProgrammeById(programmeId: string): Promise<Programme | null> {
+  return programmeRepository.getProgrammeById(programmeId);
+}
+
+/**
+ * Update an existing Programme.
+ * Delegates persistence to programmeRepository.
+ *
+ * Specs: DB-011, PE-001
+ */
+export async function updateProgramme(
+  programmeId: string,
+  updates: Partial<Programme>
+): Promise<Programme> {
+  return programmeRepository.updateProgramme(programmeId, updates);
+}
+
+/**
  * Archive an existing Programme.
  * Populates status as Archived and records archive audit fields.
  *
- * Specs: DB-011, BR-001
+ * Specs: DB-011, BR-001, PE-001
  */
 export async function archiveProgramme(
   programmeId: string,
@@ -84,6 +119,9 @@ export async function archiveProgrammeRevision(
 }
 
 export const programmeService = {
+  createProgramme,
+  getProgrammeById,
+  updateProgramme,
   archiveProgramme,
   approveProgrammeRevision,
   archiveProgrammeRevision,
