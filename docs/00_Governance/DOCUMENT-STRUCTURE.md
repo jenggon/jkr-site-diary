@@ -32,7 +32,8 @@ docs/
 ├──06_Database
 ├──07_API
 ├──08_UI
-├──09_HQ
+├──09_Product_Modules
+├──10_Development
 ├──10_UX
 ├──11_Architecture_Diagrams
 ├──12_Sequence_Diagrams
@@ -40,6 +41,7 @@ docs/
 ├──14_Decision_Tables
 ├──15_Data_Dictionary
 ├──16_Test_Scenarios
+├──18_Engineering
 └──99_Glossary
 ```
 
@@ -136,16 +138,18 @@ Examples:
 
 ---
 
-## 09_HQ
+## 09_Product_Modules
 
-HQ governance documents.
+Product module documentation.
 
 Examples:
 
-- Compliance
-- Reviews
-- Policies
-- Approval Records
+- Core Operations
+- Field Operations
+- Governance
+- Administration
+- Executive
+- AI
 
 ---
 
@@ -201,6 +205,12 @@ Official definition of all database fields.
 ## 16_Test_Scenarios
 
 Functional, integration and acceptance test scenarios.
+
+---
+
+## 18_Engineering
+
+Engineering standards and implementation governance.
 
 ---
 
