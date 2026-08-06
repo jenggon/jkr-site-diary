@@ -36,7 +36,7 @@ export function loadTasks(): ParsedTask[] {
 
   const tasks = data.Project.Tasks.Task;
 
-  return tasks.map((task: any) => ({
+  return tasks.map((task: Record<string, unknown>) => ({
     uid: String(task.UID ?? ""),
     name: task.Name ?? "",
 

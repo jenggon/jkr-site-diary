@@ -57,7 +57,7 @@ export default function SearchPicker({
     });
   }, [items, query]);
 
-  const selectedItem = useMemo(() => {
+  const _selectedItem = useMemo(() => {
 
     return items.find(
       (x) => x.outline_number === value
