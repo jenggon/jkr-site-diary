@@ -1,9 +1,21 @@
+import { IClock } from './IClock';
+
 export function nowIso(): string {
   return new Date().toISOString();
 }
 
 export function nowUtcDate(): Date {
   return new Date();
+}
+
+export class SystemClock implements IClock {
+  public nowIso(): string {
+    return nowIso();
+  }
+
+  public nowUtcDate(): Date {
+    return nowUtcDate();
+  }
 }
 
 export function toIso8601(input: Date | string | number): string {

@@ -14,6 +14,6 @@ export interface IProgrammeRepository {
   create(programme: Programme): Promise<Result<Programme, BaseAppError>>;
   update(programme: Programme): Promise<Result<Programme, BaseAppError>>;
   archive(id: string, actorId: string): Promise<Result<Programme, BaseAppError>>;
-  setCurrentRevision?(programmeId: string, revisionId: string): Promise<Result<void, BaseAppError>>;
-  setLockStatus?(programmeId: string, isLocked: boolean): Promise<Result<void, BaseAppError>>;
+  setCurrentRevision(programmeId: string, revisionId: string): Promise<Result<void, BaseAppError>>;
+  setLockStatus(programmeId: string, isLocked: boolean): Promise<Result<void, BaseAppError>>;
 }
