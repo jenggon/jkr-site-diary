@@ -1,0 +1,34 @@
+export type ActivityStatus = 'Planned' | 'InProgress' | 'Completed' | 'Suspended' | 'Cancelled';
+
+export type TradeSource = 'MSPResource' | 'KnowledgeEngine' | 'TradeLibrary';
+
+export interface TradeSelection {
+  readonly tradeId: string;
+  readonly tradeCode: string;
+  readonly tradeName: string;
+  readonly source: TradeSource;
+}
+
+export interface ActivityLocation {
+  readonly buildingId?: string | undefined;
+  readonly floorLevel?: string | undefined;
+  readonly zone?: string | undefined;
+  readonly gridReference?: string | undefined;
+}
+
+export interface OpenActivity {
+  readonly activityId: string;
+  readonly siteDiaryId: string;
+  readonly programmeId: string;
+  readonly taskId?: string | undefined;
+  readonly activityName: string;
+  readonly location?: ActivityLocation | undefined;
+  readonly tradeInfo?: TradeSelection | undefined;
+  readonly workforceCount?: number | undefined;
+  readonly status: ActivityStatus;
+  readonly isLocked: boolean;
+  readonly createdAt: string;
+  readonly createdBy: string;
+  readonly updatedAt?: string | undefined;
+  readonly updatedBy?: string | undefined;
+}
