@@ -50,7 +50,6 @@
     "src/app/api/**/*",
     "src/services/mspParser.ts",
     "src/services/programmeService.ts",
-    "src/repositories/programmeRepository.ts",
     "scripts/**/*"
   ]
 }
