@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { programmeService } from '@/services/programmeService';
+import { createProgrammeService } from '@/composition/programmeComposition';
+import { isSuccess } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ programmeId: string }>;
@@ -7,7 +8,7 @@ type RouteParams = {
 
 /**
  * POST /api/programme/[programmeId]/archive
- * Archives a Programme.
+ * Archives a Programme via Composition Root.
  */
 export async function POST(request: Request, context: RouteParams) {
   try {
@@ -38,13 +39,19 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    const archivedProgramme = await programmeService.archiveProgramme(programmeId, archivedBy);
+    const service = createProgrammeService();
+    const result = await service.archiveProgramme(programmeId, archivedBy);
 
-    return NextResponse.json({ data: archivedProgramme }, { status: 200 });
-  } catch (error: any) {
+    if (isSuccess(result)) {
+      return NextResponse.json({ data: result.value }, { status: 200 });
+    }
+
     return NextResponse.json(
-      { error: error?.message || 'Failed to archive programme' },
-      { status: 500 }
+      { error: result.error.message },
+      { status: result.error.errorCode === 'PROGRAMME_NOT_FOUND' ? 404 : 400 }
     );
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Failed to archive programme';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

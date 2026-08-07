@@ -278,12 +278,4 @@ export class ProgrammeService implements IProgrammeService {
   }
 }
 
-// Prototype API Route Compatibility Export
-export const programmeService = {
-  createProgramme: async () => { throw new Error('Use ProgrammeService with DI'); },
-  getProgrammeById: async () => null,
-  updateProgramme: async () => { throw new Error('Use ProgrammeService with DI'); },
-  archiveProgramme: async () => { throw new Error('Use ProgrammeService with DI'); },
-  approveProgrammeRevision: async () => { throw new Error('Use ProgrammeService with DI'); },
-  archiveProgrammeRevision: async () => { throw new Error('Use ProgrammeService with DI'); },
-};
+

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { programmeService } from '@/services/programmeService';
+import { createProgrammeService } from '@/composition/programmeComposition';
+import { isSuccess } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ revisionId: string }>;
@@ -7,7 +8,7 @@ type RouteParams = {
 
 /**
  * POST /api/programme-revision/[revisionId]/approve
- * Approves a Programme Revision.
+ * Approves a Programme Revision via Composition Root.
  */
 export async function POST(request: Request, context: RouteParams) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    const { approvedBy, approvalDate, effectiveDate } = body;
+    const { approvedBy } = body;
 
     if (!approvedBy || typeof approvedBy !== 'string') {
       return NextResponse.json(
@@ -38,32 +39,19 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    if (!approvalDate || typeof approvalDate !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: approvalDate' },
-        { status: 400 }
-      );
+    const service = createProgrammeService();
+    const result = await service.approveRevision(revisionId, approvedBy);
+
+    if (isSuccess(result)) {
+      return NextResponse.json({ data: result.value }, { status: 200 });
     }
 
-    if (!effectiveDate || typeof effectiveDate !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: effectiveDate' },
-        { status: 400 }
-      );
-    }
-
-    const approvedRevision = await programmeService.approveProgrammeRevision(
-      revisionId,
-      approvedBy,
-      approvalDate,
-      effectiveDate
-    );
-
-    return NextResponse.json({ data: approvedRevision }, { status: 200 });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Failed to approve programme revision' },
-      { status: 500 }
+      { error: result.error.message },
+      { status: result.error.errorCode === 'PROGRAMME_NOT_FOUND' ? 404 : 400 }
     );
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Failed to approve programme revision';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

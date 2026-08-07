@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { programmeService } from '@/services/programmeService';
+import { createProgrammeService } from '@/composition/programmeComposition';
+import { isSuccess } from '@/lib/result';
 
 /**
  * POST /api/programme
- * Creates a new Programme record.
+ * Creates a new Programme record via Composition Root.
  */
 export async function POST(request: Request) {
   try {
@@ -39,12 +40,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const programme = await programmeService.createProgramme(body);
-    return NextResponse.json({ data: programme }, { status: 201 });
-  } catch (error: any) {
+    const service = createProgrammeService();
+    const result = await service.createProgramme({
+      programmeCode: programme_code,
+      programmeName: programme_name,
+      employerName: body.employer_name,
+      contractorName: body.contractor_name,
+      supervisingOfficer: body.supervising_officer,
+      contractStartDate: body.contract_start_date,
+      contractCompletionDate: body.contract_completion_date,
+      defectLiabilityEnd: body.defect_liability_end,
+      createdBy: created_by,
+    });
+
+    if (isSuccess(result)) {
+      return NextResponse.json({ data: result.value }, { status: 201 });
+    }
+
     return NextResponse.json(
-      { error: error?.message || 'Failed to create programme' },
-      { status: 500 }
+      { error: result.error.message },
+      { status: result.error.errorCode === 'PROGRAMME_ALREADY_EXISTS' ? 409 : 400 }
     );
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Failed to create programme';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

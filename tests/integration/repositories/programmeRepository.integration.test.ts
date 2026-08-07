@@ -4,16 +4,15 @@ import { ProgrammeRowMapper } from '@/repositories/mappers/ProgrammeRowMapper';
 import { IDatabaseAdapter } from '@/repositories/adapters/IDatabaseAdapter';
 import { withTransaction } from '@/lib/db';
 import { isSuccess, isFailure, Success, Failure } from '@/lib/result';
-import { ProgrammeAlreadyExistsError, ProgrammeNotFoundError } from '@/errors/programmeErrors';
 import { Programme } from '@/types/programme';
+import { ProgrammeAlreadyExistsError, ProgrammeNotFoundError } from '@/errors/programmeErrors';
 
 describe('ProgrammeRepository Integration Scenarios', () => {
   const mapper = new ProgrammeRowMapper();
-
   const mockDbState: Map<string, Record<string, unknown>> = new Map();
 
   const mockAdapter: IDatabaseAdapter = {
-    selectOne: async <T>(table: string, filter: Record<string, unknown>) => {
+    selectOne: async <T>(_table: string, filter: Record<string, unknown>) => {
       for (const item of mockDbState.values()) {
         let match = true;
         for (const [k, v] of Object.entries(filter)) {
@@ -24,7 +23,7 @@ describe('ProgrammeRepository Integration Scenarios', () => {
       return Success(null);
     },
 
-    selectMany: async <T>(table: string, filter?: Record<string, unknown>) => {
+    selectMany: async <T>(_table: string, filter?: Record<string, unknown>) => {
       const results: T[] = [];
       for (const item of mockDbState.values()) {
         let match = true;
@@ -38,7 +37,7 @@ describe('ProgrammeRepository Integration Scenarios', () => {
       return Success(results);
     },
 
-    insert: async <T>(table: string, row: Record<string, unknown>) => {
+    insert: async <T>(_table: string, row: Record<string, unknown>) => {
       const code = row.programme_code as string;
       for (const existing of mockDbState.values()) {
         if (existing.programme_code === code) {
@@ -51,7 +50,7 @@ describe('ProgrammeRepository Integration Scenarios', () => {
       return Success(stored as T);
     },
 
-    update: async <T>(table: string, filter: Record<string, unknown>, updates: Record<string, unknown>) => {
+    update: async <T>(_table: string, filter: Record<string, unknown>, updates: Record<string, unknown>) => {
       const id = filter.programme_id as string;
       const existing = mockDbState.get(id);
       if (!existing) {
@@ -62,7 +61,7 @@ describe('ProgrammeRepository Integration Scenarios', () => {
       return Success(updated as T);
     },
 
-    exists: async (table: string, filter: Record<string, unknown>) => {
+    exists: async (_table: string, filter: Record<string, unknown>) => {
       const code = filter.programme_code as string;
       for (const item of mockDbState.values()) {
         if (item.programme_code === code) return Success(true);

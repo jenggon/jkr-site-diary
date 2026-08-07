@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { programmeService } from '@/services/programmeService';
+import { createProgrammeService } from '@/composition/programmeComposition';
+import { isSuccess } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ programmeId: string }>;
@@ -7,9 +8,9 @@ type RouteParams = {
 
 /**
  * GET /api/programme/[programmeId]
- * Retrieves a Programme by ID.
+ * Retrieves a Programme by ID via Composition Root.
  */
-export async function GET(request: Request, context: RouteParams) {
+export async function GET(_request: Request, context: RouteParams) {
   try {
     const { programmeId } = await context.params;
 
@@ -20,27 +21,26 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const programme = await programmeService.getProgrammeById(programmeId);
+    const service = createProgrammeService();
+    const result = await service.getProgramme(programmeId);
 
-    if (!programme) {
-      return NextResponse.json(
-        { error: 'Programme not found' },
-        { status: 404 }
-      );
+    if (isSuccess(result)) {
+      if (!result.value) {
+        return NextResponse.json({ error: 'Programme not found' }, { status: 404 });
+      }
+      return NextResponse.json({ data: result.value }, { status: 200 });
     }
 
-    return NextResponse.json({ data: programme }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve programme' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Failed to retrieve programme';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
 /**
  * PATCH /api/programme/[programmeId]
- * Updates an existing Programme.
+ * Updates an existing Programme via Composition Root.
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
@@ -62,13 +62,29 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const updatedProgramme = await programmeService.updateProgramme(programmeId, body);
+    const service = createProgrammeService();
+    const result = await service.updateProgramme({
+      programmeId,
+      programmeName: body.programme_name ?? body.programmeName,
+      employerName: body.employer_name ?? body.employerName,
+      contractorName: body.contractor_name ?? body.contractorName,
+      supervisingOfficer: body.supervising_officer ?? body.supervisingOfficer,
+      contractStartDate: body.contract_start_date ?? body.contractStartDate,
+      contractCompletionDate: body.contract_completion_date ?? body.contractCompletionDate,
+      defectLiabilityEnd: body.defect_liability_end ?? body.defectLiabilityEnd,
+      updatedBy: body.updated_by ?? body.updatedBy ?? 'system',
+    });
 
-    return NextResponse.json({ data: updatedProgramme }, { status: 200 });
-  } catch (error: any) {
+    if (isSuccess(result)) {
+      return NextResponse.json({ data: result.value }, { status: 200 });
+    }
+
     return NextResponse.json(
-      { error: error?.message || 'Failed to update programme' },
-      { status: 500 }
+      { error: result.error.message },
+      { status: result.error.errorCode === 'PROGRAMME_NOT_FOUND' ? 404 : 400 }
     );
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Failed to update programme';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
