@@ -48,6 +48,7 @@
     "out",
     "src/app/page.tsx",
     "src/app/api/**/*",
+    "src/services/mspParser.ts",
     "scripts/**/*"
   ]
 }
