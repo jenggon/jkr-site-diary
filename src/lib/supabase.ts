@@ -1,12 +1,61 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { env } from './env';
+import { InfrastructureError } from './errors';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+let browserClientInstance: SupabaseClient | null = null;
+let serverClientInstance: SupabaseClient | null = null;
+let serviceRoleClientInstance: SupabaseClient | null = null;
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  console.warn(
-    'Supabase environment variables are missing. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your .env.local file.'
-  );
+export function getSupabaseBrowserClient(): SupabaseClient {
+  if (!browserClientInstance) {
+    browserClientInstance = createClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
+  }
+  return browserClientInstance;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export function getSupabaseServerClient(): SupabaseClient {
+  if (!serverClientInstance) {
+    serverClientInstance = createClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
+  }
+  return serverClientInstance;
+}
+
+export function getSupabaseServiceRoleClient(): SupabaseClient {
+  if (typeof window !== 'undefined') {
+    throw new InfrastructureError(
+      'Service Role Supabase client cannot be instantiated in a browser environment'
+    );
+  }
+
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new InfrastructureError(
+      'SUPABASE_SERVICE_ROLE_KEY environment variable is missing'
+    );
+  }
+
+  if (!serviceRoleClientInstance) {
+    serviceRoleClientInstance = createClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
+  }
+  return serviceRoleClientInstance;
+}
+
+export const supabase: SupabaseClient = getSupabaseBrowserClient();
