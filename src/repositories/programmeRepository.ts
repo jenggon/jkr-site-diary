@@ -1,194 +1,116 @@
-import { supabase } from '@/lib/supabase';
-import { Programme, ProgrammeRevision } from '@/types/programme';
+import { Result, Success, Failure, isFailure } from '@/lib/result';
+import { BaseAppError } from '@/lib/errors';
+import { nowIso } from '@/lib/clock';
+import { Programme, ProgrammeStatus } from '@/types/programme';
+import { IProgrammeRepository } from './IProgrammeRepository';
+import { IDatabaseAdapter, IDatabaseAdapterOptions } from './adapters/IDatabaseAdapter';
+import { SupabaseDatabaseAdapter } from './adapters/SupabaseDatabaseAdapter';
+import { IProgrammeRowMapper } from './mappers/IProgrammeRowMapper';
+import { ProgrammeRowMapper } from './mappers/ProgrammeRowMapper';
+import { ProgrammeRow } from './types/programmeRow';
 
-/**
- * Programme Engine Repository
- *
- * Specs: DB-011 (programme), DB-012 (programme_revision)
- * Bounded Context: Zon Penjadualan / Programme Engine
- * Primary Owner: Programme Engine (PE)
- *
- * Provides low-level persistence operations (create, read, update) for Programme and ProgrammeRevision entities.
- * Contains no business logic, lifecycle transitions, or status/audit assignments.
- */
+export class ProgrammeRepository implements IProgrammeRepository {
+  private readonly adapter: IDatabaseAdapter;
+  private readonly mapper: IProgrammeRowMapper;
 
-// ============================================================
-// Programme Persistence Operations
-// ============================================================
-
-/**
- * Create a new Programme record in database.
- * Spec: DB-011
- */
-export async function createProgramme(
-  data: Omit<Programme, 'programme_id' | 'created_at'> & {
-    programme_id?: string;
-    created_at?: string;
-  }
-): Promise<Programme> {
-  const { data: result, error } = await supabase
-    .from('programme')
-    .insert(data)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to create programme: ${error.message}`);
+  constructor(
+    adapter: IDatabaseAdapter = new SupabaseDatabaseAdapter(),
+    mapper: IProgrammeRowMapper = new ProgrammeRowMapper()
+  ) {
+    this.adapter = adapter;
+    this.mapper = mapper;
   }
 
-  return result as Programme;
+  public async findById(id: string): Promise<Result<Programme | null, BaseAppError>> {
+    const result = await this.adapter.selectOne<ProgrammeRow>('programme', { programme_id: id });
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(result.value ? this.mapper.toDomain(result.value) : null);
+  }
+
+  public async findByCode(code: string): Promise<Result<Programme | null, BaseAppError>> {
+    const result = await this.adapter.selectOne<ProgrammeRow>('programme', { programme_code: code });
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(result.value ? this.mapper.toDomain(result.value) : null);
+  }
+
+  public async findAll(params?: {
+    status?: ProgrammeStatus | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
+  }): Promise<Result<Programme[], BaseAppError>> {
+    const filter = params?.status !== undefined ? { status: params.status } : undefined;
+    const options: IDatabaseAdapterOptions = {
+      orderBy: 'created_at',
+      ascending: false,
+      ...(params?.limit !== undefined ? { limit: params.limit } : {}),
+      ...(params?.offset !== undefined ? { offset: params.offset } : {}),
+    };
+
+    const result = await this.adapter.selectMany<ProgrammeRow>('programme', filter, options);
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(result.value.map((row) => this.mapper.toDomain(row)));
+  }
+
+  public async existsByCode(code: string): Promise<Result<boolean, BaseAppError>> {
+    return this.adapter.exists('programme', { programme_code: code });
+  }
+
+  public async create(programme: Programme): Promise<Result<Programme, BaseAppError>> {
+    const row = this.mapper.toRow(programme);
+    const result = await this.adapter.insert<ProgrammeRow>('programme', row as unknown as Record<string, unknown>);
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(this.mapper.toDomain(result.value));
+  }
+
+  public async update(programme: Programme): Promise<Result<Programme, BaseAppError>> {
+    const row = this.mapper.toRow(programme);
+    const result = await this.adapter.update<ProgrammeRow>(
+      'programme',
+      { programme_id: programme.programmeId },
+      row as unknown as Record<string, unknown>
+    );
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(this.mapper.toDomain(result.value));
+  }
+
+  public async archive(id: string, actorId: string): Promise<Result<Programme, BaseAppError>> {
+    const updates = {
+      status: 'Archived',
+      archived_at: nowIso(),
+      archived_by: actorId,
+    };
+    const result = await this.adapter.update<ProgrammeRow>('programme', { programme_id: id }, updates);
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(this.mapper.toDomain(result.value));
+  }
+
+  public async setCurrentRevision(programmeId: string, revisionId: string): Promise<Result<void, BaseAppError>> {
+    const updates = { current_revision_id: revisionId, updated_at: nowIso() };
+    const result = await this.adapter.update<ProgrammeRow>('programme', { programme_id: programmeId }, updates);
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(undefined);
+  }
+
+  public async setLockStatus(programmeId: string, isLocked: boolean): Promise<Result<void, BaseAppError>> {
+    const updates = { is_locked: isLocked, updated_at: nowIso() };
+    const result = await this.adapter.update<ProgrammeRow>('programme', { programme_id: programmeId }, updates);
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(undefined);
+  }
 }
-
-/**
- * Retrieve a Programme by its primary key (programme_id).
- * Spec: DB-011
- */
-export async function getProgrammeById(programmeId: string): Promise<Programme | null> {
-  const { data, error } = await supabase
-    .from('programme')
-    .select('*')
-    .eq('programme_id', programmeId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Failed to get programme by ID: ${error.message}`);
-  }
-
-  return data as Programme | null;
-}
-
-/**
- * Retrieve a Programme by its unique business code (programme_code).
- * Spec: DB-011
- */
-export async function getProgrammeByCode(programmeCode: string): Promise<Programme | null> {
-  const { data, error } = await supabase
-    .from('programme')
-    .select('*')
-    .eq('programme_code', programmeCode)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Failed to get programme by code: ${error.message}`);
-  }
-
-  return data as Programme | null;
-}
-
-/**
- * Update an existing Programme record.
- * Spec: DB-011
- */
-export async function updateProgramme(
-  programmeId: string,
-  updates: Partial<Programme>
-): Promise<Programme> {
-  const { data: result, error } = await supabase
-    .from('programme')
-    .update(updates)
-    .eq('programme_id', programmeId)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to update programme: ${error.message}`);
-  }
-
-  return result as Programme;
-}
-
-// ============================================================
-// Programme Revision Persistence Operations
-// ============================================================
-
-/**
- * Create a new ProgrammeRevision record in database.
- * Spec: DB-012
- */
-export async function createProgrammeRevision(
-  data: Omit<ProgrammeRevision, 'revision_id' | 'created_at'> & {
-    revision_id?: string;
-    created_at?: string;
-  }
-): Promise<ProgrammeRevision> {
-  const { data: result, error } = await supabase
-    .from('programme_revision')
-    .insert(data)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to create programme revision: ${error.message}`);
-  }
-
-  return result as ProgrammeRevision;
-}
-
-/**
- * Retrieve a ProgrammeRevision by its primary key (revision_id).
- * Spec: DB-012
- */
-export async function getProgrammeRevisionById(revisionId: string): Promise<ProgrammeRevision | null> {
-  const { data, error } = await supabase
-    .from('programme_revision')
-    .select('*')
-    .eq('revision_id', revisionId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Failed to get programme revision by ID: ${error.message}`);
-  }
-
-  return data as ProgrammeRevision | null;
-}
-
-/**
- * Retrieve all ProgrammeRevisions belonging to a Programme.
- * Spec: DB-012
- */
-export async function getProgrammeRevisions(programmeId: string): Promise<ProgrammeRevision[]> {
-  const { data, error } = await supabase
-    .from('programme_revision')
-    .select('*')
-    .eq('programme_id', programmeId)
-    .order('revision_no', { ascending: true });
-
-  if (error) {
-    throw new Error(`Failed to get programme revisions: ${error.message}`);
-  }
-
-  return (data || []) as ProgrammeRevision[];
-}
-
-/**
- * Update an existing ProgrammeRevision record.
- * Spec: DB-012
- */
-export async function updateProgrammeRevision(
-  revisionId: string,
-  updates: Partial<ProgrammeRevision>
-): Promise<ProgrammeRevision> {
-  const { data: result, error } = await supabase
-    .from('programme_revision')
-    .update(updates)
-    .eq('revision_id', revisionId)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to update programme revision: ${error.message}`);
-  }
-
-  return result as ProgrammeRevision;
-}
-
-export const programmeRepository = {
-  createProgramme,
-  getProgrammeById,
-  getProgrammeByCode,
-  updateProgramme,
-  createProgrammeRevision,
-  getProgrammeRevisionById,
-  getProgrammeRevisions,
-  updateProgrammeRevision,
-};
