@@ -1,15 +1,8 @@
 import { Result } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
+import { ActivityLogEntry } from '@/types/openActivity';
 
-export interface ActivityLogEntry {
-  readonly logId: string;
-  readonly activityId: string;
-  readonly siteDiaryId: string;
-  readonly eventType: 'NEW' | 'UPDATE';
-  readonly snapshotData: Record<string, unknown>;
-  readonly loggedAt: string;
-  readonly loggedBy: string;
-}
+export type { ActivityLogEntry };
 
 export interface IActivityLogRepository {
   appendLog(entry: ActivityLogEntry): Promise<Result<ActivityLogEntry, BaseAppError>>;

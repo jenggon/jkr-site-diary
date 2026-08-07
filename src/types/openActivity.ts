@@ -32,3 +32,13 @@ export interface OpenActivity {
   readonly updatedAt?: string | undefined;
   readonly updatedBy?: string | undefined;
 }
+
+export interface ActivityLogEntry {
+  readonly logId: string;
+  readonly activityId: string;
+  readonly siteDiaryId: string;
+  readonly eventType: 'NEW' | 'UPDATE';
+  readonly snapshotData: Record<string, unknown>;
+  readonly loggedAt: string;
+  readonly loggedBy: string;
+}
