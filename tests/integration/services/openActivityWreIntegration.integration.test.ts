@@ -1,10 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { OpenActivityService } from '@/services/OpenActivityService';
 import { ITreEngineService } from '@/services/ITreEngineService';
+import { IMaterialEngineService } from '@/services/IMaterialEngineService';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
 import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivityLogRepository';
 import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
+
+const mockMreNoOp: IMaterialEngineService = {
+  recommend: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+  resolveMaterialRecommendation: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+} as unknown as IMaterialEngineService;
+
 import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
 import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
@@ -64,6 +71,7 @@ describe('openActivityWreIntegration', () => {
       eventPublisher,
       treEngine: mockTreEngine,
       workforceEngine,
+      materialEngine: mockMreNoOp,
     });
 
     const result = await service.createActivity({
@@ -107,6 +115,7 @@ describe('openActivityWreIntegration', () => {
       eventPublisher: new NoopDomainEventPublisher(),
       treEngine: { resolveTradeRecommendation: async () => ({ success: true, value: { tradeId: 'x', tradeCode: 'x', tradeName: 'x', tradeCategory: 'x', resolutionSource: 'MSP_RESOURCE' } }) } as unknown as ITreEngineService,
       workforceEngine,
+      materialEngine: mockMreNoOp,
     });
 
     const result = await service.createActivity({

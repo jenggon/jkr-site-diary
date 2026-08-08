@@ -12,6 +12,7 @@ import { BaseAppError } from '@/lib/errors';
 import { OpenActivity } from '@/types/openActivity';
 import { TradeSelection as TreTradeSelection } from '@/types/tre';
 import { NoTradeRecommendationFoundError, TreEngineError } from '@/errors/treErrors';
+import { IMaterialEngineService } from '@/services/IMaterialEngineService';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 import { WorkforceResolution } from '@/types/wre';
 import { WreEngineError, NoWorkforceRecommendationFoundError } from '@/errors/wreErrors';
@@ -70,7 +71,12 @@ describe('OpenActivityService', () => {
     } satisfies TreTradeSelection)),
   };
 
-  const mockWreNoOp: IWorkforceEngineService = {
+  const mockMreNoOp: IMaterialEngineService = {
+  recommend: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+  resolveMaterialRecommendation: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+} as unknown as IMaterialEngineService;
+
+const mockWreNoOp: IWorkforceEngineService = {
     recommend: vi.fn(),
     resolveWorkforceRecommendation: vi.fn().mockResolvedValue(Success({
       recommendation: {
@@ -93,6 +99,7 @@ describe('OpenActivityService', () => {
     eventPublisher?: IDomainEventPublisher;
     treEngine?: ITreEngineService;
     workforceEngine?: IWorkforceEngineService;
+      materialEngine?: IMaterialEngineService;
     logger?: Logger;
   }) {
     const activityRepo: IOpenActivityRepository = {
@@ -119,6 +126,7 @@ describe('OpenActivityService', () => {
       eventPublisher: overrides?.eventPublisher ?? mockEventPublisher,
       treEngine: overrides?.treEngine ?? mockTreNoOp,
       workforceEngine: overrides?.workforceEngine ?? mockWreNoOp,
+      materialEngine: mockMreNoOp,
     });
   }
 
@@ -332,6 +340,7 @@ describe('OpenActivityService', () => {
       eventPublisher: mockEventPublisher,
       treEngine: mockTre,
       workforceEngine: mockWreNoOp,
+      materialEngine: mockMreNoOp,
     });
 
     const result = await service.createActivity({
@@ -390,6 +399,7 @@ describe('OpenActivityService', () => {
       eventPublisher: mockEventPublisher,
       treEngine: mockTre,
       workforceEngine: mockWreNoOp,
+      materialEngine: mockMreNoOp,
     });
 
     const result = await service.createActivity({
@@ -481,6 +491,7 @@ describe('OpenActivityService', () => {
       eventPublisher: mockEventPublisher,
       treEngine: mockTre,
       workforceEngine: mockWreNoOp,
+      materialEngine: mockMreNoOp,
     });
 
     await service.createActivity({

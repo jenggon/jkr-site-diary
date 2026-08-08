@@ -25,6 +25,7 @@ export interface OpenActivity {
   readonly location?: ActivityLocation | undefined;
   readonly tradeInfo?: TradeSelection | undefined;
   readonly workforceCount?: number | undefined;
+  readonly materialSnapshot?: import('./mre').MaterialRecommendationSnapshot | undefined;
   readonly status: ActivityStatus;
   readonly isLocked: boolean;
   readonly createdAt: string;

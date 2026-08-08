@@ -1,15 +1,22 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { OpenActivityService } from '@/services/OpenActivityService';
 import { OpenActivityRepository } from '@/repositories/OpenActivityRepository';
 import { ActivityLogRepository } from '@/repositories/ActivityLogRepository';
 import { IDatabaseAdapter } from '@/repositories/adapters/IDatabaseAdapter';
 import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
+
+const mockMreNoOp: IMaterialEngineService = {
+  recommend: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+  resolveMaterialRecommendation: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+} as unknown as IMaterialEngineService;
+
 import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
 import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
 import { isSuccess, Success, Failure } from '@/lib/result';
 import { ActivityNotFoundError } from '@/errors/activityErrors';
 import { ITreEngineService } from '@/services/ITreEngineService';
+import { IMaterialEngineService } from '@/services/IMaterialEngineService';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 
 describe('OpenActivityService Integration Scenarios', () => {
@@ -117,6 +124,7 @@ describe('OpenActivityService Integration Scenarios', () => {
     eventPublisher,
     treEngine: mockTreEngine,
     workforceEngine: mockWreEngine,
+      materialEngine: mockMreNoOp,
   });
 
   it('should execute createActivity and write single site_diary row + append-only site_diary_log', async () => {

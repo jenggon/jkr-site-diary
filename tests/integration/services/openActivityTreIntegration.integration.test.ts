@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { TreEngineService } from '@/services/TreEngineService';
 import { OpenActivityService } from '@/services/OpenActivityService';
 import { IMspResourceRepository } from '@/repositories/IMspResourceRepository';
@@ -17,7 +17,14 @@ import { MspResourceTrade } from '@/types/tre';
 import { TradeLibrary } from '@/types/tradeLibrary';
 import { SystemClock } from '@/lib/clock';
 import { LazyPlatformServiceContainer } from '@/app/api/_shared/container';
+import { IMaterialEngineService } from '@/services/IMaterialEngineService';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
+
+const mockMreNoOp: IMaterialEngineService = {
+  recommend: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+  resolveMaterialRecommendation: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
+} as unknown as IMaterialEngineService;
+
 
 describe('OpenActivityService + TreEngineService Integration', () => {
   const clock: IClock = new SystemClock();
@@ -128,6 +135,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
       eventPublisher: mockEventPublisher,
       treEngine,
       workforceEngine: mockWreEngine,
+      materialEngine: mockMreNoOp,
     });
 
     const result = await openActivityService.createActivity({
@@ -177,6 +185,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
       eventPublisher: mockEventPublisher,
       treEngine,
       workforceEngine: mockWreEngine,
+      materialEngine: mockMreNoOp,
     });
 
     const result = await openActivityService.createActivity({
@@ -223,6 +232,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
       eventPublisher: mockEventPublisher,
       treEngine,
       workforceEngine: mockWreEngine,
+      materialEngine: mockMreNoOp,
     });
 
     const result = await openActivityService.createActivity({

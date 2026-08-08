@@ -16,8 +16,11 @@ import { ITreEngineService } from '@/services/ITreEngineService';
 import { TreResolutionContext } from '@/types/tre';
 import { mapTreSelectionToActivityTrade } from '@/services/mappers/treTradeSelectionMapper';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
+import { IMaterialEngineService } from '@/services/IMaterialEngineService';
 import { WorkforceResolutionContext, WorkforceResolutionObservabilityEvent } from '@/types/wre';
+import { MaterialResolutionContext, MaterialResolutionObservabilityEvent, MaterialRecommendationSnapshot } from '@/types/mre';
 import { mapWreResolutionToActivityWorkforceCount } from '@/services/mappers/wreRecommendationMapper';
+import { toSnapshot as mapMreResolutionToSnapshot } from '@/services/mappers/materialRecommendationMapper';
 import {
   IOpenActivityService,
   CreateActivityCommand,
@@ -33,6 +36,7 @@ export interface IOpenActivityServiceDependencies {
   readonly eventPublisher: IDomainEventPublisher;
   readonly treEngine: ITreEngineService;
   readonly workforceEngine: IWorkforceEngineService;
+  readonly materialEngine: IMaterialEngineService;
 }
 
 /**
@@ -66,6 +70,7 @@ export class OpenActivityService implements IOpenActivityService {
   private readonly eventPublisher: IDomainEventPublisher;
   private readonly treEngine: ITreEngineService;
   private readonly workforceEngine: IWorkforceEngineService;
+  private readonly materialEngine: IMaterialEngineService;
 
   constructor(deps: IOpenActivityServiceDependencies) {
     this.activityRepo = deps.activityRepository;
@@ -76,6 +81,7 @@ export class OpenActivityService implements IOpenActivityService {
     this.eventPublisher = deps.eventPublisher;
     this.treEngine = deps.treEngine;
     this.workforceEngine = deps.workforceEngine;
+    this.materialEngine = deps.materialEngine;
   }
 
   private async publishEventSafely(event: unknown): Promise<void> {
@@ -236,6 +242,78 @@ export class OpenActivityService implements IOpenActivityService {
       }
     }
 
+    // MRE auto-resolution: only when caller did not supply materialSnapshot and trade is resolved
+    let resolvedMaterialSnapshot: MaterialRecommendationSnapshot | undefined = cmd.materialSnapshot;
+
+    if (cmd.materialSnapshot === undefined && resolvedTradeInfo !== undefined) {
+      const mreCtx: MaterialResolutionContext = {
+        siteDiaryId: cmd.siteDiaryId,
+        programmeId: cmd.programmeId,
+        mspTaskId: cmd.taskId,
+        activityName: cmd.activityName,
+        tradeSelection: resolvedTradeInfo,
+        policy: {
+          allowSubstitution: true,
+          allowPartialRecommendation: true,
+          includeOptionalMaterials: true,
+          respectRegionalRestriction: false,
+          respectSupplierRestriction: false,
+        }
+      };
+
+      const mreStart = Date.now();
+      const mreResult = await this.materialEngine.resolveMaterialRecommendation(mreCtx);
+      const durationMs = Date.now() - mreStart;
+
+      if (isSuccess(mreResult)) {
+        resolvedMaterialSnapshot = mapMreResolutionToSnapshot(activityId, cmd.siteDiaryId, mreResult.value);
+
+        const observabilityEvent: MaterialResolutionObservabilityEvent = {
+          requestId,
+          activityId,
+          programmeId: cmd.programmeId,
+          tradeId: resolvedTradeInfo.tradeId,
+          resolutionSource: mreResult.value.resolutionSource,
+          confidenceLevel: mreResult.value.confidenceLevel,
+          evaluationStage: mreResult.value.diagnostics.evaluationStage,
+          durationMs,
+          materialCount: mreResult.value.recommendation.items.length,
+          estimatedCost: mreResult.value.recommendation.totalEstimatedCost,
+          timestamp: this.clock.nowIso(),
+        };
+        this.logger.info('MRE resolution succeeded', { mreResolution: observabilityEvent });
+      } else {
+        const error = mreResult.error;
+        const isNotFound = error.errorCode === 'NO_MATERIAL_RECOMMENDATION_FOUND';
+
+        const observabilityEvent: MaterialResolutionObservabilityEvent = {
+          requestId,
+          activityId,
+          programmeId: cmd.programmeId,
+          tradeId: resolvedTradeInfo.tradeId,
+          resolutionSource: null,
+          confidenceLevel: null,
+          evaluationStage: 'ALL_SOURCES_EXHAUSTED',
+          durationMs,
+          materialCount: 0,
+          estimatedCost: null,
+          timestamp: this.clock.nowIso(),
+        };
+
+        if (isNotFound) {
+          this.logger.warn(
+            'MRE resolution exhausted all sources - activity will be created without materials',
+            { mreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
+          );
+        } else {
+          this.logger.error(
+            'MRE engine error - activity will be created without materials',
+            { mreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
+          );
+        }
+      }
+    }
+
     try {
       const newActivity: OpenActivity = {
         activityId,
@@ -246,6 +324,7 @@ export class OpenActivityService implements IOpenActivityService {
         location: cmd.location,
         tradeInfo: resolvedTradeInfo,
         workforceCount: resolvedWorkforceCount,
+        materialSnapshot: resolvedMaterialSnapshot,
         status: 'Planned',
         isLocked: false,
         createdAt: now,
@@ -304,6 +383,7 @@ export class OpenActivityService implements IOpenActivityService {
         location: cmd.location ?? existingRes.value.location,
         tradeInfo: cmd.tradeSelection ?? existingRes.value.tradeInfo,
         workforceCount: cmd.workforceCount ?? existingRes.value.workforceCount,
+        materialSnapshot: cmd.materialSnapshot ?? existingRes.value.materialSnapshot,
         updatedAt,
         updatedBy: cmd.updatedBy,
       };

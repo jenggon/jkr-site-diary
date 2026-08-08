@@ -19,7 +19,8 @@ import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
  */
 export function createOpenActivityService(
   treEngine: ITreEngineService,
-  workforceEngine: IWorkforceEngineService
+  workforceEngine: IWorkforceEngineService,
+  materialEngine: import('@/services/IMaterialEngineService').IMaterialEngineService
 ): IOpenActivityService {
   const activityRepo = new OpenActivityRepository();
   const logRepo = new ActivityLogRepository();
@@ -36,5 +37,6 @@ export function createOpenActivityService(
     eventPublisher,
     treEngine,
     workforceEngine,
+    materialEngine,
   });
 }

@@ -2,23 +2,26 @@ import { IOpenActivityService } from '@/services/IOpenActivityService';
 import { ITreEngineService } from '@/services/ITreEngineService';
 import { IKnowledgeEngineService } from '@/services/IKnowledgeEngineService';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
+import { IMaterialEngineService } from '@/services/IMaterialEngineService';
 import { createOpenActivityService } from '@/composition/activityComposition';
 import { createTreEngineService } from '@/composition/treComposition';
 import { createKnowledgeEngineService } from '@/composition/knowledgeComposition';
 import { createWorkforceEngineService } from '@/composition/wreComposition';
+import { createMaterialEngineService } from '@/composition/mreComposition';
 
 export interface PlatformServiceContainer {
   openActivity(): IOpenActivityService;
   treEngine(): ITreEngineService;
   knowledgeEngine(): IKnowledgeEngineService;
   workforceEngine(): IWorkforceEngineService;
+  materialEngine(): IMaterialEngineService;
 }
 
 /**
  * Lazy-initializing platform service container.
  *
  * DEV-026: openActivity() injects the shared treEngine() instance
- * into createOpenActivityService() — ensuring a single TRE instance
+ * into createOpenActivityService() â€” ensuring a single TRE instance
  * is shared across the container lifetime (Refinement 1).
  *
  * Initialization order is safe: TreEngineService has zero dependency
@@ -30,11 +33,12 @@ export class LazyPlatformServiceContainer implements PlatformServiceContainer {
   private _treEngineService?: ITreEngineService | undefined;
   private _knowledgeEngineService?: IKnowledgeEngineService | undefined;
   private _workforceEngineService?: IWorkforceEngineService | undefined;
+  private _materialEngineService?: IMaterialEngineService | undefined;
 
   public openActivity(): IOpenActivityService {
     if (!this._openActivityService) {
-      // Pass the shared TRE and WRE instances — not a new one
-      this._openActivityService = createOpenActivityService(this.treEngine(), this.workforceEngine());
+      // Pass the shared TRE and WRE instances â€” not a new one
+      this._openActivityService = createOpenActivityService(this.treEngine(), this.workforceEngine(), this.materialEngine());
     }
     return this._openActivityService;
   }
@@ -58,5 +62,11 @@ export class LazyPlatformServiceContainer implements PlatformServiceContainer {
       this._workforceEngineService = createWorkforceEngineService();
     }
     return this._workforceEngineService;
+  }
+  public materialEngine(): IMaterialEngineService {
+    if (!this._materialEngineService) {
+      this._materialEngineService = createMaterialEngineService();
+    }
+    return this._materialEngineService;
   }
 }

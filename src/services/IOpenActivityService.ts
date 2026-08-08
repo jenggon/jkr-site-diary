@@ -11,6 +11,7 @@ export interface CreateActivityCommand {
   readonly location?: ActivityLocation | undefined;
   readonly tradeSelection?: TradeSelection | undefined;
   readonly workforceCount?: number | undefined;
+  readonly materialSnapshot?: import('../types/mre').MaterialRecommendationSnapshot | undefined;
   readonly createdBy: string;
 }
 
@@ -20,6 +21,7 @@ export interface UpdateActivityCommand {
   readonly location?: ActivityLocation | undefined;
   readonly tradeSelection?: TradeSelection | undefined;
   readonly workforceCount?: number | undefined;
+  readonly materialSnapshot?: import('../types/mre').MaterialRecommendationSnapshot | undefined;
   readonly updatedBy: string;
 }
 
