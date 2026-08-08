@@ -1,14 +1,17 @@
 import { IOpenActivityService } from '@/services/IOpenActivityService';
 import { ITreEngineService } from '@/services/ITreEngineService';
 import { IKnowledgeEngineService } from '@/services/IKnowledgeEngineService';
+import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 import { createOpenActivityService } from '@/composition/activityComposition';
 import { createTreEngineService } from '@/composition/treComposition';
 import { createKnowledgeEngineService } from '@/composition/knowledgeComposition';
+import { createWorkforceEngineService } from '@/composition/wreComposition';
 
 export interface PlatformServiceContainer {
   openActivity(): IOpenActivityService;
   treEngine(): ITreEngineService;
   knowledgeEngine(): IKnowledgeEngineService;
+  workforceEngine(): IWorkforceEngineService;
 }
 
 /**
@@ -26,6 +29,7 @@ export class LazyPlatformServiceContainer implements PlatformServiceContainer {
   private _openActivityService?: IOpenActivityService | undefined;
   private _treEngineService?: ITreEngineService | undefined;
   private _knowledgeEngineService?: IKnowledgeEngineService | undefined;
+  private _workforceEngineService?: IWorkforceEngineService | undefined;
 
   public openActivity(): IOpenActivityService {
     if (!this._openActivityService) {
@@ -47,5 +51,12 @@ export class LazyPlatformServiceContainer implements PlatformServiceContainer {
       this._knowledgeEngineService = createKnowledgeEngineService();
     }
     return this._knowledgeEngineService;
+  }
+
+  public workforceEngine(): IWorkforceEngineService {
+    if (!this._workforceEngineService) {
+      this._workforceEngineService = createWorkforceEngineService();
+    }
+    return this._workforceEngineService;
   }
 }
