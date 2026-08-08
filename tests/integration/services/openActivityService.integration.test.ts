@@ -9,6 +9,7 @@ import { Logger } from '@/lib/logger';
 import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
 import { isSuccess, Success, Failure } from '@/lib/result';
 import { ActivityNotFoundError } from '@/errors/activityErrors';
+import { ITreEngineService } from '@/services/ITreEngineService';
 
 describe('OpenActivityService Integration Scenarios', () => {
   const mockDiaryRows: Map<string, Record<string, unknown>> = new Map();
@@ -97,6 +98,11 @@ describe('OpenActivityService Integration Scenarios', () => {
   const logger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} } as unknown as Logger;
   const eventPublisher = new NoopDomainEventPublisher();
 
+  // Minimal no-op TRE mock — integration tests here focus on OAS persistence behaviour
+  const mockTreEngine: ITreEngineService = {
+    resolveTradeRecommendation: async () => ({ success: false, error: new ActivityNotFoundError('no trade') }),
+  };
+
   const service = new OpenActivityService({
     activityRepository: activityRepo,
     logRepository: logRepo,
@@ -104,6 +110,7 @@ describe('OpenActivityService Integration Scenarios', () => {
     clock,
     logger,
     eventPublisher,
+    treEngine: mockTreEngine,
   });
 
   it('should execute createActivity and write single site_diary row + append-only site_diary_log', async () => {

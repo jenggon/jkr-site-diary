@@ -11,6 +11,17 @@ export interface PlatformServiceContainer {
   knowledgeEngine(): IKnowledgeEngineService;
 }
 
+/**
+ * Lazy-initializing platform service container.
+ *
+ * DEV-026: openActivity() injects the shared treEngine() instance
+ * into createOpenActivityService() — ensuring a single TRE instance
+ * is shared across the container lifetime (Refinement 1).
+ *
+ * Initialization order is safe: TreEngineService has zero dependency
+ * on OpenActivityService, so calling this.treEngine() inside openActivity()
+ * carries no circular dependency risk.
+ */
 export class LazyPlatformServiceContainer implements PlatformServiceContainer {
   private _openActivityService?: IOpenActivityService | undefined;
   private _treEngineService?: ITreEngineService | undefined;
@@ -18,7 +29,8 @@ export class LazyPlatformServiceContainer implements PlatformServiceContainer {
 
   public openActivity(): IOpenActivityService {
     if (!this._openActivityService) {
-      this._openActivityService = createOpenActivityService();
+      // Pass the shared TRE instance — not a new one (DEV-026 Refinement 1)
+      this._openActivityService = createOpenActivityService(this.treEngine());
     }
     return this._openActivityService;
   }

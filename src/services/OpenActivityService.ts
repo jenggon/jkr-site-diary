@@ -12,6 +12,9 @@ import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivi
 import { ITransactionManager } from '@/transactions/ITransactionManager';
 import { IDomainEventPublisher } from '@/events/IDomainEventPublisher';
 import { ActivityCreatedEvent, ActivityUpdatedEvent, ActivityStatusChangedEvent } from '@/events/activityEvents';
+import { ITreEngineService } from '@/services/ITreEngineService';
+import { TreResolutionContext } from '@/types/tre';
+import { mapTreSelectionToActivityTrade } from '@/services/mappers/treTradeSelectionMapper';
 import {
   IOpenActivityService,
   CreateActivityCommand,
@@ -25,6 +28,29 @@ export interface IOpenActivityServiceDependencies {
   readonly clock: IClock;
   readonly logger: Logger;
   readonly eventPublisher: IDomainEventPublisher;
+  readonly treEngine: ITreEngineService;
+}
+
+/**
+ * Structured observability payload for TRE resolution outcomes.
+ * Enables platform metrics: MSP hit rate, KRE hit rate,
+ * Trade Library fallback rate, TRE failure rate.
+ */
+interface TreResolutionObservabilityEvent {
+  readonly requestId: string;
+  readonly activityId: string | null;
+  readonly programmeId: string;
+  readonly taskId: string | undefined;
+  readonly resolutionStage:
+    | 'MSP_RESOURCE'
+    | 'KNOWLEDGE_ENGINE'
+    | 'TRADE_LIBRARY'
+    | 'ALL_SOURCES_EXHAUSTED';
+  readonly resolutionOutcome: 'RESOLVED' | 'NOT_FOUND' | 'ENGINE_ERROR';
+  readonly failureReason: string | null;
+  readonly failureCode: string | null;
+  readonly durationMs: number;
+  readonly timestamp: string;
 }
 
 export class OpenActivityService implements IOpenActivityService {
@@ -34,6 +60,7 @@ export class OpenActivityService implements IOpenActivityService {
   private readonly clock: IClock;
   private readonly logger: Logger;
   private readonly eventPublisher: IDomainEventPublisher;
+  private readonly treEngine: ITreEngineService;
 
   constructor(deps: IOpenActivityServiceDependencies) {
     this.activityRepo = deps.activityRepository;
@@ -42,6 +69,7 @@ export class OpenActivityService implements IOpenActivityService {
     this.clock = deps.clock;
     this.logger = deps.logger;
     this.eventPublisher = deps.eventPublisher;
+    this.treEngine = deps.treEngine;
   }
 
   private async publishEventSafely(event: unknown): Promise<void> {
@@ -60,10 +88,84 @@ export class OpenActivityService implements IOpenActivityService {
       return Failure(new ActivityValidationError(err instanceof Error ? err.message : 'Validation failed'));
     }
 
-    try {
-      const now = this.clock.nowIso();
-      const activityId = generateUuid();
+    const requestId = generateUuid();
+    const now = this.clock.nowIso();
+    const activityId = generateUuid();
 
+    // TRE auto-resolution: only when caller did not supply a tradeSelection
+    let resolvedTradeInfo: OpenActivity['tradeInfo'] = cmd.tradeSelection;
+
+    if (cmd.tradeSelection === undefined) {
+      const treCtx: TreResolutionContext = {
+        siteDiaryId: cmd.siteDiaryId,
+        programmeId: cmd.programmeId,
+        mspTaskId: cmd.taskId,
+        activityName: cmd.activityName,
+      };
+
+      const treStart = Date.now();
+      const treResult = await this.treEngine.resolveTradeRecommendation(treCtx);
+      const durationMs = Date.now() - treStart;
+
+      if (isSuccess(treResult)) {
+        resolvedTradeInfo = mapTreSelectionToActivityTrade(treResult.value);
+
+        const resolutionStage = ((): TreResolutionObservabilityEvent['resolutionStage'] => {
+          switch (treResult.value.resolutionSource) {
+            case 'MSP_RESOURCE': return 'MSP_RESOURCE';
+            case 'KNOWLEDGE_ENGINE': return 'KNOWLEDGE_ENGINE';
+            case 'TRADE_LIBRARY': return 'TRADE_LIBRARY';
+          }
+        })();
+
+        const observabilityEvent: TreResolutionObservabilityEvent = {
+          requestId,
+          activityId,
+          programmeId: cmd.programmeId,
+          taskId: cmd.taskId,
+          resolutionStage,
+          resolutionOutcome: 'RESOLVED',
+          failureReason: null,
+          failureCode: null,
+          durationMs,
+          timestamp: this.clock.nowIso(),
+        };
+        this.logger.info('TRE resolution succeeded', { treResolution: observabilityEvent });
+      } else {
+        // Soft failure — TRE failure MUST NEVER fail activity creation
+        const error = treResult.error;
+        const isNotFound = error.errorCode === 'NO_TRADE_RECOMMENDATION_FOUND';
+
+        const observabilityEvent: TreResolutionObservabilityEvent = {
+          requestId,
+          activityId,
+          programmeId: cmd.programmeId,
+          taskId: cmd.taskId,
+          resolutionStage: 'ALL_SOURCES_EXHAUSTED',
+          resolutionOutcome: isNotFound ? 'NOT_FOUND' : 'ENGINE_ERROR',
+          failureReason: error.message,
+          failureCode: error.errorCode,
+          durationMs,
+          timestamp: this.clock.nowIso(),
+        };
+
+        if (isNotFound) {
+          this.logger.warn(
+            'TRE resolution exhausted all sources — activity will be created without trade assignment',
+            { treResolution: observabilityEvent }
+          );
+        } else {
+          this.logger.error(
+            'TRE engine error — activity will be created without trade assignment',
+            { treResolution: observabilityEvent }
+          );
+        }
+
+        resolvedTradeInfo = undefined;
+      }
+    }
+
+    try {
       const newActivity: OpenActivity = {
         activityId,
         siteDiaryId: cmd.siteDiaryId,
@@ -71,7 +173,7 @@ export class OpenActivityService implements IOpenActivityService {
         taskId: cmd.taskId,
         activityName: cmd.activityName,
         location: cmd.location,
-        tradeInfo: cmd.tradeSelection,
+        tradeInfo: resolvedTradeInfo,
         workforceCount: cmd.workforceCount,
         status: 'Planned',
         isLocked: false,
@@ -124,14 +226,14 @@ export class OpenActivityService implements IOpenActivityService {
       if (!existingRes.value) return Failure(new ActivityNotFoundError('Activity not found'));
       if (existingRes.value.isLocked) return Failure(new ActivityLockedError('Cannot update locked activity'));
 
-      const now = this.clock.nowIso();
+      const updatedAt = this.clock.nowIso();
       const updatedActivity: OpenActivity = {
         ...existingRes.value,
         activityName: cmd.activityName ?? existingRes.value.activityName,
         location: cmd.location ?? existingRes.value.location,
         tradeInfo: cmd.tradeSelection ?? existingRes.value.tradeInfo,
         workforceCount: cmd.workforceCount ?? existingRes.value.workforceCount,
-        updatedAt: now,
+        updatedAt,
         updatedBy: cmd.updatedBy,
       };
 
@@ -141,7 +243,7 @@ export class OpenActivityService implements IOpenActivityService {
         siteDiaryId: existingRes.value.siteDiaryId,
         eventType: 'UPDATE',
         snapshotData: { ...updatedActivity },
-        loggedAt: now,
+        loggedAt: updatedAt,
         loggedBy: cmd.updatedBy,
       };
 
