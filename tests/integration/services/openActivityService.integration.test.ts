@@ -10,6 +10,7 @@ import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
 import { isSuccess, Success, Failure } from '@/lib/result';
 import { ActivityNotFoundError } from '@/errors/activityErrors';
 import { ITreEngineService } from '@/services/ITreEngineService';
+import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 
 describe('OpenActivityService Integration Scenarios', () => {
   const mockDiaryRows: Map<string, Record<string, unknown>> = new Map();
@@ -103,6 +104,10 @@ describe('OpenActivityService Integration Scenarios', () => {
     resolveTradeRecommendation: async () => ({ success: false, error: new ActivityNotFoundError('no trade') }),
   };
 
+  const mockWreEngine = {
+    resolveWorkforceRecommendation: async () => ({ success: false, error: new ActivityNotFoundError('no workforce') }),
+  } as unknown as IWorkforceEngineService;
+
   const service = new OpenActivityService({
     activityRepository: activityRepo,
     logRepository: logRepo,
@@ -111,6 +116,7 @@ describe('OpenActivityService Integration Scenarios', () => {
     logger,
     eventPublisher,
     treEngine: mockTreEngine,
+    workforceEngine: mockWreEngine,
   });
 
   it('should execute createActivity and write single site_diary row + append-only site_diary_log', async () => {

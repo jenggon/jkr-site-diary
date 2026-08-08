@@ -15,6 +15,9 @@ import { ActivityCreatedEvent, ActivityUpdatedEvent, ActivityStatusChangedEvent 
 import { ITreEngineService } from '@/services/ITreEngineService';
 import { TreResolutionContext } from '@/types/tre';
 import { mapTreSelectionToActivityTrade } from '@/services/mappers/treTradeSelectionMapper';
+import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
+import { WorkforceResolutionContext, WorkforceResolutionObservabilityEvent } from '@/types/wre';
+import { mapWreResolutionToActivityWorkforceCount } from '@/services/mappers/wreRecommendationMapper';
 import {
   IOpenActivityService,
   CreateActivityCommand,
@@ -29,6 +32,7 @@ export interface IOpenActivityServiceDependencies {
   readonly logger: Logger;
   readonly eventPublisher: IDomainEventPublisher;
   readonly treEngine: ITreEngineService;
+  readonly workforceEngine: IWorkforceEngineService;
 }
 
 /**
@@ -61,6 +65,7 @@ export class OpenActivityService implements IOpenActivityService {
   private readonly logger: Logger;
   private readonly eventPublisher: IDomainEventPublisher;
   private readonly treEngine: ITreEngineService;
+  private readonly workforceEngine: IWorkforceEngineService;
 
   constructor(deps: IOpenActivityServiceDependencies) {
     this.activityRepo = deps.activityRepository;
@@ -70,6 +75,7 @@ export class OpenActivityService implements IOpenActivityService {
     this.logger = deps.logger;
     this.eventPublisher = deps.eventPublisher;
     this.treEngine = deps.treEngine;
+    this.workforceEngine = deps.workforceEngine;
   }
 
   private async publishEventSafely(event: unknown): Promise<void> {
@@ -165,6 +171,71 @@ export class OpenActivityService implements IOpenActivityService {
       }
     }
 
+    // WRE auto-resolution: only when caller did not supply workforceCount and trade is resolved
+    let resolvedWorkforceCount: number | undefined = cmd.workforceCount;
+
+    if (cmd.workforceCount === undefined && resolvedTradeInfo !== undefined) {
+      const wreCtx: WorkforceResolutionContext = {
+        siteDiaryId: cmd.siteDiaryId,
+        programmeId: cmd.programmeId,
+        mspTaskId: cmd.taskId,
+        activityName: cmd.activityName,
+        tradeSelection: resolvedTradeInfo,
+        location: cmd.location,
+      };
+
+      const wreStart = Date.now();
+      const wreResult = await this.workforceEngine.resolveWorkforceRecommendation(wreCtx);
+      const durationMs = Date.now() - wreStart;
+
+      if (isSuccess(wreResult)) {
+        resolvedWorkforceCount = mapWreResolutionToActivityWorkforceCount(wreResult.value);
+
+        const observabilityEvent: WorkforceResolutionObservabilityEvent = {
+          requestId,
+          activityId,
+          programmeId: cmd.programmeId,
+          tradeId: resolvedTradeInfo.tradeId,
+          resolutionSource: wreResult.value.resolutionSource,
+          confidenceLevel: wreResult.value.confidenceLevel,
+          evaluationStage: wreResult.value.diagnostics.evaluationStage,
+          durationMs,
+          workforceCount: resolvedWorkforceCount,
+          timestamp: this.clock.nowIso(),
+        };
+        this.logger.info('WRE resolution succeeded', { wreResolution: observabilityEvent });
+      } else {
+        // Soft failure — WRE failure MUST NEVER fail activity creation
+        const error = wreResult.error;
+        const isNotFound = error.errorCode === 'NO_WORKFORCE_RECOMMENDATION_FOUND';
+
+        const observabilityEvent: WorkforceResolutionObservabilityEvent = {
+          requestId,
+          activityId,
+          programmeId: cmd.programmeId,
+          tradeId: resolvedTradeInfo.tradeId,
+          resolutionSource: null,
+          confidenceLevel: null,
+          evaluationStage: 'ALL_SOURCES_EXHAUSTED',
+          durationMs,
+          workforceCount: 0,
+          timestamp: this.clock.nowIso(),
+        };
+
+        if (isNotFound) {
+          this.logger.warn(
+            'WRE resolution exhausted all sources — activity will be created without workforce assignment',
+            { wreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
+          );
+        } else {
+          this.logger.error(
+            'WRE engine error — activity will be created without workforce assignment',
+            { wreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
+          );
+        }
+      }
+    }
+
     try {
       const newActivity: OpenActivity = {
         activityId,
@@ -174,7 +245,7 @@ export class OpenActivityService implements IOpenActivityService {
         activityName: cmd.activityName,
         location: cmd.location,
         tradeInfo: resolvedTradeInfo,
-        workforceCount: cmd.workforceCount,
+        workforceCount: resolvedWorkforceCount,
         status: 'Planned',
         isLocked: false,
         createdAt: now,

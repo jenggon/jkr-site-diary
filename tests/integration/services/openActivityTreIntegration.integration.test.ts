@@ -17,9 +17,14 @@ import { MspResourceTrade } from '@/types/tre';
 import { TradeLibrary } from '@/types/tradeLibrary';
 import { SystemClock } from '@/lib/clock';
 import { LazyPlatformServiceContainer } from '@/app/api/_shared/container';
+import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 
 describe('OpenActivityService + TreEngineService Integration', () => {
   const clock: IClock = new SystemClock();
+
+  const mockWreEngine = {
+    resolveWorkforceRecommendation: async () => ({ success: false, error: { errorCode: 'NO_WORKFORCE_RECOMMENDATION_FOUND' } }),
+  } as unknown as IWorkforceEngineService;
 
   const silentLogger = {
     info: () => {},
@@ -122,6 +127,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
       logger: silentLogger,
       eventPublisher: mockEventPublisher,
       treEngine,
+      workforceEngine: mockWreEngine,
     });
 
     const result = await openActivityService.createActivity({
@@ -170,6 +176,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
       logger: silentLogger,
       eventPublisher: mockEventPublisher,
       treEngine,
+      workforceEngine: mockWreEngine,
     });
 
     const result = await openActivityService.createActivity({
@@ -215,6 +222,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
       logger: silentLogger,
       eventPublisher: mockEventPublisher,
       treEngine,
+      workforceEngine: mockWreEngine,
     });
 
     const result = await openActivityService.createActivity({

@@ -12,6 +12,9 @@ import { BaseAppError } from '@/lib/errors';
 import { OpenActivity } from '@/types/openActivity';
 import { TradeSelection as TreTradeSelection } from '@/types/tre';
 import { NoTradeRecommendationFoundError, TreEngineError } from '@/errors/treErrors';
+import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
+import { WorkforceResolution } from '@/types/wre';
+import { WreEngineError, NoWorkforceRecommendationFoundError } from '@/errors/wreErrors';
 
 describe('OpenActivityService', () => {
   const mockClock: IClock = {
@@ -67,12 +70,30 @@ describe('OpenActivityService', () => {
     } satisfies TreTradeSelection)),
   };
 
+  const mockWreNoOp: IWorkforceEngineService = {
+    recommend: vi.fn(),
+    resolveWorkforceRecommendation: vi.fn().mockResolvedValue(Success({
+      recommendation: {
+        items: [{ roleCode: 'GENERAL', tradeId: 'trade-1', tradeCode: 'GENERAL_WORKER', tradeName: 'Buruh Am', recommendedCount: 5, skillLevel: 'GENERAL', isMandatory: false }],
+        totalWorkforceCount: 5,
+      },
+      resolutionSource: 'TRADE_WORKFORCE_LIBRARY',
+      confidenceLevel: 'MEDIUM',
+      provenance: { repository: 'TradeWorkforceLibraryRepository', evaluator: null, ruleId: null, ruleVersion: null, matchedPriority: 'TRADE_WORKFORCE_LIBRARY', matchedDiscipline: null },
+      diagnostics: { evaluationStage: 'TRADE_WORKFORCE_LIBRARY', durationMs: 10, evaluatorsAttemptedCount: 0, timestamp: '2026-08-07T12:00:00Z' },
+      reasoning: { reasonCode: 'DEFAULT', reasonDescription: 'Default resolution' },
+      metadata: { generatedAt: '2026-08-07T12:00:00Z', engineVersion: '1.0', executionDurationMs: 10, platformVersion: '1.0' },
+    } satisfies WorkforceResolution)),
+  };
+
   function createService(overrides?: {
     activityRepo?: Partial<IOpenActivityRepository>;
     logRepo?: Partial<IActivityLogRepository>;
     txManager?: ITransactionManager;
     eventPublisher?: IDomainEventPublisher;
     treEngine?: ITreEngineService;
+    workforceEngine?: IWorkforceEngineService;
+    logger?: Logger;
   }) {
     const activityRepo: IOpenActivityRepository = {
       findById: async () => Success(sampleActivity),
@@ -94,9 +115,10 @@ describe('OpenActivityService', () => {
       logRepository: logRepo,
       transactionManager: overrides?.txManager ?? mockTxManager,
       clock: mockClock,
-      logger: mockLogger,
+      logger: overrides?.logger ?? mockLogger,
       eventPublisher: overrides?.eventPublisher ?? mockEventPublisher,
       treEngine: overrides?.treEngine ?? mockTreNoOp,
+      workforceEngine: overrides?.workforceEngine ?? mockWreNoOp,
     });
   }
 
@@ -309,6 +331,7 @@ describe('OpenActivityService', () => {
       logger,
       eventPublisher: mockEventPublisher,
       treEngine: mockTre,
+      workforceEngine: mockWreNoOp,
     });
 
     const result = await service.createActivity({
@@ -366,6 +389,7 @@ describe('OpenActivityService', () => {
       logger,
       eventPublisher: mockEventPublisher,
       treEngine: mockTre,
+      workforceEngine: mockWreNoOp,
     });
 
     const result = await service.createActivity({
@@ -456,6 +480,7 @@ describe('OpenActivityService', () => {
       logger,
       eventPublisher: mockEventPublisher,
       treEngine: mockTre,
+      workforceEngine: mockWreNoOp,
     });
 
     await service.createActivity({
@@ -478,6 +503,123 @@ describe('OpenActivityService', () => {
           taskId: 'task-88',
         }),
       })
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // DEV-028: WRE Auto-Resolution Tests
+  // -----------------------------------------------------------------------
+
+  it('auto-resolves workforce via WRE when no workforceCount supplied', async () => {
+    const mockWre: IWorkforceEngineService = {
+      resolveWorkforceRecommendation: vi.fn().mockResolvedValue(Success({
+        recommendation: {
+          items: [],
+          totalWorkforceCount: 15,
+        },
+        resolutionSource: 'MSP_RESOURCE',
+        confidenceLevel: 'HIGH',
+        diagnostics: { evaluationStage: 'MSP_RESOURCE', durationMs: 5, evaluatorsAttemptedCount: 0, timestamp: 'now' },
+      })),
+    } as unknown as IWorkforceEngineService;
+
+    const service = createService({ workforceEngine: mockWre });
+    const result = await service.createActivity({
+      siteDiaryId: 'diary-100',
+      programmeId: 'prog-1',
+      activityName: 'Test Activity',
+      createdBy: 'user-1',
+    });
+
+    expect(isSuccess(result)).toBe(true);
+    if (isSuccess(result)) {
+      expect(result.value.workforceCount).toBe(15);
+    }
+    expect(mockWre.resolveWorkforceRecommendation).toHaveBeenCalledOnce();
+  });
+
+  it('skips WRE entirely when caller supplies workforceCount', async () => {
+    const mockWre: IWorkforceEngineService = {
+      resolveWorkforceRecommendation: vi.fn(),
+    } as unknown as IWorkforceEngineService;
+
+    const service = createService({ workforceEngine: mockWre });
+    const result = await service.createActivity({
+      siteDiaryId: 'diary-100',
+      programmeId: 'prog-1',
+      activityName: 'Test Activity',
+      createdBy: 'user-1',
+      workforceCount: 8,
+    });
+
+    expect(isSuccess(result)).toBe(true);
+    if (isSuccess(result)) {
+      expect(result.value.workforceCount).toBe(8);
+    }
+    expect(mockWre.resolveWorkforceRecommendation).not.toHaveBeenCalled();
+  });
+
+  it('creates activity without workforceCount when WRE returns NoWorkforceRecommendationFoundError (soft failure)', async () => {
+    const mockWre: IWorkforceEngineService = {
+      resolveWorkforceRecommendation: vi.fn().mockResolvedValue(
+        Failure(new NoWorkforceRecommendationFoundError())
+      ),
+    } as unknown as IWorkforceEngineService;
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: () => logger,
+    } as unknown as Logger;
+
+    const service = createService({ workforceEngine: mockWre, logger });
+
+    const result = await service.createActivity({
+      siteDiaryId: 'diary-100',
+      programmeId: 'prog-1',
+      activityName: 'Kerja Am',
+      createdBy: 'user-1',
+    });
+
+    expect(isSuccess(result)).toBe(true);
+    if (isSuccess(result)) {
+      expect(result.value.workforceCount).toBeUndefined();
+    }
+    expect(logger.warn).toHaveBeenCalledWith(
+      'WRE resolution exhausted all sources — activity will be created without workforce assignment',
+      expect.any(Object)
+    );
+  });
+
+  it('creates activity without workforceCount when WRE returns engine error (soft failure)', async () => {
+    const mockWre: IWorkforceEngineService = {
+      resolveWorkforceRecommendation: vi.fn().mockResolvedValue(
+        Failure(new WreEngineError('Internal crash'))
+      ),
+    } as unknown as IWorkforceEngineService;
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: () => logger,
+    } as unknown as Logger;
+
+    const service = createService({ workforceEngine: mockWre, logger });
+
+    const result = await service.createActivity({
+      siteDiaryId: 'diary-100',
+      programmeId: 'prog-1',
+      activityName: 'Kerja Am',
+      createdBy: 'user-1',
+    });
+
+    expect(isSuccess(result)).toBe(true);
+    if (isSuccess(result)) {
+      expect(result.value.workforceCount).toBeUndefined();
+    }
+    expect(logger.error).toHaveBeenCalledWith(
+      'WRE engine error — activity will be created without workforce assignment',
+      expect.any(Object)
     );
   });
 });
