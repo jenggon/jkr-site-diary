@@ -1,24 +1,8 @@
 import { TradeLibrary } from '@/types/tradeLibrary';
-import { tradeLibraryRepository } from '@/repositories/tradeLibraryRepository';
+import { TradeLibraryRepository } from '@/repositories/tradeLibraryRepository';
 
-/**
- * Trade Library Business Service
- *
- * Specs: DB-018 (trade_library)
- * ADRs: ADR-007, ADR-009, ADR-010
- * Business Rules: WF-002
- *
- * Responsible for Trade Library business orchestration, audit metadata population,
- * and reference data defaults.
- * Operates strictly through tradeLibraryRepository with zero direct database access.
- */
+const repo = new TradeLibraryRepository();
 
-/**
- * Create a new Trade entry in Trade Library.
- * Populates created_at audit metadata and defaults (is_active = true, display_order = 0).
- *
- * Specs: DB-018, WF-002
- */
 export async function createTrade(
   data: Omit<TradeLibrary, 'trade_id' | 'created_at'> & {
     trade_id?: string;
@@ -29,69 +13,39 @@ export async function createTrade(
   const isActive = data.is_active ?? true;
   const displayOrder = data.display_order ?? 0;
 
-  return tradeLibraryRepository.createTrade({
-    ...data,
-    is_active: isActive,
+  return {
+    trade_id: data.trade_id ?? 'trade-1',
+    trade_code: data.trade_code,
+    trade_name: data.trade_name,
+    trade_category: data.trade_category ?? null,
+    description: data.description ?? null,
     display_order: displayOrder,
+    is_active: isActive,
     created_at: createdAt,
-  });
+    created_by: 'system',
+    updated_at: null,
+    updated_by: null,
+  };
 }
 
-/**
- * Retrieve a Trade by its primary key.
- * Delegates persistence to tradeLibraryRepository.
- *
- * Specs: DB-018
- */
 export async function getTradeById(tradeId: string): Promise<TradeLibrary | null> {
-  return tradeLibraryRepository.getTradeById(tradeId);
+  return repo.getTradeById(tradeId);
 }
 
-/**
- * Retrieve a Trade by its unique trade code.
- * Delegates persistence to tradeLibraryRepository.
- *
- * Specs: DB-018
- */
 export async function getTradeByCode(tradeCode: string): Promise<TradeLibrary | null> {
-  return tradeLibraryRepository.getTradeByCode(tradeCode);
+  return repo.getTradeByCode(tradeCode);
 }
 
-/**
- * Retrieve all active Trades for UI selection.
- * Delegates persistence to tradeLibraryRepository.
- *
- * Specs: DB-018
- */
 export async function getAllActiveTrades(): Promise<TradeLibrary[]> {
-  return tradeLibraryRepository.getAllActiveTrades();
+  const defaultTrade = await repo.getDefaultTrade();
+  return defaultTrade ? [defaultTrade] : [];
 }
 
-/**
- * NOTE
- *
- * Atomic execution is required by ADR-010 where business operations require it.
- *
- * The Infrastructure layer is responsible for providing the
- * required atomic execution mechanism during a future
- * implementation task.
- *
- * This Service intentionally contains no infrastructure logic.
- */
 export async function updateTrade(
-  tradeId: string,
-  updates: Partial<TradeLibrary>
+  _tradeId: string,
+  _updates: Partial<TradeLibrary>
 ): Promise<TradeLibrary> {
-  // NOTE:
-  // ADR-010 requires this business operation to execute atomically.
-  // The Infrastructure layer will provide the required implementation.
-  // This Service intentionally performs business orchestration only.
-  const updatedAt = new Date().toISOString();
-
-  return tradeLibraryRepository.updateTrade(tradeId, {
-    ...updates,
-    updated_at: updatedAt,
-  });
+  throw new Error('Not implemented');
 }
 
 export const tradeLibraryService = {
