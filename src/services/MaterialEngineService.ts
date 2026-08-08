@@ -1,4 +1,4 @@
-import { Result, Success, Failure } from '@/lib/result';
+import { Result, Success, Failure, isSuccess } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
 import { 
   MaterialResolutionContext, 
@@ -10,7 +10,7 @@ import {
   MaterialItemRecommendation
 } from '@/types/mre';
 import { IMaterialEngineService } from './IMaterialEngineService';
-import { IMspMaterialRepository } from '@/repositories/IMspMaterialRepository';
+import { IProgramKerjaBoundaryService } from './IProgramKerjaBoundaryService';
 import { ITradeMaterialLibraryRepository } from '@/repositories/ITradeMaterialLibraryRepository';
 import { IMaterialRuleEvaluatorRegistry } from '@/services/evaluators/MaterialRuleEvaluatorRegistry';
 import { IClock } from '@/lib/IClock';
@@ -22,7 +22,7 @@ import {
 } from '@/errors/mreErrors';
 
 export interface IMaterialEngineServiceDependencies {
-  readonly mspMaterialRepository: IMspMaterialRepository;
+  readonly programKerjaBoundaryService: IProgramKerjaBoundaryService;
   readonly tradeMaterialLibraryRepository: ITradeMaterialLibraryRepository;
   readonly evaluatorRegistry: IMaterialRuleEvaluatorRegistry;
   readonly clock: IClock;
@@ -46,19 +46,37 @@ export class MaterialEngineService implements IMaterialEngineService {
     }
 
     try {
-      // Priority 1: MSP Resource Assignment
-      if (ctx.mspTaskId) {
-        const mspData = await this.deps.mspMaterialRepository.findMaterialsByMspTask(ctx.programmeId, ctx.mspTaskId);
-        if (mspData && mspData.length > 0) {
+      // Priority 1: Program Kerja Boundary (formerly raw MSP Material Assignment)
+      if (ctx.mspTaskId && ctx.revisionId) {
+        const pkResult = await this.deps.programKerjaBoundaryService.getProgramKerjaMaterials(
+          ctx.programmeId,
+          ctx.revisionId,
+          ctx.mspTaskId
+        );
+        if (isSuccess(pkResult) && pkResult.value && pkResult.value.length > 0) {
+          const items: MaterialItemRecommendation[] = pkResult.value.map((m) => ({
+            materialCode: m.materialCode,
+            materialName: m.materialName,
+            materialRole: m.materialRole,
+            recommendedQuantity: m.recommendedQuantity,
+            unitOfMeasure: m.unitOfMeasure,
+            isMandatory: m.isMandatory,
+            estimatedWastePercentage: m.estimatedWastePercentage,
+            estimatedCost: m.estimatedCost,
+            estimatedLeadTime: m.estimatedLeadTime,
+            constraints: [],
+            substitutions: [],
+          }));
+
           return Success(this.buildResolution(ctx, 'MSP_MATERIAL', 'HIGH', {
-            repository: 'MspMaterialRepository',
+            repository: 'ProgramKerjaBoundaryService',
             evaluator: null,
             ruleId: null,
             ruleVersion: null,
             matchedPriority: 'MSP_MATERIAL',
             matchedTrade: null,
             matchedDiscipline: null
-          }, startTime, mspData, 'MSP_MATCH', 'Resolved from MSP resource assignment'));
+          }, startTime, items, 'MSP_MATCH', 'Resolved from Program Kerja Boundary material assignment'));
         }
       }
 

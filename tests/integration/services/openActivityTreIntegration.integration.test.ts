@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TreEngineService } from '@/services/TreEngineService';
 import { OpenActivityService } from '@/services/OpenActivityService';
-import { IMspResourceRepository } from '@/repositories/IMspResourceRepository';
+import { IProgramKerjaBoundaryService } from '@/services/IProgramKerjaBoundaryService';
 import { ITradeLibraryRepository } from '@/repositories/ITradeLibraryRepository';
 import { IKnowledgeEngineAdapter } from '@/services/adapters/IKnowledgeEngineAdapter';
 import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
@@ -13,7 +13,6 @@ import { Logger } from '@/lib/logger';
 import { Success, Result, isSuccess } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
 import { OpenActivity } from '@/types/openActivity';
-import { MspResourceTrade } from '@/types/tre';
 import { TradeLibrary } from '@/types/tradeLibrary';
 import { SystemClock } from '@/lib/clock';
 import { LazyPlatformServiceContainer } from '@/app/api/_shared/container';
@@ -24,7 +23,6 @@ const mockMreNoOp: IMaterialEngineService = {
   recommend: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
   resolveMaterialRecommendation: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
 } as unknown as IMaterialEngineService;
-
 
 describe('OpenActivityService + TreEngineService Integration', () => {
   const clock: IClock = new SystemClock();
@@ -83,13 +81,6 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     findLogsByActivityId: async () => Success([sampleLog]),
   };
 
-  const sampleMspTrade: MspResourceTrade = {
-    resourceId: 'res-integ-1',
-    tradeCode: 'CONCRETOR',
-    tradeName: 'Pekerja Konkrit',
-    tradeCategory: 'Skilled',
-  };
-
   const sampleDefaultTrade: TradeLibrary = {
     trade_id: 'trade-lib-1',
     trade_code: 'GENERAL_WORKER',
@@ -104,9 +95,16 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     updated_by: null,
   };
 
-  it('integration: OpenActivityService uses shared TreEngineService instance to resolve Priority 1 (MSP)', async () => {
-    const mockMspRepo: IMspResourceRepository = {
-      findResourceTradeByMspTask: async () => sampleMspTrade,
+  it('integration: OpenActivityService uses shared TreEngineService instance to resolve Priority 1 (Program Kerja Boundary)', async () => {
+    const mockPkBoundary: IProgramKerjaBoundaryService = {
+      getProgramKerjaTrade: async () => Success({
+        tradeId: 'res-integ-1',
+        tradeCode: 'CONCRETOR',
+        tradeName: 'Pekerja Konkrit',
+        tradeCategory: 'Skilled',
+      }),
+      getProgramKerjaWorkforce: async () => Success(null),
+      getProgramKerjaMaterials: async () => Success(null),
     };
     const mockTradeLibRepo: ITradeLibraryRepository = {
       getDefaultTrade: async () => null,
@@ -117,9 +115,9 @@ describe('OpenActivityService + TreEngineService Integration', () => {
       getTopRecommendation: async () => null,
     };
 
-    // Real TreEngineService — not mocked
+    // Real TreEngineService — consuming ProgramKerjaBoundaryService
     const treEngine = new TreEngineService({
-      mspResourceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeLibraryRepository: mockTradeLibRepo,
       knowledgeEngineAdapter: mockKeAdapter,
       clock,
@@ -155,9 +153,11 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     }
   });
 
-  it('integration: OpenActivityService falls back to Trade Library when MSP and KRE miss', async () => {
-    const mockMspRepo: IMspResourceRepository = {
-      findResourceTradeByMspTask: async () => null,
+  it('integration: OpenActivityService falls back to Trade Library when Program Kerja Boundary and KRE miss', async () => {
+    const mockPkBoundary: IProgramKerjaBoundaryService = {
+      getProgramKerjaTrade: async () => Success(null),
+      getProgramKerjaWorkforce: async () => Success(null),
+      getProgramKerjaMaterials: async () => Success(null),
     };
     const mockTradeLibRepo: ITradeLibraryRepository = {
       getDefaultTrade: async () => sampleDefaultTrade,
@@ -169,7 +169,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     };
 
     const treEngine = new TreEngineService({
-      mspResourceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeLibraryRepository: mockTradeLibRepo,
       knowledgeEngineAdapter: mockKeAdapter,
       clock,
@@ -203,8 +203,10 @@ describe('OpenActivityService + TreEngineService Integration', () => {
   });
 
   it('integration: activity is created (tradeInfo=undefined) when all TRE sources exhausted', async () => {
-    const mockMspRepo: IMspResourceRepository = {
-      findResourceTradeByMspTask: async () => null,
+    const mockPkBoundary: IProgramKerjaBoundaryService = {
+      getProgramKerjaTrade: async () => Success(null),
+      getProgramKerjaWorkforce: async () => Success(null),
+      getProgramKerjaMaterials: async () => Success(null),
     };
     const mockTradeLibRepo: ITradeLibraryRepository = {
       getDefaultTrade: async () => null,
@@ -216,7 +218,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     };
 
     const treEngine = new TreEngineService({
-      mspResourceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeLibraryRepository: mockTradeLibRepo,
       knowledgeEngineAdapter: mockKeAdapter,
       clock,

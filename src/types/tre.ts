@@ -21,6 +21,7 @@ export interface TradeSelection {
 export interface TreResolutionContext {
   readonly siteDiaryId: string;
   readonly programmeId: string;
+  readonly revisionId: string;
   readonly mspTaskId?: string | undefined;
   readonly activityName: string;
   readonly subtaskName?: string | undefined;

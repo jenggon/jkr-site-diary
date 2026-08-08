@@ -1,12 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TreEngineService } from '@/services/TreEngineService';
-import { IMspResourceRepository } from '@/repositories/IMspResourceRepository';
+import { IProgramKerjaBoundaryService } from '@/services/IProgramKerjaBoundaryService';
 import { ITradeLibraryRepository } from '@/repositories/ITradeLibraryRepository';
 import { IKnowledgeEngineAdapter } from '@/services/adapters/IKnowledgeEngineAdapter';
 import { IClock } from '@/lib/IClock';
 import { Logger } from '@/lib/logger';
-import { isSuccess, isFailure } from '@/lib/result';
-import { TreResolutionContext, MspResourceTrade, KnowledgeTradeRecommendation } from '@/types/tre';
+import { isSuccess, isFailure, Success } from '@/lib/result';
+import { TreResolutionContext, KnowledgeTradeRecommendation } from '@/types/tre';
+import { ProgramKerjaTradeDTO } from '@/dto/programKerjaDto';
 import { TradeLibrary } from '@/types/tradeLibrary';
 import { NoTradeRecommendationFoundError } from '@/errors/treErrors';
 
@@ -27,12 +28,13 @@ describe('TreEngineService', () => {
   const sampleContext: TreResolutionContext = {
     siteDiaryId: 'diary-1',
     programmeId: 'prog-1',
+    revisionId: 'rev-approved-1',
     mspTaskId: 'task-100',
     activityName: 'Kerja Konkrit Substruktur',
   };
 
-  const sampleMspTrade: MspResourceTrade = {
-    resourceId: 'res-1',
+  const samplePkTrade: ProgramKerjaTradeDTO = {
+    tradeId: 'res-1',
     tradeCode: 'CONCRETOR',
     tradeName: 'Pekerja Konkrit',
     tradeCategory: 'Skilled',
@@ -60,9 +62,11 @@ describe('TreEngineService', () => {
     updated_by: null,
   };
 
-  it('resolves Priority 1 (MSP Resource) when available', async () => {
-    const mockMspRepo: IMspResourceRepository = {
-      findResourceTradeByMspTask: vi.fn().mockResolvedValue(sampleMspTrade),
+  it('resolves Priority 1 (Program Kerja Boundary Trade) when available', async () => {
+    const mockPkBoundary: IProgramKerjaBoundaryService = {
+      getProgramKerjaTrade: vi.fn().mockResolvedValue(Success(samplePkTrade)),
+      getProgramKerjaWorkforce: vi.fn().mockResolvedValue(Success(null)),
+      getProgramKerjaMaterials: vi.fn().mockResolvedValue(Success(null)),
     };
     const mockTradeLibRepo: ITradeLibraryRepository = {
       getDefaultTrade: vi.fn().mockResolvedValue(null),
@@ -74,7 +78,7 @@ describe('TreEngineService', () => {
     };
 
     const service = new TreEngineService({
-      mspResourceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeLibraryRepository: mockTradeLibRepo,
       knowledgeEngineAdapter: mockKeAdapter,
       clock: mockClock,
@@ -89,14 +93,16 @@ describe('TreEngineService', () => {
       expect(result.value.tradeCode).toBe('CONCRETOR');
       expect(result.value.tradeName).toBe('Pekerja Konkrit');
     }
-    expect(mockMspRepo.findResourceTradeByMspTask).toHaveBeenCalledWith('prog-1', 'task-100');
+    expect(mockPkBoundary.getProgramKerjaTrade).toHaveBeenCalledWith('prog-1', 'rev-approved-1', 'task-100');
     expect(mockKeAdapter.getTopRecommendation).not.toHaveBeenCalled();
     expect(mockTradeLibRepo.getDefaultTrade).not.toHaveBeenCalled();
   });
 
   it('falls back to Priority 2 (Knowledge Engine) when Priority 1 is missing', async () => {
-    const mockMspRepo: IMspResourceRepository = {
-      findResourceTradeByMspTask: vi.fn().mockResolvedValue(null),
+    const mockPkBoundary: IProgramKerjaBoundaryService = {
+      getProgramKerjaTrade: vi.fn().mockResolvedValue(Success(null)),
+      getProgramKerjaWorkforce: vi.fn().mockResolvedValue(Success(null)),
+      getProgramKerjaMaterials: vi.fn().mockResolvedValue(Success(null)),
     };
     const mockTradeLibRepo: ITradeLibraryRepository = {
       getDefaultTrade: vi.fn().mockResolvedValue(null),
@@ -108,7 +114,7 @@ describe('TreEngineService', () => {
     };
 
     const service = new TreEngineService({
-      mspResourceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeLibraryRepository: mockTradeLibRepo,
       knowledgeEngineAdapter: mockKeAdapter,
       clock: mockClock,
@@ -122,14 +128,16 @@ describe('TreEngineService', () => {
       expect(result.value.resolutionSource).toBe('KNOWLEDGE_ENGINE');
       expect(result.value.tradeCode).toBe('BAR_BENDER');
     }
-    expect(mockMspRepo.findResourceTradeByMspTask).toHaveBeenCalled();
+    expect(mockPkBoundary.getProgramKerjaTrade).toHaveBeenCalled();
     expect(mockKeAdapter.getTopRecommendation).toHaveBeenCalledWith(sampleContext);
     expect(mockTradeLibRepo.getDefaultTrade).not.toHaveBeenCalled();
   });
 
   it('falls back to Priority 3 (Master Trade Library) when Priority 1 and 2 miss', async () => {
-    const mockMspRepo: IMspResourceRepository = {
-      findResourceTradeByMspTask: vi.fn().mockResolvedValue(null),
+    const mockPkBoundary: IProgramKerjaBoundaryService = {
+      getProgramKerjaTrade: vi.fn().mockResolvedValue(Success(null)),
+      getProgramKerjaWorkforce: vi.fn().mockResolvedValue(Success(null)),
+      getProgramKerjaMaterials: vi.fn().mockResolvedValue(Success(null)),
     };
     const mockTradeLibRepo: ITradeLibraryRepository = {
       getDefaultTrade: vi.fn().mockResolvedValue(sampleDefaultTrade),
@@ -141,7 +149,7 @@ describe('TreEngineService', () => {
     };
 
     const service = new TreEngineService({
-      mspResourceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeLibraryRepository: mockTradeLibRepo,
       knowledgeEngineAdapter: mockKeAdapter,
       clock: mockClock,
@@ -159,8 +167,10 @@ describe('TreEngineService', () => {
   });
 
   it('returns NoTradeRecommendationFoundError when all 3 priorities miss', async () => {
-    const mockMspRepo: IMspResourceRepository = {
-      findResourceTradeByMspTask: vi.fn().mockResolvedValue(null),
+    const mockPkBoundary: IProgramKerjaBoundaryService = {
+      getProgramKerjaTrade: vi.fn().mockResolvedValue(Success(null)),
+      getProgramKerjaWorkforce: vi.fn().mockResolvedValue(Success(null)),
+      getProgramKerjaMaterials: vi.fn().mockResolvedValue(Success(null)),
     };
     const mockTradeLibRepo: ITradeLibraryRepository = {
       getDefaultTrade: vi.fn().mockResolvedValue(null),
@@ -172,7 +182,7 @@ describe('TreEngineService', () => {
     };
 
     const service = new TreEngineService({
-      mspResourceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeLibraryRepository: mockTradeLibRepo,
       knowledgeEngineAdapter: mockKeAdapter,
       clock: mockClock,

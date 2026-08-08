@@ -115,6 +115,7 @@ export interface WorkforceEvaluationTrace {
 export interface WorkforceResolutionContext {
   readonly siteDiaryId: string;
   readonly programmeId: string;
+  readonly revisionId: string;
   readonly mspTaskId?: string | undefined;
   readonly activityName: string;
   readonly tradeSelection: TradeSelection;

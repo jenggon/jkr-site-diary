@@ -1,4 +1,4 @@
-import { Result, Success, Failure } from '@/lib/result';
+import { Result, Success, Failure, isSuccess } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
 import { 
   WorkforceResolutionContext, 
@@ -9,7 +9,7 @@ import {
   WorkforceResolutionObservabilityEvent
 } from '@/types/wre';
 import { IWorkforceEngineService } from './IWorkforceEngineService';
-import { IMspWorkforceRepository } from '@/repositories/IMspWorkforceRepository';
+import { IProgramKerjaBoundaryService } from './IProgramKerjaBoundaryService';
 import { ITradeWorkforceLibraryRepository } from '@/repositories/ITradeWorkforceLibraryRepository';
 import { IWorkforceRuleRepository } from '@/repositories/IWorkforceRuleRepository';
 import { IRuleEvaluatorRegistry } from '@/services/evaluators/IWorkforceEvaluatorRegistry';
@@ -22,7 +22,7 @@ import {
 } from '@/errors/wreErrors';
 
 export interface IWorkforceEngineServiceDependencies {
-  readonly mspWorkforceRepository: IMspWorkforceRepository;
+  readonly programKerjaBoundaryService: IProgramKerjaBoundaryService;
   readonly tradeWorkforceLibraryRepository: ITradeWorkforceLibraryRepository;
   readonly workforceRuleRepository: IWorkforceRuleRepository;
   readonly evaluatorRegistry: IRuleEvaluatorRegistry;
@@ -47,18 +47,22 @@ export class WorkforceEngineService implements IWorkforceEngineService {
     }
 
     try {
-      // Priority 1: MSP Resource Assignment
-      if (ctx.mspTaskId) {
-        const mspData = await this.deps.mspWorkforceRepository.findWorkforceByMspTask(ctx.programmeId, ctx.mspTaskId);
-        if (mspData && mspData.length > 0) {
+      // Priority 1: Program Kerja Boundary (formerly raw MSP Resource Assignment)
+      if (ctx.mspTaskId && ctx.revisionId) {
+        const pkResult = await this.deps.programKerjaBoundaryService.getProgramKerjaWorkforce(
+          ctx.programmeId,
+          ctx.revisionId,
+          ctx.mspTaskId
+        );
+        if (isSuccess(pkResult) && pkResult.value && pkResult.value.length > 0) {
           return Success(this.buildResolution(ctx, 'MSP_RESOURCE', 'HIGH', {
-            repository: 'MspWorkforceRepository',
+            repository: 'ProgramKerjaBoundaryService',
             evaluator: null,
             ruleId: null,
             ruleVersion: null,
             matchedPriority: 'MSP_RESOURCE',
             matchedDiscipline: null
-          }, startTime, mspData, 'MSP_MATCH', 'Resolved from MSP resource assignment'));
+          }, startTime, pkResult.value, 'MSP_MATCH', 'Resolved from Program Kerja Boundary workforce assignment'));
         }
       }
 

@@ -1,16 +1,16 @@
-import { Result, Success, Failure } from '@/lib/result';
+import { Result, Success, Failure, isSuccess } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
 import { TradeSelection, TreResolutionContext } from '@/types/tre';
 import { TreEngineError, NoTradeRecommendationFoundError } from '@/errors/treErrors';
-import { IMspResourceRepository } from '@/repositories/IMspResourceRepository';
+import { IProgramKerjaBoundaryService } from './IProgramKerjaBoundaryService';
 import { ITradeLibraryRepository } from '@/repositories/ITradeLibraryRepository';
 import { IKnowledgeEngineAdapter } from '@/services/adapters/IKnowledgeEngineAdapter';
 import { ITreEngineService } from './ITreEngineService';
 
 export interface ITreEngineServiceDependencies {
-  readonly mspResourceRepository: IMspResourceRepository;
+  readonly programKerjaBoundaryService: IProgramKerjaBoundaryService;
   readonly tradeLibraryRepository: ITradeLibraryRepository;
   readonly knowledgeEngineAdapter: IKnowledgeEngineAdapter;
   readonly clock: IClock;
@@ -21,11 +21,12 @@ export interface ITreEngineServiceDependencies {
  * Trade Recommendation Engine (TRE) Service
  *
  * Enforces immutable 3-tier resolution priority:
- * 1. Priority 1: MSP Resource Assignment (IMspResourceRepository)
+ * 1. Priority 1: Program Kerja Operational Boundary (IProgramKerjaBoundaryService)
  * 2. Priority 2: Knowledge Recommendation Engine (IKnowledgeEngineAdapter)
  * 3. Priority 3: Master Trade Library (ITradeLibraryRepository)
  *
  * Operational Invariants:
+ * - NO Direct MSP Repository Dependencies (consumes scheduling data via Program Kerja Boundary)
  * - NO Trade Scoring (scoring belongs exclusively to Knowledge Engine DEV-025)
  * - NO Caching (evaluates live source data on every call)
  * - NO Persistence (read-only orchestration engine)
@@ -33,14 +34,14 @@ export interface ITreEngineServiceDependencies {
  * - NO Database Transactions (executes zero mutations)
  */
 export class TreEngineService implements ITreEngineService {
-  private readonly mspRepo: IMspResourceRepository;
+  private readonly pkBoundary: IProgramKerjaBoundaryService;
   private readonly tradeLibRepo: ITradeLibraryRepository;
   private readonly knowledgeAdapter: IKnowledgeEngineAdapter;
   private readonly clock: IClock;
   private readonly logger: Logger;
 
   constructor(deps: ITreEngineServiceDependencies) {
-    this.mspRepo = deps.mspResourceRepository;
+    this.pkBoundary = deps.programKerjaBoundaryService;
     this.tradeLibRepo = deps.tradeLibraryRepository;
     this.knowledgeAdapter = deps.knowledgeEngineAdapter;
     this.clock = deps.clock;
@@ -54,25 +55,28 @@ export class TreEngineService implements ITreEngineService {
       this.logger.info('Resolving trade recommendation in TRE', {
         siteDiaryId: ctx.siteDiaryId,
         programmeId: ctx.programmeId,
+        revisionId: ctx.revisionId,
         mspTaskId: ctx.mspTaskId,
         timestamp: this.clock.nowIso(),
       });
 
-      // Priority 1: MSP Resource Assignment
-      if (ctx.mspTaskId) {
-        const mspResource = await this.mspRepo.findResourceTradeByMspTask(
+      // Priority 1: Program Kerja Boundary (formerly raw MSP Resource Assignment)
+      if (ctx.mspTaskId && ctx.revisionId) {
+        const pkResult = await this.pkBoundary.getProgramKerjaTrade(
           ctx.programmeId,
+          ctx.revisionId,
           ctx.mspTaskId
         );
-        if (mspResource) {
-          this.logger.info('TRE resolved via Priority 1 (MSP Resource)', {
-            tradeCode: mspResource.tradeCode,
+        if (isSuccess(pkResult) && pkResult.value) {
+          const pkTrade = pkResult.value;
+          this.logger.info('TRE resolved via Priority 1 (Program Kerja Boundary)', {
+            tradeCode: pkTrade.tradeCode,
           });
           return Success<TradeSelection>({
-            tradeId: mspResource.resourceId,
-            tradeCode: mspResource.tradeCode,
-            tradeName: mspResource.tradeName,
-            tradeCategory: mspResource.tradeCategory,
+            tradeId: pkTrade.tradeId,
+            tradeCode: pkTrade.tradeCode,
+            tradeName: pkTrade.tradeName,
+            tradeCategory: pkTrade.tradeCategory,
             resolutionSource: 'MSP_RESOURCE',
           });
         }

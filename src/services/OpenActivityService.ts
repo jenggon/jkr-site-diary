@@ -111,6 +111,7 @@ export class OpenActivityService implements IOpenActivityService {
       const treCtx: TreResolutionContext = {
         siteDiaryId: cmd.siteDiaryId,
         programmeId: cmd.programmeId,
+        revisionId: cmd.revisionId ?? 'rev-approved-default',
         mspTaskId: cmd.taskId,
         activityName: cmd.activityName,
       };
@@ -184,6 +185,7 @@ export class OpenActivityService implements IOpenActivityService {
       const wreCtx: WorkforceResolutionContext = {
         siteDiaryId: cmd.siteDiaryId,
         programmeId: cmd.programmeId,
+        revisionId: cmd.revisionId ?? 'rev-approved-default',
         mspTaskId: cmd.taskId,
         activityName: cmd.activityName,
         tradeSelection: resolvedTradeInfo,
@@ -231,14 +233,16 @@ export class OpenActivityService implements IOpenActivityService {
         if (isNotFound) {
           this.logger.warn(
             'WRE resolution exhausted all sources — activity will be created without workforce assignment',
-            { wreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
+            { wreResolution: observabilityEvent }
           );
         } else {
           this.logger.error(
             'WRE engine error — activity will be created without workforce assignment',
-            { wreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
+            { wreResolution: observabilityEvent }
           );
         }
+
+        resolvedWorkforceCount = undefined;
       }
     }
 
@@ -249,6 +253,7 @@ export class OpenActivityService implements IOpenActivityService {
       const mreCtx: MaterialResolutionContext = {
         siteDiaryId: cmd.siteDiaryId,
         programmeId: cmd.programmeId,
+        revisionId: cmd.revisionId ?? 'rev-approved-default',
         mspTaskId: cmd.taskId,
         activityName: cmd.activityName,
         tradeSelection: resolvedTradeInfo,

@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WorkforceEngineService, IWorkforceEngineServiceDependencies } from '@/services/WorkforceEngineService';
 import { WorkforceResolutionContext } from '@/types/wre';
-import { IMspWorkforceRepository } from '@/repositories/IMspWorkforceRepository';
+import { IProgramKerjaBoundaryService } from '@/services/IProgramKerjaBoundaryService';
 import { ITradeWorkforceLibraryRepository } from '@/repositories/ITradeWorkforceLibraryRepository';
 import { IWorkforceRuleRepository } from '@/repositories/IWorkforceRuleRepository';
 import { IRuleEvaluatorRegistry } from '@/services/evaluators/IWorkforceEvaluatorRegistry';
 import { IClock } from '@/lib/IClock';
 import { Logger } from '@/lib/logger';
-import { isSuccess, isFailure } from '@/lib/result';
+import { isSuccess, isFailure, Success } from '@/lib/result';
 import { NoWorkforceRecommendationFoundError, InvalidWorkforceContextError } from '@/errors/wreErrors';
 
 describe('WorkforceEngineService', () => {
-  let mockMspRepo: IMspWorkforceRepository;
+  let mockPkBoundary: IProgramKerjaBoundaryService;
   let mockTradeLibRepo: ITradeWorkforceLibraryRepository;
   let mockRuleRepo: IWorkforceRuleRepository;
   let mockRegistry: IRuleEvaluatorRegistry;
@@ -21,8 +21,10 @@ describe('WorkforceEngineService', () => {
   let mockCtx: WorkforceResolutionContext;
 
   beforeEach(() => {
-    mockMspRepo = {
-      findWorkforceByMspTask: async () => null,
+    mockPkBoundary = {
+      getProgramKerjaTrade: async () => Success(null),
+      getProgramKerjaWorkforce: async () => Success(null),
+      getProgramKerjaMaterials: async () => Success(null),
     };
     mockTradeLibRepo = {
       getWorkforceCompositionByTrade: async () => null,
@@ -48,7 +50,7 @@ describe('WorkforceEngineService', () => {
     } as unknown as Logger;
 
     const deps: IWorkforceEngineServiceDependencies = {
-      mspWorkforceRepository: mockMspRepo,
+      programKerjaBoundaryService: mockPkBoundary,
       tradeWorkforceLibraryRepository: mockTradeLibRepo,
       workforceRuleRepository: mockRuleRepo,
       evaluatorRegistry: mockRegistry,
@@ -61,6 +63,7 @@ describe('WorkforceEngineService', () => {
     mockCtx = {
       siteDiaryId: 'sd-1',
       programmeId: 'prog-1',
+      revisionId: 'rev-approved-1',
       activityName: 'Test Activity',
       tradeSelection: {
         tradeId: 't-1',
@@ -81,9 +84,9 @@ describe('WorkforceEngineService', () => {
     }
   });
 
-  it('resolves via Priority 1 (MSP) if mspTaskId is present and data found', async () => {
+  it('resolves via Priority 1 (Program Kerja Boundary) if mspTaskId is present and data found', async () => {
     mockCtx = { ...mockCtx, mspTaskId: 'msp-1' };
-    mockMspRepo.findWorkforceByMspTask = async () => [{
+    mockPkBoundary.getProgramKerjaWorkforce = async () => Success([{
       roleCode: 'SUPERVISOR',
       allocatedCount: 2,
       tradeId: 't-1',
@@ -91,7 +94,7 @@ describe('WorkforceEngineService', () => {
       tradeName: 'Trade 1',
       skillLevel: 'SKILLED',
       isMandatory: true,
-    }];
+    }]);
 
     const result = await service.resolveWorkforceRecommendation(mockCtx);
     
@@ -104,9 +107,9 @@ describe('WorkforceEngineService', () => {
     }
   });
 
-  it('falls back to Priority 2 (Trade Library) if MSP misses', async () => {
+  it('falls back to Priority 2 (Trade Library) if Program Kerja Boundary misses', async () => {
     mockCtx = { ...mockCtx, mspTaskId: 'msp-1' };
-    mockMspRepo.findWorkforceByMspTask = async () => null; // miss
+    mockPkBoundary.getProgramKerjaWorkforce = async () => Success(null); // miss
     mockTradeLibRepo.getWorkforceCompositionByTrade = async () => [{
       roleCode: 'GENERAL',
       baselineCount: 5,
