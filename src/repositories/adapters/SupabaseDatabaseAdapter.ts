@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase';
 import { Result, Success, Failure } from '@/lib/result';
 import { BaseAppError, InfrastructureError } from '@/lib/errors';
 import { ProgrammeAlreadyExistsError, ProgrammeNotFoundError } from '@/errors/programmeErrors';
+import { ActivityRevisionSupersededError } from '@/errors/activityErrors';
 import { IDatabaseAdapter } from './IDatabaseAdapter';
 
 export class SupabaseDatabaseAdapter implements IDatabaseAdapter {
@@ -18,6 +19,9 @@ export class SupabaseDatabaseAdapter implements IDatabaseAdapter {
     }
     if (error.code === 'PGRST116') {
       return new ProgrammeNotFoundError(`Resource not found: ${error.message}`);
+    }
+    if (error.code === 'P0001' && error.message.includes('ACTIVITY_REVISION_SUPERSEDED')) {
+      return new ActivityRevisionSupersededError(error.message);
     }
     return new InfrastructureError(`Database error [${error.code ?? 'UNKNOWN'}]: ${error.message}`);
   }
