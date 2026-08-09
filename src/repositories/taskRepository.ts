@@ -119,8 +119,30 @@ export async function updateTask(
   return result as Task;
 }
 
+/**
+ * Bulk insert multiple Task records into database.
+ * Spec: DB-013 / S1 Ingestion
+ */
+export async function bulkCreateTasks(tasks: Task[]): Promise<Task[]> {
+  if (!tasks || tasks.length === 0) {
+    return [];
+  }
+
+  const { data: result, error } = await supabase
+    .from('task')
+    .insert(tasks)
+    .select();
+
+  if (error) {
+    throw new Error(`Failed to bulk create tasks: ${error.message}`);
+  }
+
+  return (result || []) as Task[];
+}
+
 export const taskRepository = {
   createTask,
+  bulkCreateTasks,
   getTaskById,
   getTaskByUID,
   getTasksByRevision,

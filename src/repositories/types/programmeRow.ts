@@ -26,6 +26,8 @@ export interface ProgrammeRevisionRow {
   readonly revision_title: string;
   readonly is_current: boolean;
   readonly status: 'Draft' | 'UnderReview' | 'Approved' | 'Superseded' | 'Archived';
+  readonly msp_file_name?: string | null;
+  readonly msp_file_hash?: string | null;
   readonly description: string | null;
   readonly approved_at: string | null;
   readonly approved_by: string | null;
