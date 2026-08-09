@@ -138,6 +138,7 @@ export interface MaterialRecommendationSnapshot {
 export interface MaterialResolutionContext {
   readonly siteDiaryId: string;
   readonly programmeId: string;
+  readonly revisionId?: string | undefined;
   readonly mspTaskId?: string | undefined;
   readonly activityName: string;
   readonly tradeSelection: TradeSelection;

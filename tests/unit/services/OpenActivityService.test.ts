@@ -105,6 +105,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const activityRepo: IOpenActivityRepository = {
       findById: async () => Success(sampleActivity),
       findBySiteDiaryId: async () => Success([sampleActivity]),
+      findByRevisionId: async () => Success([sampleActivity]),
       create: async (a) => Success(a),
       update: async (a) => Success(a),
       updateStatus: async (id, status) => Success({ ...sampleActivity, activityId: id, status }),
@@ -139,6 +140,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja-kerja Memasang Tetulang',
       workforceCount: 4,
       createdBy: 'user-1',
@@ -239,6 +241,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       taskId: 'task-50',
       activityName: 'Kerja Konkrit Asas',
       createdBy: 'user-1',
@@ -270,6 +273,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja Tetulang Lantai',
       createdBy: 'user-1',
     });
@@ -297,6 +301,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja Am',
       createdBy: 'user-1',
     });
@@ -326,6 +331,7 @@ const mockWreNoOp: IWorkforceEngineService = {
       activityRepository: {
         findById: async () => Success(sampleActivity),
         findBySiteDiaryId: async () => Success([sampleActivity]),
+        findByRevisionId: async () => Success([sampleActivity]),
         create: async (a) => Success(a),
         update: async (a) => Success(a),
         updateStatus: async (id, status) => Success({ ...sampleActivity, activityId: id, status }),
@@ -346,6 +352,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja Am',
       createdBy: 'user-1',
     });
@@ -385,6 +392,7 @@ const mockWreNoOp: IWorkforceEngineService = {
       activityRepository: {
         findById: async () => Success(sampleActivity),
         findBySiteDiaryId: async () => Success([sampleActivity]),
+        findByRevisionId: async () => Success([sampleActivity]),
         create: async (a) => Success(a),
         update: async (a) => Success(a),
         updateStatus: async (id, status) => Success({ ...sampleActivity, activityId: id, status }),
@@ -405,6 +413,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja Am',
       createdBy: 'user-1',
     });
@@ -435,6 +444,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja Konkrit Asas',
       createdBy: 'user-1',
       tradeSelection: {
@@ -477,6 +487,7 @@ const mockWreNoOp: IWorkforceEngineService = {
       activityRepository: {
         findById: async () => Success(sampleActivity),
         findBySiteDiaryId: async () => Success([sampleActivity]),
+        findByRevisionId: async () => Success([sampleActivity]),
         create: async (a) => Success(a),
         update: async (a) => Success(a),
         updateStatus: async (id, status) => Success({ ...sampleActivity, activityId: id, status }),
@@ -497,6 +508,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       taskId: 'task-88',
       activityName: 'Kerja Paip Utama',
       createdBy: 'user-1',
@@ -538,6 +550,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Test Activity',
       createdBy: 'user-1',
     });
@@ -558,6 +571,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Test Activity',
       createdBy: 'user-1',
       workforceCount: 8,
@@ -588,6 +602,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja Am',
       createdBy: 'user-1',
     });
@@ -620,6 +635,7 @@ const mockWreNoOp: IWorkforceEngineService = {
     const result = await service.createActivity({
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
+      revisionId: 'rev-001',
       activityName: 'Kerja Am',
       createdBy: 'user-1',
     });

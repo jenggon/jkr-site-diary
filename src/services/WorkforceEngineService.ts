@@ -21,8 +21,11 @@ import {
   WreEngineError 
 } from '@/errors/wreErrors';
 
+import { IProgramKerjaBoundaryService } from './IProgramKerjaBoundaryService';
+
 export interface IWorkforceEngineServiceDependencies {
-  readonly mspWorkforceRepository: IMspWorkforceRepository;
+  readonly mspWorkforceRepository?: IMspWorkforceRepository | undefined;
+  readonly programKerjaBoundaryService?: IProgramKerjaBoundaryService | undefined;
   readonly tradeWorkforceLibraryRepository: ITradeWorkforceLibraryRepository;
   readonly workforceRuleRepository: IWorkforceRuleRepository;
   readonly evaluatorRegistry: IRuleEvaluatorRegistry;
@@ -47,18 +50,37 @@ export class WorkforceEngineService implements IWorkforceEngineService {
     }
 
     try {
-      // Priority 1: MSP Resource Assignment
+      // Priority 1: Program Kerja / MSP Resource Assignment
       if (ctx.mspTaskId) {
-        const mspData = await this.deps.mspWorkforceRepository.findWorkforceByMspTask(ctx.programmeId, ctx.mspTaskId);
-        if (mspData && mspData.length > 0) {
-          return Success(this.buildResolution(ctx, 'MSP_RESOURCE', 'HIGH', {
-            repository: 'MspWorkforceRepository',
-            evaluator: null,
-            ruleId: null,
-            ruleVersion: null,
-            matchedPriority: 'MSP_RESOURCE',
-            matchedDiscipline: null
-          }, startTime, mspData, 'MSP_MATCH', 'Resolved from MSP resource assignment'));
+        if (this.deps.programKerjaBoundaryService) {
+          const pkWf = await this.deps.programKerjaBoundaryService.getProgramKerjaWorkforce(
+            ctx.programmeId,
+            ctx.revisionId ?? '',
+            ctx.mspTaskId
+          );
+          if (pkWf && pkWf.length > 0) {
+            const count = pkWf.reduce((sum, item) => sum + item.count, 0);
+            return Success(this.buildResolution(ctx, 'MSP_RESOURCE', 'HIGH', {
+              repository: 'ProgramKerjaBoundaryService',
+              evaluator: null,
+              ruleId: null,
+              ruleVersion: null,
+              matchedPriority: 'MSP_RESOURCE',
+              matchedDiscipline: null
+            }, startTime, [{ recommendedCount: count }], 'MSP_MATCH', 'Resolved from Program Kerja'));
+          }
+        } else if (this.deps.mspWorkforceRepository) {
+          const mspData = await this.deps.mspWorkforceRepository.findWorkforceByMspTask(ctx.programmeId, ctx.mspTaskId);
+          if (mspData && mspData.length > 0) {
+            return Success(this.buildResolution(ctx, 'MSP_RESOURCE', 'HIGH', {
+              repository: 'MspWorkforceRepository',
+              evaluator: null,
+              ruleId: null,
+              ruleVersion: null,
+              matchedPriority: 'MSP_RESOURCE',
+              matchedDiscipline: null
+            }, startTime, mspData, 'MSP_MATCH', 'Resolved from MSP resource assignment'));
+          }
         }
       }
 

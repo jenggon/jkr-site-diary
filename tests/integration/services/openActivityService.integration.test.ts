@@ -131,6 +131,7 @@ describe('OpenActivityService Integration Scenarios', () => {
     const createRes = await service.createActivity({
       siteDiaryId: 'diary-888',
       programmeId: 'prog-999',
+      revisionId: 'rev-999',
       activityName: 'Memasang Papan Acuan',
       workforceCount: 6,
       createdBy: 'user-supervisor',

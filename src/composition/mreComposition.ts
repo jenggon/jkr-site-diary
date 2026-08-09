@@ -3,6 +3,8 @@ import { MaterialEngineService } from '@/services/MaterialEngineService';
 import { IMspMaterialRepository } from '@/repositories/IMspMaterialRepository';
 import { ITradeMaterialLibraryRepository } from '@/repositories/ITradeMaterialLibraryRepository';
 import { IMaterialRuleRepository } from '@/repositories/IMaterialRuleRepository';
+import { ProgramKerjaBoundaryService } from '@/services/ProgramKerjaBoundaryService';
+import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
 import { MaterialRuleEvaluatorRegistry } from '@/services/evaluators/MaterialRuleEvaluatorRegistry';
 import { StandardMaterialEvaluator } from '@/services/evaluators/StandardMaterialEvaluator';
 import { SystemClock } from '@/lib/clock';
@@ -30,6 +32,11 @@ class MockMaterialRuleRepository implements IMaterialRuleRepository {
 
 export function createMaterialEngineService(): IMaterialEngineService {
   const mspMaterialRepository = new MockMspMaterialRepository();
+  const revisionRepo = new ProgrammeRevisionRepository();
+  const pkBoundary = new ProgramKerjaBoundaryService({
+    mspMaterialRepository,
+    revisionRepository: revisionRepo,
+  });
   const tradeMaterialLibraryRepository = new MockTradeMaterialLibraryRepository();
   const materialRuleRepository = new MockMaterialRuleRepository();
   
@@ -38,7 +45,7 @@ export function createMaterialEngineService(): IMaterialEngineService {
   evaluatorRegistry.register(new StandardMaterialEvaluator('ALL', materialRuleRepository));
 
   return new MaterialEngineService({
-    mspMaterialRepository,
+    programKerjaBoundaryService: pkBoundary,
     tradeMaterialLibraryRepository,
     evaluatorRegistry,
     clock: new SystemClock(),

@@ -28,10 +28,12 @@ export class ProgrammeRevisionApprovedEvent implements IDomainEvent {
   public readonly occurredAt: string = nowIso();
   public readonly payload: Record<string, unknown>;
 
-  constructor(revision: ProgrammeRevision) {
+  constructor(revision: ProgrammeRevision, previousRevisionId: string | null = null) {
     this.payload = {
-      revisionId: revision.revisionId,
       programmeId: revision.programmeId,
+      approvedRevisionId: revision.revisionId,
+      previousRevisionId: previousRevisionId,
+      revisionId: revision.revisionId,
       revisionNumber: revision.revisionNumber,
       status: revision.status,
       approvedBy: revision.approvedBy ?? null,

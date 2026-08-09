@@ -10,6 +10,7 @@ export interface OpenActivityRow {
   readonly id: string;
   readonly site_diary_id: string;
   readonly programme_id: string;
+  readonly revision_id?: string | null;
   readonly task_id?: string | null;
   readonly activity_name: string;
   readonly location?: Record<string, unknown> | null;
@@ -35,6 +36,7 @@ export class OpenActivityRepository implements IOpenActivityRepository {
       activityId: row.id,
       siteDiaryId: row.site_diary_id,
       programmeId: row.programme_id,
+      revisionId: row.revision_id ?? undefined,
       taskId: row.task_id ?? undefined,
       activityName: row.activity_name,
       location: (row.location as unknown as ActivityLocation) ?? undefined,
@@ -54,6 +56,7 @@ export class OpenActivityRepository implements IOpenActivityRepository {
       id: activity.activityId,
       site_diary_id: activity.siteDiaryId,
       programme_id: activity.programmeId,
+      revision_id: activity.revisionId ?? null,
       task_id: activity.taskId ?? null,
       activity_name: activity.activityName,
       location: activity.location ?? null,
@@ -77,6 +80,12 @@ export class OpenActivityRepository implements IOpenActivityRepository {
 
   public async findBySiteDiaryId(siteDiaryId: string): Promise<Result<OpenActivity[], BaseAppError>> {
     const res = await this.adapter.selectMany<OpenActivityRow>('site_diary', { site_diary_id: siteDiaryId });
+    if (isFailure(res)) return Failure(res.error);
+    return Success(res.value.map((r) => this.mapRowToDomain(r)));
+  }
+
+  public async findByRevisionId(revisionId: string): Promise<Result<OpenActivity[], BaseAppError>> {
+    const res = await this.adapter.selectMany<OpenActivityRow>('site_diary', { revision_id: revisionId });
     if (isFailure(res)) return Failure(res.error);
     return Success(res.value.map((r) => this.mapRowToDomain(r)));
   }

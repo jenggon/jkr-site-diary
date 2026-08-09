@@ -21,8 +21,11 @@ import {
   MreEngineError 
 } from '@/errors/mreErrors';
 
+import { IProgramKerjaBoundaryService } from './IProgramKerjaBoundaryService';
+
 export interface IMaterialEngineServiceDependencies {
-  readonly mspMaterialRepository: IMspMaterialRepository;
+  readonly mspMaterialRepository?: IMspMaterialRepository | undefined;
+  readonly programKerjaBoundaryService?: IProgramKerjaBoundaryService | undefined;
   readonly tradeMaterialLibraryRepository: ITradeMaterialLibraryRepository;
   readonly evaluatorRegistry: IMaterialRuleEvaluatorRegistry;
   readonly clock: IClock;
@@ -46,19 +49,51 @@ export class MaterialEngineService implements IMaterialEngineService {
     }
 
     try {
-      // Priority 1: MSP Resource Assignment
+      // Priority 1: Program Kerja / MSP Resource Assignment
       if (ctx.mspTaskId) {
-        const mspData = await this.deps.mspMaterialRepository.findMaterialsByMspTask(ctx.programmeId, ctx.mspTaskId);
-        if (mspData && mspData.length > 0) {
-          return Success(this.buildResolution(ctx, 'MSP_MATERIAL', 'HIGH', {
-            repository: 'MspMaterialRepository',
-            evaluator: null,
-            ruleId: null,
-            ruleVersion: null,
-            matchedPriority: 'MSP_MATERIAL',
-            matchedTrade: null,
-            matchedDiscipline: null
-          }, startTime, mspData, 'MSP_MATCH', 'Resolved from MSP resource assignment'));
+        if (this.deps.programKerjaBoundaryService) {
+          const pkMats = await this.deps.programKerjaBoundaryService.getProgramKerjaMaterials(
+            ctx.programmeId,
+            ctx.revisionId ?? '',
+            ctx.mspTaskId
+          );
+          if (pkMats && pkMats.length > 0) {
+            const items: MaterialItemRecommendation[] = pkMats.map((m) => ({
+              materialCode: m.materialCode,
+              materialName: m.materialName,
+              materialRole: 'MAIN',
+              recommendedQuantity: m.quantity,
+              unitOfMeasure: m.unit,
+              isMandatory: true,
+              estimatedWastePercentage: null,
+              estimatedCost: m.estimatedCost ?? null,
+              estimatedLeadTime: null,
+              constraints: [],
+              substitutions: [],
+            }));
+            return Success(this.buildResolution(ctx, 'MSP_MATERIAL', 'HIGH', {
+              repository: 'ProgramKerjaBoundaryService',
+              evaluator: null,
+              ruleId: null,
+              ruleVersion: null,
+              matchedPriority: 'MSP_MATERIAL',
+              matchedTrade: null,
+              matchedDiscipline: null
+            }, startTime, items, 'MSP_MATCH', 'Resolved from Program Kerja'));
+          }
+        } else if (this.deps.mspMaterialRepository) {
+          const mspData = await this.deps.mspMaterialRepository.findMaterialsByMspTask(ctx.programmeId, ctx.mspTaskId);
+          if (mspData && mspData.length > 0) {
+            return Success(this.buildResolution(ctx, 'MSP_MATERIAL', 'HIGH', {
+              repository: 'MspMaterialRepository',
+              evaluator: null,
+              ruleId: null,
+              ruleVersion: null,
+              matchedPriority: 'MSP_MATERIAL',
+              matchedTrade: null,
+              matchedDiscipline: null
+            }, startTime, mspData as unknown as MaterialItemRecommendation[], 'MSP_MATCH', 'Resolved from MSP material assignment'));
+          }
         }
       }
 

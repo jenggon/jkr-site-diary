@@ -47,6 +47,15 @@ export interface Task {
   /** Task Information - Outline level from MSP */
   outline_level: number | null;
 
+  /** Task Information - Outline number from MSP (e.g. 1.1.2) */
+  outline_number?: string | null;
+
+  /** Trade Information - Trade classification code */
+  trade_code?: string | null;
+
+  /** Trade Information - Trade classification name */
+  trade_name?: string | null;
+
   /** Task Information - Display/Rendering order */
   display_order: number | null;
 

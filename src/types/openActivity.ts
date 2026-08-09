@@ -20,6 +20,7 @@ export interface OpenActivity {
   readonly activityId: string;
   readonly siteDiaryId: string;
   readonly programmeId: string;
+  readonly revisionId?: string | undefined;
   readonly taskId?: string | undefined;
   readonly activityName: string;
   readonly location?: ActivityLocation | undefined;
