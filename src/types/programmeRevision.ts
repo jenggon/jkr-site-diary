@@ -12,7 +12,8 @@ export interface ProgrammeRevision {
   readonly revisionTitle: string;
   readonly isCurrent: boolean;
   readonly status: ProgrammeRevisionStatus;
-  readonly msp_file_hash?: string | null;
+  readonly msp_file_name?: string | null | undefined;
+  readonly msp_file_hash?: string | null | undefined;
   readonly description?: string | undefined;
   readonly approvedAt?: string | undefined;
   readonly approvedBy?: string | undefined;
