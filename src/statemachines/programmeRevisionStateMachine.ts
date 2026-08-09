@@ -2,7 +2,7 @@ import { ProgrammeRevisionStatus } from '@/types/programmeRevision';
 import { InvalidProgrammeStateError } from '@/errors/programmeErrors';
 
 const ALLOWED_REVISION_TRANSITIONS: Readonly<Record<ProgrammeRevisionStatus, readonly ProgrammeRevisionStatus[]>> = Object.freeze({
-  Draft: ['UnderReview', 'Archived'] as readonly ProgrammeRevisionStatus[],
+  Draft: ['UnderReview', 'Approved', 'Archived'] as readonly ProgrammeRevisionStatus[],
   UnderReview: ['Approved', 'Draft', 'Archived'] as readonly ProgrammeRevisionStatus[],
   Approved: ['Superseded', 'Archived'] as readonly ProgrammeRevisionStatus[],
   Superseded: ['Archived'] as readonly ProgrammeRevisionStatus[],
