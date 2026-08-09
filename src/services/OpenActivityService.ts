@@ -37,6 +37,8 @@ export interface IOpenActivityServiceDependencies {
   readonly treEngine: ITreEngineService;
   readonly workforceEngine: IWorkforceEngineService;
   readonly materialEngine: IMaterialEngineService;
+  readonly revisionRepository?: import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository;
+  readonly taskRepository?: { getTaskById(taskId: string): Promise<import('@/types/task').Task | null> };
 }
 
 /**
@@ -71,6 +73,8 @@ export class OpenActivityService implements IOpenActivityService {
   private readonly treEngine: ITreEngineService;
   private readonly workforceEngine: IWorkforceEngineService;
   private readonly materialEngine: IMaterialEngineService;
+  private readonly revisionRepo?: import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository;
+  private readonly taskRepo?: { getTaskById(taskId: string): Promise<import('@/types/task').Task | null> };
 
   constructor(deps: IOpenActivityServiceDependencies) {
     this.activityRepo = deps.activityRepository;
@@ -82,6 +86,12 @@ export class OpenActivityService implements IOpenActivityService {
     this.treEngine = deps.treEngine;
     this.workforceEngine = deps.workforceEngine;
     this.materialEngine = deps.materialEngine;
+    if (deps.revisionRepository !== undefined) {
+      this.revisionRepo = deps.revisionRepository;
+    }
+    if (deps.taskRepository !== undefined) {
+      this.taskRepo = deps.taskRepository;
+    }
   }
 
   private async publishEventSafely(event: unknown): Promise<void> {
@@ -93,11 +103,39 @@ export class OpenActivityService implements IOpenActivityService {
   }
 
   public async createActivity(cmd: CreateActivityCommand): Promise<Result<OpenActivity, BaseAppError>> {
+    if (!cmd.revisionId || cmd.revisionId.trim() === '') {
+      return Failure(new ActivityValidationError('revisionId is required'));
+    }
+
     try {
       validateActivityName(cmd.activityName);
     } catch (err: unknown) {
       if (err instanceof BaseAppError) return Failure(err);
       return Failure(new ActivityValidationError(err instanceof Error ? err.message : 'Validation failed'));
+    }
+
+    if (this.revisionRepo) {
+      const revRes = await this.revisionRepo.findById(cmd.revisionId);
+      if (isFailure(revRes)) return Failure(revRes.error);
+      if (!revRes.value) {
+        return Failure(new ActivityValidationError(`Revision not found: ${cmd.revisionId}`));
+      }
+      if (revRes.value.programmeId !== cmd.programmeId) {
+        return Failure(new ActivityValidationError('programme/revision mismatch'));
+      }
+    }
+
+    if (cmd.taskId && this.taskRepo) {
+      const task = await this.taskRepo.getTaskById(cmd.taskId);
+      if (!task) {
+        return Failure(new ActivityValidationError(`Task not found: ${cmd.taskId}`));
+      }
+      if (task.revision_id !== cmd.revisionId) {
+        return Failure(new ActivityValidationError('task/revision mismatch'));
+      }
+      if (task.programme_id !== cmd.programmeId) {
+        return Failure(new ActivityValidationError('programme/task mismatch'));
+      }
     }
 
     const requestId = generateUuid();
@@ -319,6 +357,7 @@ export class OpenActivityService implements IOpenActivityService {
         activityId,
         siteDiaryId: cmd.siteDiaryId,
         programmeId: cmd.programmeId,
+        revisionId: cmd.revisionId,
         taskId: cmd.taskId,
         activityName: cmd.activityName,
         location: cmd.location,

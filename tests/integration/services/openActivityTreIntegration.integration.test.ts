@@ -73,6 +73,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
   const mockActivityRepo: IOpenActivityRepository = {
     findById: async () => Success(sampleActivity),
     findBySiteDiaryId: async () => Success([sampleActivity]),
+    findByRevisionId: async () => Success([sampleActivity]),
     create: async (a) => Success(a),
     update: async (a) => Success(a),
     updateStatus: async (id, status) => Success({ ...sampleActivity, activityId: id, status }),
@@ -141,6 +142,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     const result = await openActivityService.createActivity({
       siteDiaryId: 'diary-integ',
       programmeId: 'prog-integ',
+      revisionId: 'rev-integ',
       taskId: 'msp-task-1',
       activityName: 'Kerja Konkrit Utama',
       createdBy: 'test-user',
@@ -191,6 +193,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     const result = await openActivityService.createActivity({
       siteDiaryId: 'diary-integ',
       programmeId: 'prog-integ',
+      revisionId: 'rev-integ',
       activityName: 'Kerja Am Tapak',
       createdBy: 'test-user',
     });
@@ -238,6 +241,7 @@ describe('OpenActivityService + TreEngineService Integration', () => {
     const result = await openActivityService.createActivity({
       siteDiaryId: 'diary-integ',
       programmeId: 'prog-integ',
+      revisionId: 'rev-integ',
       activityName: 'Kerja Tiada Trade',
       createdBy: 'test-user',
     });

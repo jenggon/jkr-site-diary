@@ -35,6 +35,7 @@ describe('openActivityWreIntegration', () => {
     const mockActivityRepo: IOpenActivityRepository = {
       findById: async () => Success({} as OpenActivity),
       findBySiteDiaryId: async () => Success([]),
+      findByRevisionId: async () => Success([]),
       create: async (a: OpenActivity) => Success(a),
       update: async (a: OpenActivity) => Success(a),
       updateStatus: async (_id: string, _status: import('@/types/openActivity').ActivityStatus) => Success({} as OpenActivity),
@@ -77,6 +78,7 @@ describe('openActivityWreIntegration', () => {
     const result = await service.createActivity({
       siteDiaryId: 'diary-integration-1',
       programmeId: 'prog-1',
+      revisionId: 'rev-1',
       activityName: 'Kerja-kerja Konkrit Asas',
       createdBy: 'test-user',
     });
@@ -97,6 +99,7 @@ describe('openActivityWreIntegration', () => {
     const mockActivityRepo: IOpenActivityRepository = {
       findById: async () => Success({} as OpenActivity),
       findBySiteDiaryId: async () => Success([]),
+      findByRevisionId: async () => Success([]),
       create: async (a: OpenActivity) => Success(a),
       update: async (a: OpenActivity) => Success(a),
       updateStatus: async (_id: string, _status: import('@/types/openActivity').ActivityStatus) => Success({} as OpenActivity),
@@ -121,6 +124,7 @@ describe('openActivityWreIntegration', () => {
     const result = await service.createActivity({
       siteDiaryId: 'diary-integration-2',
       programmeId: 'prog-1',
+      revisionId: 'rev-1',
       activityName: 'Kerja Am',
       workforceCount: 99,
       createdBy: 'test-user',

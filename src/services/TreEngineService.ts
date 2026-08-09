@@ -9,8 +9,11 @@ import { ITradeLibraryRepository } from '@/repositories/ITradeLibraryRepository'
 import { IKnowledgeEngineAdapter } from '@/services/adapters/IKnowledgeEngineAdapter';
 import { ITreEngineService } from './ITreEngineService';
 
+import { IProgramKerjaBoundaryService } from './IProgramKerjaBoundaryService';
+
 export interface ITreEngineServiceDependencies {
-  readonly mspResourceRepository: IMspResourceRepository;
+  readonly mspResourceRepository?: IMspResourceRepository | undefined;
+  readonly programKerjaBoundaryService?: IProgramKerjaBoundaryService | undefined;
   readonly tradeLibraryRepository: ITradeLibraryRepository;
   readonly knowledgeEngineAdapter: IKnowledgeEngineAdapter;
   readonly clock: IClock;
@@ -21,19 +24,13 @@ export interface ITreEngineServiceDependencies {
  * Trade Recommendation Engine (TRE) Service
  *
  * Enforces immutable 3-tier resolution priority:
- * 1. Priority 1: MSP Resource Assignment (IMspResourceRepository)
+ * 1. Priority 1: Program Kerja / MSP Resource Assignment
  * 2. Priority 2: Knowledge Recommendation Engine (IKnowledgeEngineAdapter)
  * 3. Priority 3: Master Trade Library (ITradeLibraryRepository)
- *
- * Operational Invariants:
- * - NO Trade Scoring (scoring belongs exclusively to Knowledge Engine DEV-025)
- * - NO Caching (evaluates live source data on every call)
- * - NO Persistence (read-only orchestration engine)
- * - NO Domain Events (publishes zero events)
- * - NO Database Transactions (executes zero mutations)
  */
 export class TreEngineService implements ITreEngineService {
-  private readonly mspRepo: IMspResourceRepository;
+  private readonly mspRepo?: IMspResourceRepository | undefined;
+  private readonly pkBoundary?: IProgramKerjaBoundaryService | undefined;
   private readonly tradeLibRepo: ITradeLibraryRepository;
   private readonly knowledgeAdapter: IKnowledgeEngineAdapter;
   private readonly clock: IClock;
@@ -41,6 +38,7 @@ export class TreEngineService implements ITreEngineService {
 
   constructor(deps: ITreEngineServiceDependencies) {
     this.mspRepo = deps.mspResourceRepository;
+    this.pkBoundary = deps.programKerjaBoundaryService;
     this.tradeLibRepo = deps.tradeLibraryRepository;
     this.knowledgeAdapter = deps.knowledgeEngineAdapter;
     this.clock = deps.clock;
@@ -58,23 +56,39 @@ export class TreEngineService implements ITreEngineService {
         timestamp: this.clock.nowIso(),
       });
 
-      // Priority 1: MSP Resource Assignment
+      // Priority 1: Program Kerja Boundary / MSP Resource Assignment
       if (ctx.mspTaskId) {
-        const mspResource = await this.mspRepo.findResourceTradeByMspTask(
-          ctx.programmeId,
-          ctx.mspTaskId
-        );
-        if (mspResource) {
-          this.logger.info('TRE resolved via Priority 1 (MSP Resource)', {
-            tradeCode: mspResource.tradeCode,
-          });
-          return Success<TradeSelection>({
-            tradeId: mspResource.resourceId,
-            tradeCode: mspResource.tradeCode,
-            tradeName: mspResource.tradeName,
-            tradeCategory: mspResource.tradeCategory,
-            resolutionSource: 'MSP_RESOURCE',
-          });
+        if (this.pkBoundary) {
+          const pkTrade = await this.pkBoundary.getProgramKerjaTrade(ctx.programmeId, ctx.mspTaskId);
+          if (pkTrade) {
+            this.logger.info('TRE resolved via Priority 1 (Program Kerja Boundary)', {
+              tradeCode: pkTrade.tradeCode,
+            });
+            return Success<TradeSelection>({
+              tradeId: pkTrade.tradeId,
+              tradeCode: pkTrade.tradeCode,
+              tradeName: pkTrade.tradeName,
+              tradeCategory: pkTrade.tradeCategory ?? null,
+              resolutionSource: 'MSP_RESOURCE',
+            });
+          }
+        } else if (this.mspRepo) {
+          const mspResource = await this.mspRepo.findResourceTradeByMspTask(
+            ctx.programmeId,
+            ctx.mspTaskId
+          );
+          if (mspResource) {
+            this.logger.info('TRE resolved via Priority 1 (MSP Resource)', {
+              tradeCode: mspResource.tradeCode,
+            });
+            return Success<TradeSelection>({
+              tradeId: mspResource.resourceId,
+              tradeCode: mspResource.tradeCode,
+              tradeName: mspResource.tradeName,
+              tradeCategory: mspResource.tradeCategory,
+              resolutionSource: 'MSP_RESOURCE',
+            });
+          }
         }
       }
 

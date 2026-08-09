@@ -224,6 +224,9 @@ export class ProgrammeService implements IProgrammeService {
       const activeRes = await this.revisionRepo.findActiveRevision(targetRevision.programmeId);
       if (isFailure(activeRes)) return Failure(activeRes.error);
 
+      const previousRevisionId =
+        activeRes.value && activeRes.value.revisionId !== revisionId ? activeRes.value.revisionId : null;
+
       const txResult = await this.txManager.execute(async () => {
         if (activeRes.value && activeRes.value.revisionId !== revisionId) {
           const supRes = await this.revisionRepo.updateStatus(activeRes.value.revisionId, 'Superseded', actorId);
@@ -240,7 +243,7 @@ export class ProgrammeService implements IProgrammeService {
       });
 
       if (isSuccess(txResult)) {
-        await this.publishEventSafely(new ProgrammeRevisionApprovedEvent(txResult.value));
+        await this.publishEventSafely(new ProgrammeRevisionApprovedEvent(txResult.value, previousRevisionId));
       }
       return txResult;
     } catch (err: unknown) {

@@ -6,6 +6,7 @@ import { ActivityLogEntry } from '@/repositories/IActivityLogRepository';
 export interface CreateActivityCommand {
   readonly siteDiaryId: string;
   readonly programmeId: string;
+  readonly revisionId: string;
   readonly taskId?: string | undefined;
   readonly activityName: string;
   readonly location?: ActivityLocation | undefined;
