@@ -556,10 +556,48 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     expect(tradeMismatch).toBeNull();
   });
 
-  it('R1 & R3.E: Production Composition Roots instantiate and wire ProgramKerjaBoundaryService', () => {
-    const treEngine = createTreEngineService();
-    expect(treEngine).toBeDefined();
+  it('R1 & R3.E: Production Composition Roots instantiate and wire ProgramKerjaBoundaryService (boundary routing verified)', async () => {
+    // Spy on the ProgramKerjaBoundaryService prototype BEFORE the factory creates its internal instance.
+    // This intercepts the real instance created inside createTreEngineService() without modifying
+    // the production composition root or any architectural code.
+    const spy = vi.spyOn(ProgramKerjaBoundaryService.prototype, 'getProgramKerjaTrade')
+      .mockResolvedValue({
+        tradeId: 'boundary-verified-trade-id',
+        tradeCode: 'BOUNDARY_ROUTE_CONFIRMED',
+        tradeName: 'Boundary Routing Confirmed',
+        tradeCategory: 'TEST',
+      });
 
+    try {
+      const treEngine = createTreEngineService();
+      expect(treEngine).toBeDefined();
+
+      const result = await treEngine.resolveTradeRecommendation({
+        siteDiaryId: 'sd-an001',
+        programmeId: 'prog-an001',
+        revisionId: 'rev-an001',
+        mspTaskId: 'task-an001',
+        activityName: 'AN-001 Boundary Routing Test',
+      });
+
+      // The spy must have been called once with the exact programmeId, revisionId, taskId
+      // that were in the resolution context. This proves TreEngineService called
+      // pkBoundary.getProgramKerjaTrade() — i.e., the boundary IS wired in production composition.
+      expect(spy).toHaveBeenCalledOnce();
+      expect(spy).toHaveBeenCalledWith('prog-an001', 'rev-an001', 'task-an001');
+
+      // The result must be resolved via Priority 1 (MSP_RESOURCE) with the value
+      // our spy returned — proving resolution went through the boundary, not the raw MSP fallback.
+      expect(isSuccess(result)).toBe(true);
+      if (isSuccess(result)) {
+        expect(result.value.tradeCode).toBe('BOUNDARY_ROUTE_CONFIRMED');
+        expect(result.value.resolutionSource).toBe('MSP_RESOURCE');
+      }
+    } finally {
+      spy.mockRestore();
+    }
+
+    // Verify WRE and MRE composition roots also instantiate correctly (structural check).
     const wreEngine = createWorkforceEngineService();
     expect(wreEngine).toBeDefined();
 
