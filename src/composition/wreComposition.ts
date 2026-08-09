@@ -1,6 +1,8 @@
 import { MspWorkforceRepository } from '@/repositories/MspWorkforceRepository';
 import { TradeWorkforceLibraryRepository } from '@/repositories/TradeWorkforceLibraryRepository';
 import { WorkforceRuleRepository } from '@/repositories/WorkforceRuleRepository';
+import { ProgramKerjaBoundaryService } from '@/services/ProgramKerjaBoundaryService';
+import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
 import { WorkforceEvaluatorRegistry } from '@/services/evaluators/WorkforceEvaluatorRegistry';
 import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
@@ -34,13 +36,18 @@ export function createWorkforceEvaluatorRegistry(ruleRepo: WorkforceRuleReposito
 
 export function createWorkforceEngineService(): IWorkforceEngineService {
   const mspRepo = new MspWorkforceRepository();
+  const revisionRepo = new ProgrammeRevisionRepository();
+  const pkBoundary = new ProgramKerjaBoundaryService({
+    mspWorkforceRepository: mspRepo,
+    revisionRepository: revisionRepo,
+  });
   const tradeLibRepo = new TradeWorkforceLibraryRepository();
   const ruleRepo = new WorkforceRuleRepository();
   const registry = createWorkforceEvaluatorRegistry(ruleRepo);
   const clock = new SystemClock();
 
   return new WorkforceEngineService({
-    mspWorkforceRepository: mspRepo,
+    programKerjaBoundaryService: pkBoundary,
     tradeWorkforceLibraryRepository: tradeLibRepo,
     workforceRuleRepository: ruleRepo,
     evaluatorRegistry: registry,

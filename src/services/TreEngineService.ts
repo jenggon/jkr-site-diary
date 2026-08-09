@@ -59,7 +59,11 @@ export class TreEngineService implements ITreEngineService {
       // Priority 1: Program Kerja Boundary / MSP Resource Assignment
       if (ctx.mspTaskId) {
         if (this.pkBoundary) {
-          const pkTrade = await this.pkBoundary.getProgramKerjaTrade(ctx.programmeId, ctx.mspTaskId);
+          const pkTrade = await this.pkBoundary.getProgramKerjaTrade(
+            ctx.programmeId,
+            ctx.revisionId ?? '',
+            ctx.mspTaskId
+          );
           if (pkTrade) {
             this.logger.info('TRE resolved via Priority 1 (Program Kerja Boundary)', {
               tradeCode: pkTrade.tradeCode,

@@ -52,7 +52,11 @@ export class MaterialEngineService implements IMaterialEngineService {
       // Priority 1: Program Kerja / MSP Resource Assignment
       if (ctx.mspTaskId) {
         if (this.deps.programKerjaBoundaryService) {
-          const pkMats = await this.deps.programKerjaBoundaryService.getProgramKerjaMaterials(ctx.programmeId, ctx.mspTaskId);
+          const pkMats = await this.deps.programKerjaBoundaryService.getProgramKerjaMaterials(
+            ctx.programmeId,
+            ctx.revisionId ?? '',
+            ctx.mspTaskId
+          );
           if (pkMats && pkMats.length > 0) {
             const items: MaterialItemRecommendation[] = pkMats.map((m) => ({
               materialCode: m.materialCode,

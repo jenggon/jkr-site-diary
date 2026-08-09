@@ -53,7 +53,11 @@ export class WorkforceEngineService implements IWorkforceEngineService {
       // Priority 1: Program Kerja / MSP Resource Assignment
       if (ctx.mspTaskId) {
         if (this.deps.programKerjaBoundaryService) {
-          const pkWf = await this.deps.programKerjaBoundaryService.getProgramKerjaWorkforce(ctx.programmeId, ctx.mspTaskId);
+          const pkWf = await this.deps.programKerjaBoundaryService.getProgramKerjaWorkforce(
+            ctx.programmeId,
+            ctx.revisionId ?? '',
+            ctx.mspTaskId
+          );
           if (pkWf && pkWf.length > 0) {
             const count = pkWf.reduce((sum, item) => sum + item.count, 0);
             return Success(this.buildResolution(ctx, 'MSP_RESOURCE', 'HIGH', {

@@ -14,6 +14,9 @@ import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
 import { BaseAppError } from '@/lib/errors';
+import { createTreEngineService } from '@/composition/treComposition';
+import { createWorkforceEngineService } from '@/composition/wreComposition';
+import { createMaterialEngineService } from '@/composition/mreComposition';
 
 describe('D2 Remediation Test Suite (M01-M08)', () => {
   const clock = new SystemClock();
@@ -153,6 +156,17 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
         createdAt: '2026-08-01T00:00:00Z',
         createdBy: 'user-1',
       },
+      {
+        activityId: 'act-5',
+        siteDiaryId: 'sd-1',
+        programmeId: 'prog-1',
+        revisionId: 'rev-1',
+        activityName: 'Suspended Task',
+        status: 'Suspended',
+        isLocked: false,
+        createdAt: '2026-08-01T00:00:00Z',
+        createdBy: 'user-1',
+      },
     ];
 
     const updatedActivities: OpenActivity[] = [];
@@ -185,12 +199,14 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const event = new ProgrammeRevisionApprovedEvent(revision, 'rev-1');
     await handler.handle(event);
 
-    // Only act-1 (Planned) and act-2 (InProgress) should be updated to isLocked=true
-    expect(updatedActivities.length).toBe(2);
+    // act-1 (Planned), act-2 (InProgress), and act-5 (Suspended) should be updated to isLocked=true
+    expect(updatedActivities.length).toBe(3);
     expect(updatedActivities.find((a) => a.activityId === 'act-1')?.isLocked).toBe(true);
     expect(updatedActivities.find((a) => a.activityId === 'act-1')?.status).toBe('Planned');
     expect(updatedActivities.find((a) => a.activityId === 'act-2')?.isLocked).toBe(true);
     expect(updatedActivities.find((a) => a.activityId === 'act-2')?.status).toBe('InProgress');
+    expect(updatedActivities.find((a) => a.activityId === 'act-5')?.isLocked).toBe(true);
+    expect(updatedActivities.find((a) => a.activityId === 'act-5')?.status).toBe('Suspended');
 
     // act-3 (Completed) and act-4 (Cancelled) are not in updatedActivities
     expect(updatedActivities.find((a) => a.activityId === 'act-3')).toBeUndefined();
@@ -323,6 +339,234 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     }
   });
 
+  it('R3.B & R3.C: createActivity rejects Draft, Archived, and Superseded revisions', async () => {
+    const mockRevisionRepo: IProgrammeRevisionRepository = {
+      findById: async (id) => {
+        if (id === 'rev-draft') {
+          return Success({
+            revisionId: 'rev-draft',
+            programmeId: 'prog-1',
+            revisionNumber: 1,
+            revisionTitle: 'Draft Rev',
+            isCurrent: false,
+            status: 'Draft',
+            createdAt: '2026-08-01',
+            createdBy: 'user-1',
+          });
+        }
+        if (id === 'rev-archived') {
+          return Success({
+            revisionId: 'rev-archived',
+            programmeId: 'prog-1',
+            revisionNumber: 1,
+            revisionTitle: 'Archived Rev',
+            isCurrent: false,
+            status: 'Archived',
+            createdAt: '2026-08-01',
+            createdBy: 'user-1',
+          });
+        }
+        if (id === 'rev-superseded') {
+          return Success({
+            revisionId: 'rev-superseded',
+            programmeId: 'prog-1',
+            revisionNumber: 1,
+            revisionTitle: 'Superseded Rev',
+            isCurrent: false,
+            status: 'Superseded',
+            createdAt: '2026-08-01',
+            createdBy: 'user-1',
+          });
+        }
+        return Success(null);
+      },
+      findByProgrammeId: async () => Success([]),
+      findActiveRevision: async () => Success(null),
+      create: async (r) => Success(r),
+      updateStatus: async (id, s) => Success({ revisionId: id, status: s } as unknown as ProgrammeRevision),
+    };
+
+    const service = new OpenActivityService({
+      activityRepository: {
+        findById: async () => Success(null),
+        findBySiteDiaryId: async () => Success([]),
+        findByRevisionId: async () => Success([]),
+        create: async (a) => Success(a),
+        update: async (a) => Success(a),
+        updateStatus: async (id, status) => Success({ activityId: id, status } as unknown as OpenActivity),
+      },
+      logRepository: { appendLog: async (l) => Success(l), findLogsByActivityId: async () => Success([]) },
+      transactionManager: { execute: async (fn) => fn() },
+      clock,
+      logger,
+      eventPublisher: { publish: async () => {} },
+      treEngine: { resolveTradeRecommendation: async () => Failure(new Error('no tre') as unknown as BaseAppError) },
+      workforceEngine: {
+        recommend: async () => Failure(new Error('no wre') as unknown as BaseAppError),
+        resolveWorkforceRecommendation: async () => Failure(new Error('no wre') as unknown as BaseAppError),
+      },
+      materialEngine: {
+        recommend: async () => Failure(new Error('no mre') as unknown as BaseAppError),
+        resolveMaterialRecommendation: async () => Failure(new Error('no mre') as unknown as BaseAppError),
+      },
+      revisionRepository: mockRevisionRepo,
+    });
+
+    const resDraft = await service.createActivity({
+      siteDiaryId: 'sd-1',
+      programmeId: 'prog-1',
+      revisionId: 'rev-draft',
+      activityName: 'Draft Activity',
+      createdBy: 'user-1',
+    });
+    expect(isFailure(resDraft)).toBe(true);
+
+    const resArchived = await service.createActivity({
+      siteDiaryId: 'sd-1',
+      programmeId: 'prog-1',
+      revisionId: 'rev-archived',
+      activityName: 'Archived Activity',
+      createdBy: 'user-1',
+    });
+    expect(isFailure(resArchived)).toBe(true);
+
+    const resSuperseded = await service.createActivity({
+      siteDiaryId: 'sd-1',
+      programmeId: 'prog-1',
+      revisionId: 'rev-superseded',
+      activityName: 'Superseded Activity',
+      createdBy: 'user-1',
+    });
+    expect(isFailure(resSuperseded)).toBe(true);
+  });
+
+  it('R3.D: OpenActivityTerminationHandler exits cleanly when previousRevisionId is null', async () => {
+    let updateCalled = false;
+    const mockRepo: IOpenActivityRepository = {
+      findById: async () => Success(null),
+      findBySiteDiaryId: async () => Success([]),
+      findByRevisionId: async () => Success([]),
+      create: async (a) => Success(a),
+      update: async (a) => {
+        updateCalled = true;
+        return Success(a);
+      },
+      updateStatus: async (id, status) => Success({ activityId: id, status } as unknown as OpenActivity),
+    };
+
+    const handler = new OpenActivityTerminationHandler({ activityRepository: mockRepo, logger });
+    const revision: ProgrammeRevision = {
+      revisionId: 'rev-1',
+      programmeId: 'prog-1',
+      revisionNumber: 1,
+      revisionTitle: 'Initial Revision',
+      isCurrent: true,
+      status: 'Approved',
+      createdAt: '2026-08-01T00:00:00Z',
+      createdBy: 'user-1',
+    };
+
+    const event = new ProgrammeRevisionApprovedEvent(revision, null);
+    await handler.handle(event);
+
+    expect(updateCalled).toBe(false);
+  });
+
+  it('R2: ProgramKerjaBoundaryService validates revisionId and enforces operational revision safety', async () => {
+    const mockRevisionRepo: IProgrammeRevisionRepository = {
+      findById: async (id) => {
+        if (id === 'rev-approved') {
+          return Success({
+            revisionId: 'rev-approved',
+            programmeId: 'prog-1',
+            revisionNumber: 1,
+            revisionTitle: 'Rev 1',
+            isCurrent: true,
+            status: 'Approved',
+            createdAt: '2026-08-01',
+            createdBy: 'user-1',
+          });
+        }
+        if (id === 'rev-draft') {
+          return Success({
+            revisionId: 'rev-draft',
+            programmeId: 'prog-1',
+            revisionNumber: 1,
+            revisionTitle: 'Draft',
+            isCurrent: false,
+            status: 'Draft',
+            createdAt: '2026-08-01',
+            createdBy: 'user-1',
+          });
+        }
+        return Success(null);
+      },
+      findByProgrammeId: async () => Success([]),
+      findActiveRevision: async () => Success(null),
+      create: async (r) => Success(r),
+      updateStatus: async (id, s) => Success({ revisionId: id, status: s } as unknown as ProgrammeRevision),
+    };
+
+    const boundary = new ProgramKerjaBoundaryService({
+      revisionRepository: mockRevisionRepo,
+      taskRepository: {
+        getTaskById: async (taskId) => {
+          if (taskId === 'task-1') {
+            return {
+              task_id: 'task-1',
+              programme_id: 'prog-1',
+              revision_id: 'rev-approved',
+              task_uid: 1,
+              task_guid: null,
+              wbs: '1.1',
+              task_name: 'Boundary Task',
+              parent_task_uid: null,
+              outline_level: 1,
+              trade_code: 'CARPENTER',
+              trade_name: 'Carpentry',
+              display_order: 1,
+              planned_start: null,
+              planned_finish: null,
+              planned_duration_days: null,
+              is_milestone: false,
+              is_critical: false,
+              is_summary: false,
+              constraint_type: null,
+              constraint_date: null,
+              created_at: '2026-08-01',
+              created_by: 'user-1',
+            };
+          }
+          return null;
+        },
+      },
+    });
+
+    // 1. Valid context
+    const tradeValid = await boundary.getProgramKerjaTrade('prog-1', 'rev-approved', 'task-1');
+    expect(tradeValid).not.toBeNull();
+    expect(tradeValid?.tradeCode).toBe('CARPENTER');
+
+    // 2. Draft revision context rejected
+    const tradeDraft = await boundary.getProgramKerjaTrade('prog-1', 'rev-draft', 'task-1');
+    expect(tradeDraft).toBeNull();
+
+    // 3. Task/revision mismatch rejected
+    const tradeMismatch = await boundary.getProgramKerjaTrade('prog-1', 'rev-other', 'task-1');
+    expect(tradeMismatch).toBeNull();
+  });
+
+  it('R1 & R3.E: Production Composition Roots instantiate and wire ProgramKerjaBoundaryService', () => {
+    const treEngine = createTreEngineService();
+    expect(treEngine).toBeDefined();
+
+    const wreEngine = createWorkforceEngineService();
+    expect(wreEngine).toBeDefined();
+
+    const mreEngine = createMaterialEngineService();
+    expect(mreEngine).toBeDefined();
+  });
+
   it('M07: ProgramKerjaBoundaryService provides Priority 1 trade recommendations cleanly', async () => {
     const boundary = new ProgramKerjaBoundaryService({
       taskRepository: {
@@ -365,6 +609,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const res = await treService.resolveTradeRecommendation({
       siteDiaryId: 'sd-1',
       programmeId: 'prog-1',
+      revisionId: 'rev-1',
       mspTaskId: 'task-10',
       activityName: 'Concreting Task',
     });

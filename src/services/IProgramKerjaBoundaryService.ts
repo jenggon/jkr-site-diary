@@ -19,7 +19,7 @@ export interface ProgramKerjaMaterialInfo {
 }
 
 export interface IProgramKerjaBoundaryService {
-  getProgramKerjaTrade(programmeId: string, taskId: string): Promise<ProgramKerjaTradeInfo | null>;
-  getProgramKerjaWorkforce(programmeId: string, taskId: string): Promise<ProgramKerjaWorkforceInfo[] | null>;
-  getProgramKerjaMaterials(programmeId: string, taskId: string): Promise<ProgramKerjaMaterialInfo[] | null>;
+  getProgramKerjaTrade(programmeId: string, revisionId: string, taskId: string): Promise<ProgramKerjaTradeInfo | null>;
+  getProgramKerjaWorkforce(programmeId: string, revisionId: string, taskId: string): Promise<ProgramKerjaWorkforceInfo[] | null>;
+  getProgramKerjaMaterials(programmeId: string, revisionId: string, taskId: string): Promise<ProgramKerjaMaterialInfo[] | null>;
 }

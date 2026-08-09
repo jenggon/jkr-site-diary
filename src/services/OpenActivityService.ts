@@ -123,6 +123,12 @@ export class OpenActivityService implements IOpenActivityService {
       if (revRes.value.programmeId !== cmd.programmeId) {
         return Failure(new ActivityValidationError('programme/revision mismatch'));
       }
+      if (revRes.value.status === 'Draft') {
+        return Failure(new ActivityValidationError('Cannot create activity under Draft revision'));
+      }
+      if (revRes.value.status === 'Archived' || revRes.value.status === 'Superseded') {
+        return Failure(new ActivityValidationError(`Cannot create activity under ${revRes.value.status} revision`));
+      }
     }
 
     if (cmd.taskId && this.taskRepo) {
@@ -149,6 +155,7 @@ export class OpenActivityService implements IOpenActivityService {
       const treCtx: TreResolutionContext = {
         siteDiaryId: cmd.siteDiaryId,
         programmeId: cmd.programmeId,
+        revisionId: cmd.revisionId,
         mspTaskId: cmd.taskId,
         activityName: cmd.activityName,
       };
@@ -222,6 +229,7 @@ export class OpenActivityService implements IOpenActivityService {
       const wreCtx: WorkforceResolutionContext = {
         siteDiaryId: cmd.siteDiaryId,
         programmeId: cmd.programmeId,
+        revisionId: cmd.revisionId,
         mspTaskId: cmd.taskId,
         activityName: cmd.activityName,
         tradeSelection: resolvedTradeInfo,
@@ -287,6 +295,7 @@ export class OpenActivityService implements IOpenActivityService {
       const mreCtx: MaterialResolutionContext = {
         siteDiaryId: cmd.siteDiaryId,
         programmeId: cmd.programmeId,
+        revisionId: cmd.revisionId,
         mspTaskId: cmd.taskId,
         activityName: cmd.activityName,
         tradeSelection: resolvedTradeInfo,
