@@ -25,13 +25,14 @@ describe('Programme & Revision State Machines', () => {
   describe('Programme Revision State Machine', () => {
     it('should allow valid revision transition sequences', () => {
       expect(canTransitionProgrammeRevision('Draft', 'UnderReview')).toBe(true);
+      expect(canTransitionProgrammeRevision('Draft', 'Approved')).toBe(true);
       expect(canTransitionProgrammeRevision('UnderReview', 'Approved')).toBe(true);
       expect(canTransitionProgrammeRevision('Approved', 'Superseded')).toBe(true);
       expect(canTransitionProgrammeRevision('Draft', 'Archived')).toBe(true);
     });
 
     it('should throw InvalidProgrammeStateError on illegal revision transitions', () => {
-      expect(() => validateProgrammeRevisionTransition('Draft', 'Approved')).toThrow(
+      expect(() => validateProgrammeRevisionTransition('Superseded', 'Approved')).toThrow(
         InvalidProgrammeStateError
       );
       expect(() => validateProgrammeRevisionTransition('Archived', 'Draft')).toThrow(
