@@ -4,7 +4,7 @@ import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
 import { generateUuid } from '@/lib/uuid';
 import { OpenActivity, ActivityStatus } from '@/types/openActivity';
-import { ActivityNotFoundError, ActivityLockedError, ActivityValidationError } from '@/errors/activityErrors';
+import { ActivityNotFoundError, ActivityLockedError, ActivityValidationError, ActivityRevisionSupersededError } from '@/errors/activityErrors';
 import { validateActivityStateTransition } from '@/statemachines/siteDiaryStateMachine';
 import { validateActivityName, validateReason, validateManpower } from '@/validation/activityValidation';
 import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
@@ -100,6 +100,49 @@ export class OpenActivityService implements IOpenActivityService {
     } catch (err: unknown) {
       this.logger.error('Failed to publish post-commit activity domain event', { error: err });
     }
+  }
+
+  /**
+   * REM-004: Defence-in-Depth Layer 2.
+   *
+   * Verifies that the activity's Programme Revision remains operationally
+   * current (Approved + isCurrent). This check is independent of isLocked
+   * and fires on EVERY operational mutation path.
+   *
+   * This closes the failure window identified in AUDIT-015 F-03:
+   *   R1 → Superseded (commit) → post-commit handler not yet run
+   *   → R1 activity still isLocked=false
+   *   → WITHOUT this check, mutation would be allowed.
+   *
+   * With this check, once R1.status = 'Superseded' the mutation is rejected
+   * REGARDLESS of whether OpenActivityTerminationHandler has executed.
+   *
+   * Returns Failure(ActivityRevisionSupersededError) when the revision is no
+   * longer operational. Returns null (safe to proceed) otherwise.
+   * When no revisionRepository is wired (e.g. isolated unit tests), this
+   * check is skipped gracefully — production code MUST wire the repo.
+   */
+  private async assertRevisionOperational(
+    activity: import('@/types/openActivity').OpenActivity
+  ): Promise<import('@/lib/result').Result<null, import('@/lib/errors').BaseAppError> | null> {
+    if (!this.revisionRepo) {
+      return null; // No repo wired — skip (unit-test isolation mode)
+    }
+    if (!activity.revisionId) {
+      return null; // Activity not bound to a revision — skip
+    }
+    const revRes = await this.revisionRepo.findById(activity.revisionId);
+    if (isFailure(revRes)) return revRes as unknown as import('@/lib/result').Result<null, import('@/lib/errors').BaseAppError>;
+    const revision = revRes.value;
+    if (!revision || revision.status !== 'Approved' || !revision.isCurrent) {
+      const status = revision ? revision.status : 'missing';
+      return Failure(
+        new ActivityRevisionSupersededError(
+          `Activity revision '${activity.revisionId}' is no longer operationally current (status: ${status}). Mutation rejected.`
+        )
+      );
+    }
+    return null; // Revision is operational — safe to proceed
   }
 
   public async createActivity(cmd: CreateActivityCommand): Promise<Result<OpenActivity, BaseAppError>> {
@@ -424,6 +467,11 @@ export class OpenActivityService implements IOpenActivityService {
       if (!existingRes.value) return Failure(new ActivityNotFoundError('Activity not found'));
       if (existingRes.value.isLocked) return Failure(new ActivityLockedError('Cannot update locked activity'));
 
+      // REM-004: Defence-in-Depth Layer 2 — revision operational check
+      const revCheck = await this.assertRevisionOperational(existingRes.value);
+      if (revCheck !== null && isFailure(revCheck)) return Failure(revCheck.error);
+
+
       const updatedAt = this.clock.nowIso();
       const updatedActivity: OpenActivity = {
         ...existingRes.value,
@@ -476,6 +524,10 @@ export class OpenActivityService implements IOpenActivityService {
       if (isFailure(existingRes)) return Failure(existingRes.error);
       if (!existingRes.value) return Failure(new ActivityNotFoundError('Activity not found'));
       if (existingRes.value.isLocked) return Failure(new ActivityLockedError('Cannot update status on locked activity'));
+
+      // REM-004: Defence-in-Depth Layer 2 — revision operational check
+      const revCheck = await this.assertRevisionOperational(existingRes.value);
+      if (revCheck !== null && isFailure(revCheck)) return Failure(revCheck.error);
 
       const fromStatus = existingRes.value.status;
       validateActivityStateTransition(fromStatus, targetStatus);

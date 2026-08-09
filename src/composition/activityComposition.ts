@@ -4,6 +4,7 @@ import { ITreEngineService } from '@/services/ITreEngineService';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 import { OpenActivityRepository } from '@/repositories/OpenActivityRepository';
 import { ActivityLogRepository } from '@/repositories/ActivityLogRepository';
+import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
 import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
 import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
@@ -24,6 +25,7 @@ export function createOpenActivityService(
 ): IOpenActivityService {
   const activityRepo = new OpenActivityRepository();
   const logRepo = new ActivityLogRepository();
+  const revisionRepo = new ProgrammeRevisionRepository();
   const txManager = new DatabaseTransactionManager();
   const clock = new SystemClock();
   const eventPublisher = new NoopDomainEventPublisher();
@@ -38,5 +40,8 @@ export function createOpenActivityService(
     treEngine,
     workforceEngine,
     materialEngine,
+    // REM-004: Wire revision repository so assertRevisionOperational() enforces
+    // revision lifecycle validity on every mutation path in production.
+    revisionRepository: revisionRepo,
   });
 }
