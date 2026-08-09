@@ -16,6 +16,7 @@ export interface OpenActivityResponseDto {
   readonly activity_id: string;
   readonly site_diary_id: string;
   readonly programme_id: string;
+  readonly revision_id: string;
   readonly task_id?: string | null;
   readonly activity_name: string;
   readonly location?: ActivityLocationDto | null;
@@ -41,6 +42,7 @@ export interface ActivityLogEntryResponseDto {
 
 export interface CreateActivityRequestDto {
   readonly programme_id: string;
+  readonly revision_id: string;
   readonly task_id?: string | undefined;
   readonly activity_name: string;
   readonly location?: {

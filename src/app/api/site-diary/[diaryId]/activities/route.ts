@@ -33,6 +33,7 @@ export async function POST(
     const result = await service.createActivity({
       siteDiaryId: diaryId,
       programmeId: body.programme_id,
+      revisionId: body.revision_id,
       taskId: body.task_id,
       activityName: body.activity_name,
       location: body.location

@@ -6,6 +6,7 @@ export function mapActivityToResponseDto(activity: OpenActivity): OpenActivityRe
     activity_id: activity.activityId,
     site_diary_id: activity.siteDiaryId,
     programme_id: activity.programmeId,
+    revision_id: activity.revisionId ?? '',
     task_id: activity.taskId ?? null,
     activity_name: activity.activityName,
     location: activity.location

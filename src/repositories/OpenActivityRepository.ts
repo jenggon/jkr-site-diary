@@ -16,6 +16,7 @@ export interface OpenActivityRow {
   readonly location?: Record<string, unknown> | null;
   readonly trade_info?: Record<string, unknown> | null;
   readonly workforce_count?: number | null;
+  readonly material_snapshot?: Record<string, unknown> | null;
   readonly status: ActivityStatus;
   readonly is_locked: boolean;
   readonly created_at: string;
@@ -42,6 +43,7 @@ export class OpenActivityRepository implements IOpenActivityRepository {
       location: (row.location as unknown as ActivityLocation) ?? undefined,
       tradeInfo: (row.trade_info as unknown as TradeSelection) ?? undefined,
       workforceCount: row.workforce_count ?? undefined,
+      materialSnapshot: (row.material_snapshot as unknown as import('@/types/mre').MaterialRecommendationSnapshot) ?? undefined,
       status: row.status,
       isLocked: row.is_locked,
       createdAt: row.created_at,
@@ -62,6 +64,7 @@ export class OpenActivityRepository implements IOpenActivityRepository {
       location: activity.location ?? null,
       trade_info: activity.tradeInfo ?? null,
       workforce_count: activity.workforceCount ?? null,
+      material_snapshot: activity.materialSnapshot ?? null,
       status: activity.status,
       is_locked: activity.isLocked,
       created_at: activity.createdAt,
