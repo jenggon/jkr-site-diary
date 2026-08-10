@@ -1,4 +1,4 @@
-import { TradeSelection } from '@/types/openActivity';
+import { TradeSelection } from '@/types/tre';
 import { RecommendationMetadata } from '@/types/recommendationEngine';
 import { WorkforceResolution } from '@/types/wre';
 

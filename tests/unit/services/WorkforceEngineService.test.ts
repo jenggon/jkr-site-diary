@@ -5,6 +5,7 @@ import { IMspWorkforceRepository } from '@/repositories/IMspWorkforceRepository'
 import { ITradeWorkforceLibraryRepository } from '@/repositories/ITradeWorkforceLibraryRepository';
 import { IWorkforceRuleRepository } from '@/repositories/IWorkforceRuleRepository';
 import { IRuleEvaluatorRegistry } from '@/services/evaluators/IWorkforceEvaluatorRegistry';
+import { TradeResolutionSource } from '@/types/tre';
 import { IClock } from '@/lib/IClock';
 import { Logger } from '@/lib/logger';
 import { isSuccess, isFailure } from '@/lib/result';
@@ -66,7 +67,8 @@ describe('WorkforceEngineService', () => {
         tradeId: 't-1',
         tradeCode: 'T1',
         tradeName: 'Trade 1',
-        source: 'TradeLibrary',
+        tradeCategory: null,
+        resolutionSource: 'TRADE_LIBRARY' as TradeResolutionSource,
       },
     };
   });

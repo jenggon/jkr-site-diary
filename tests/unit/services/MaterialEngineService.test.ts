@@ -8,6 +8,7 @@ import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
 import { MaterialResolutionContext, MaterialItemRecommendation } from '@/types/mre';
 import { isSuccess, isFailure } from '@/lib/result';
+import { TradeResolutionSource } from '@/types/tre';
 
 describe('MaterialEngineService', () => {
   const mockClock = new SystemClock();
@@ -31,7 +32,7 @@ describe('MaterialEngineService', () => {
     siteDiaryId: 'd1',
     programmeId: 'p1',
     activityName: 'a1',
-    tradeSelection: { tradeId: 't1', tradeCode: 't1', tradeName: 't1', source: 'MSPResource' },
+    tradeSelection: { tradeId: 't1', tradeCode: 't1', tradeName: 't1', tradeCategory: null, resolutionSource: 'MSP_RESOURCE' as TradeResolutionSource },
     policy: {
       allowSubstitution: true,
       allowPartialRecommendation: true,

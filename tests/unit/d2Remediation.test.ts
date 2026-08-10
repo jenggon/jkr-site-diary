@@ -4,16 +4,15 @@ import { ProgrammeRevision } from '@/types/programmeRevision';
 import { ProgrammeRevisionApprovedEvent } from '@/events/programmeEvents';
 import { SyncDomainEventPublisher } from '@/events/SyncDomainEventPublisher';
 import { OpenActivityTerminationHandler } from '@/events/handlers/OpenActivityTerminationHandler';
-import { OpenActivity } from '@/types/openActivity';
-import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
+import { Activity, ActivityStatus } from '@/types/activity';
+import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { OpenActivityService } from '@/services/OpenActivityService';
 import { ProgramKerjaBoundaryService } from '@/services/ProgramKerjaBoundaryService';
 import { TreEngineService } from '@/services/TreEngineService';
-import { Success, Failure, isSuccess, isFailure } from '@/lib/result';
+import { Success, isSuccess, isFailure } from '@/lib/result';
 import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
-import { BaseAppError } from '@/lib/errors';
 import { createTreEngineService } from '@/composition/treComposition';
 import { createWorkforceEngineService } from '@/composition/wreComposition';
 import { createMaterialEngineService } from '@/composition/mreComposition';
@@ -110,80 +109,47 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     expect(handlerFn).toHaveBeenCalledWith(event);
   });
 
-  it('M05: OpenActivityTerminationHandler locks previous revision activities as-is without changing status', async () => {
-    const activities: OpenActivity[] = [
+  it('M05: OpenActivityTerminationHandler logs cleanly without modifying DB-014 Activity bounds (isLocked is obsolete)', async () => {
+    const activities: Activity[] = [
       {
-        activityId: 'act-1',
-        siteDiaryId: 'sd-1',
-        programmeId: 'prog-1',
-        revisionId: 'rev-1',
-        activityName: 'Planned Task',
-        status: 'Planned',
-        isLocked: false,
-        createdAt: '2026-08-01T00:00:00Z',
-        createdBy: 'user-1',
-      },
-      {
-        activityId: 'act-2',
-        siteDiaryId: 'sd-1',
-        programmeId: 'prog-1',
-        revisionId: 'rev-1',
-        activityName: 'In Progress Task',
-        status: 'InProgress',
-        isLocked: false,
-        createdAt: '2026-08-01T00:00:00Z',
-        createdBy: 'user-1',
-      },
-      {
-        activityId: 'act-3',
-        siteDiaryId: 'sd-1',
-        programmeId: 'prog-1',
-        revisionId: 'rev-1',
-        activityName: 'Completed Task',
-        status: 'Completed',
-        isLocked: false,
-        createdAt: '2026-08-01T00:00:00Z',
-        createdBy: 'user-1',
-      },
-      {
-        activityId: 'act-4',
-        siteDiaryId: 'sd-1',
-        programmeId: 'prog-1',
-        revisionId: 'rev-1',
-        activityName: 'Cancelled Task',
-        status: 'Cancelled',
-        isLocked: false,
-        createdAt: '2026-08-01T00:00:00Z',
-        createdBy: 'user-1',
-      },
-      {
-        activityId: 'act-5',
-        siteDiaryId: 'sd-1',
-        programmeId: 'prog-1',
-        revisionId: 'rev-1',
-        activityName: 'Suspended Task',
-        status: 'Suspended',
-        isLocked: false,
-        createdAt: '2026-08-01T00:00:00Z',
-        createdBy: 'user-1',
-      },
+        activity_id: 'act-1',
+        programme_id: 'prog-1',
+        revision_id: 'rev-1',
+        task_id: 'task-1',
+        activity_uid: 'ACT-1',
+        ahi: null,
+        ahi_display_name: null,
+        subtask: 'Planned Task',
+        subtask_display_name: null,
+        activity_date: '2026-08-01',
+        actual_start_date: null,
+        completed_date: null,
+        status: ActivityStatus.New,
+        weather: null,
+        notes: '',
+        submitted_by: 'user-1',
+        created_at: '2026-08-01T00:00:00Z',
+        updated_at: null,
+      }
     ];
 
-    const updatedActivities: OpenActivity[] = [];
+    let updateCalled = false;
 
-    const mockRepo: IOpenActivityRepository = {
-      findById: async (id) => Success(activities.find((a) => a.activityId === id) ?? null),
-      findBySiteDiaryId: async () => Success(activities),
-      findByRevisionId: async (revId) => Success(activities.filter((a) => a.revisionId === revId)),
+    const mockRepo: IActivityRepository = {
+      findById: async (id) => Success(activities.find((a) => a.activity_id === id) ?? null),
+      findByRevisionId: async (revId) => Success(activities.filter((a) => a.revision_id === revId)),
       create: async (a) => Success(a),
       update: async (a) => {
-        updatedActivities.push(a);
+        updateCalled = true;
         return Success(a);
       },
-      updateStatus: async (id, status) => Success({ ...activities[0]!, activityId: id, status }),
+      updateStatus: async (id, status) => {
+        updateCalled = true;
+        return Success({ ...activities[0]!, activity_id: id, status });
+      },
     };
 
-    const handler = new OpenActivityTerminationHandler({ activityRepository: mockRepo, logger });
+    const handler = new OpenActivityTerminationHandler({ activityRepository: mockRepo as unknown as IActivityRepository, logger });
 
     const revision: ProgrammeRevision = {
       revisionId: 'rev-2',
@@ -199,28 +165,17 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const event = new ProgrammeRevisionApprovedEvent(revision, 'rev-1');
     await handler.handle(event);
 
-    // act-1 (Planned), act-2 (InProgress), and act-5 (Suspended) should be updated to isLocked=true
-    expect(updatedActivities.length).toBe(3);
-    expect(updatedActivities.find((a) => a.activityId === 'act-1')?.isLocked).toBe(true);
-    expect(updatedActivities.find((a) => a.activityId === 'act-1')?.status).toBe('Planned');
-    expect(updatedActivities.find((a) => a.activityId === 'act-2')?.isLocked).toBe(true);
-    expect(updatedActivities.find((a) => a.activityId === 'act-2')?.status).toBe('InProgress');
-    expect(updatedActivities.find((a) => a.activityId === 'act-5')?.isLocked).toBe(true);
-    expect(updatedActivities.find((a) => a.activityId === 'act-5')?.status).toBe('Suspended');
-
-    // act-3 (Completed) and act-4 (Cancelled) are not in updatedActivities
-    expect(updatedActivities.find((a) => a.activityId === 'act-3')).toBeUndefined();
-    expect(updatedActivities.find((a) => a.activityId === 'act-4')).toBeUndefined();
+    // M05 explicitly guarantees we DO NOT mutate DB-014 activity because isLocked is obsolete.
+    expect(updateCalled).toBe(false);
   });
 
   it('M06: createActivity requires non-empty revisionId and validates revision and task matches', async () => {
-    const mockActivityRepo: IOpenActivityRepository = {
+    const mockActivityRepo: IActivityRepository = {
       findById: async () => Success(null),
-      findBySiteDiaryId: async () => Success([]),
       findByRevisionId: async () => Success([]),
       create: async (a) => Success(a),
       update: async (a) => Success(a),
-      updateStatus: async (id, status) => Success({ activityId: id, status } as unknown as OpenActivity),
+      updateStatus: async (id, status) => Success({ activity_id: id, status } as unknown as Activity),
     };
 
     const mockRevisionRepo: IProgrammeRevisionRepository = {
@@ -252,15 +207,6 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
       clock,
       logger,
       eventPublisher: { publish: async () => {} },
-      treEngine: { resolveTradeRecommendation: async () => Failure(new Error('no tre') as unknown as BaseAppError) },
-      workforceEngine: {
-        recommend: async () => Failure(new Error('no wre') as unknown as BaseAppError),
-        resolveWorkforceRecommendation: async () => Failure(new Error('no wre') as unknown as BaseAppError),
-      },
-      materialEngine: {
-        recommend: async () => Failure(new Error('no mre') as unknown as BaseAppError),
-        resolveMaterialRecommendation: async () => Failure(new Error('no mre') as unknown as BaseAppError),
-      },
       revisionRepository: mockRevisionRepo,
       taskRepository: {
         getTaskById: async (taskId) => {
@@ -389,26 +335,16 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const service = new OpenActivityService({
       activityRepository: {
         findById: async () => Success(null),
-        findBySiteDiaryId: async () => Success([]),
         findByRevisionId: async () => Success([]),
         create: async (a) => Success(a),
         update: async (a) => Success(a),
-        updateStatus: async (id, status) => Success({ activityId: id, status } as unknown as OpenActivity),
+        updateStatus: async (id, status) => Success({ activity_id: id, status } as unknown as Activity),
       },
       logRepository: { appendLog: async (l) => Success(l), findLogsByActivityId: async () => Success([]) },
       transactionManager: { execute: async (fn) => fn() },
       clock,
       logger,
       eventPublisher: { publish: async () => {} },
-      treEngine: { resolveTradeRecommendation: async () => Failure(new Error('no tre') as unknown as BaseAppError) },
-      workforceEngine: {
-        recommend: async () => Failure(new Error('no wre') as unknown as BaseAppError),
-        resolveWorkforceRecommendation: async () => Failure(new Error('no wre') as unknown as BaseAppError),
-      },
-      materialEngine: {
-        recommend: async () => Failure(new Error('no mre') as unknown as BaseAppError),
-        resolveMaterialRecommendation: async () => Failure(new Error('no mre') as unknown as BaseAppError),
-      },
       revisionRepository: mockRevisionRepo,
     });
 
@@ -442,19 +378,18 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
 
   it('R3.D: OpenActivityTerminationHandler exits cleanly when previousRevisionId is null', async () => {
     let updateCalled = false;
-    const mockRepo: IOpenActivityRepository = {
+    const mockRepo: IActivityRepository = {
       findById: async () => Success(null),
-      findBySiteDiaryId: async () => Success([]),
       findByRevisionId: async () => Success([]),
       create: async (a) => Success(a),
       update: async (a) => {
         updateCalled = true;
         return Success(a);
       },
-      updateStatus: async (id, status) => Success({ activityId: id, status } as unknown as OpenActivity),
+      updateStatus: async (id, status) => Success({ activity_id: id, status } as unknown as Activity),
     };
 
-    const handler = new OpenActivityTerminationHandler({ activityRepository: mockRepo, logger });
+    const handler = new OpenActivityTerminationHandler({ activityRepository: mockRepo as unknown as IActivityRepository, logger });
     const revision: ProgrammeRevision = {
       revisionId: 'rev-1',
       programmeId: 'prog-1',

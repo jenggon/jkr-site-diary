@@ -1,10 +1,9 @@
 import { IDomainEvent } from '../IDomainEventPublisher';
-import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
-import { isSuccess } from '@/lib/result';
+import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { Logger } from '@/lib/logger';
 
 export interface IOpenActivityTerminationHandlerDependencies {
-  readonly activityRepository: IOpenActivityRepository;
+  readonly activityRepository: IActivityRepository;
   readonly logger?: Logger | undefined;
 }
 
@@ -19,11 +18,9 @@ export interface IOpenActivityTerminationHandlerDependencies {
  * - Does NOT migrate, copy, or delete activities.
  */
 export class OpenActivityTerminationHandler {
-  private readonly activityRepo: IOpenActivityRepository;
   private readonly logger?: Logger | undefined;
 
   constructor(deps: IOpenActivityTerminationHandlerDependencies) {
-    this.activityRepo = deps.activityRepository;
     this.logger = deps.logger;
   }
 
@@ -39,36 +36,9 @@ export class OpenActivityTerminationHandler {
       return;
     }
 
-    const findRes = await this.activityRepo.findByRevisionId(previousRevisionId);
-    if (!isSuccess(findRes)) {
-      this.logger?.error('Failed to query open activities for previous revision', {
-        previousRevisionId,
-        error: findRes.error,
-      });
-      return;
-    }
-
-    const activities = findRes.value;
-    for (const activity of activities) {
-      // Do not touch Completed or Cancelled activities
-      if (activity.status === 'Completed' || activity.status === 'Cancelled') {
-        continue;
-      }
-
-      // Lock active/open activities as-is without changing status
-      if (!activity.isLocked) {
-        const lockedActivity = {
-          ...activity,
-          isLocked: true,
-        };
-        const updateRes = await this.activityRepo.update(lockedActivity);
-        if (!isSuccess(updateRes)) {
-          this.logger?.error('Failed to lock open activity on revision supersession', {
-            activityId: activity.activityId,
-            error: updateRes.error,
-          });
-        }
-      }
-    }
+    // Under DB-003 canonical architecture, isLocked is NOT persisted on Activity (DB-014).
+    // OpenActivityService.assertRevisionOperational dynamically rejects mutations for activities 
+    // belonging to superseded revisions. Therefore, no physical mutation to Activity is required here.
+    this.logger?.info('Activity termination logic is obsolete under DB-014; relies on dynamic revision locking.', { previousRevisionId });
   }
 }

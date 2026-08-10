@@ -1,26 +1,18 @@
-import { Result, Success, Failure, isSuccess, isFailure } from '@/lib/result';
+import { Result, Success, Failure, FailureResult, isFailure, isSuccess } from '@/lib/result';
 import { BaseAppError, UnknownError } from '@/lib/errors';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
 import { generateUuid } from '@/lib/uuid';
-import { OpenActivity, ActivityStatus } from '@/types/openActivity';
-import { ActivityNotFoundError, ActivityLockedError, ActivityValidationError, ActivityRevisionSupersededError } from '@/errors/activityErrors';
+import { Activity, ActivityStatus } from '@/types/activity';
+import { OpenActivityDto } from '@/types/openActivity';
+import { ActivityNotFoundError, ActivityValidationError, ActivityRevisionSupersededError, InvalidActivityStateError } from '@/errors/activityErrors';
 import { validateActivityStateTransition } from '@/statemachines/siteDiaryStateMachine';
-import { validateActivityName, validateReason, validateManpower } from '@/validation/activityValidation';
-import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
+import { validateActivityName } from '@/validation/activityValidation';
+import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivityLogRepository';
 import { ITransactionManager } from '@/transactions/ITransactionManager';
 import { IDomainEventPublisher } from '@/events/IDomainEventPublisher';
 import { ActivityCreatedEvent, ActivityUpdatedEvent, ActivityStatusChangedEvent } from '@/events/activityEvents';
-import { ITreEngineService } from '@/services/ITreEngineService';
-import { TreResolutionContext } from '@/types/tre';
-import { mapTreSelectionToActivityTrade } from '@/services/mappers/treTradeSelectionMapper';
-import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
-import { IMaterialEngineService } from '@/services/IMaterialEngineService';
-import { WorkforceResolutionContext, WorkforceResolutionObservabilityEvent } from '@/types/wre';
-import { MaterialResolutionContext, MaterialResolutionObservabilityEvent, MaterialRecommendationSnapshot } from '@/types/mre';
-import { mapWreResolutionToActivityWorkforceCount } from '@/services/mappers/wreRecommendationMapper';
-import { toSnapshot as mapMreResolutionToSnapshot } from '@/services/mappers/materialRecommendationMapper';
 import {
   IOpenActivityService,
   CreateActivityCommand,
@@ -28,51 +20,23 @@ import {
 } from './IOpenActivityService';
 
 export interface IOpenActivityServiceDependencies {
-  readonly activityRepository: IOpenActivityRepository;
+  readonly activityRepository: IActivityRepository;
   readonly logRepository: IActivityLogRepository;
   readonly transactionManager: ITransactionManager;
   readonly clock: IClock;
   readonly logger: Logger;
   readonly eventPublisher: IDomainEventPublisher;
-  readonly treEngine: ITreEngineService;
-  readonly workforceEngine: IWorkforceEngineService;
-  readonly materialEngine: IMaterialEngineService;
   readonly revisionRepository?: import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository;
   readonly taskRepository?: { getTaskById(taskId: string): Promise<import('@/types/task').Task | null> };
 }
 
-/**
- * Structured observability payload for TRE resolution outcomes.
- * Enables platform metrics: MSP hit rate, KRE hit rate,
- * Trade Library fallback rate, TRE failure rate.
- */
-interface TreResolutionObservabilityEvent {
-  readonly requestId: string;
-  readonly activityId: string | null;
-  readonly programmeId: string;
-  readonly taskId: string | undefined;
-  readonly resolutionStage:
-    | 'MSP_RESOURCE'
-    | 'KNOWLEDGE_ENGINE'
-    | 'TRADE_LIBRARY'
-    | 'ALL_SOURCES_EXHAUSTED';
-  readonly resolutionOutcome: 'RESOLVED' | 'NOT_FOUND' | 'ENGINE_ERROR';
-  readonly failureReason: string | null;
-  readonly failureCode: string | null;
-  readonly durationMs: number;
-  readonly timestamp: string;
-}
-
 export class OpenActivityService implements IOpenActivityService {
-  private readonly activityRepo: IOpenActivityRepository;
+  private readonly activityRepo: IActivityRepository;
   private readonly logRepo: IActivityLogRepository;
   private readonly txManager: ITransactionManager;
   private readonly clock: IClock;
   private readonly logger: Logger;
   private readonly eventPublisher: IDomainEventPublisher;
-  private readonly treEngine: ITreEngineService;
-  private readonly workforceEngine: IWorkforceEngineService;
-  private readonly materialEngine: IMaterialEngineService;
   private readonly revisionRepo?: import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository;
   private readonly taskRepo?: { getTaskById(taskId: string): Promise<import('@/types/task').Task | null> };
 
@@ -83,15 +47,28 @@ export class OpenActivityService implements IOpenActivityService {
     this.clock = deps.clock;
     this.logger = deps.logger;
     this.eventPublisher = deps.eventPublisher;
-    this.treEngine = deps.treEngine;
-    this.workforceEngine = deps.workforceEngine;
-    this.materialEngine = deps.materialEngine;
     if (deps.revisionRepository !== undefined) {
       this.revisionRepo = deps.revisionRepository;
     }
     if (deps.taskRepository !== undefined) {
       this.taskRepo = deps.taskRepository;
     }
+  }
+
+  private mapToDto(activity: Activity): OpenActivityDto {
+    return {
+      activityId: activity.activity_id,
+      programmeId: activity.programme_id,
+      revisionId: activity.revision_id,
+      taskId: activity.task_id,
+      subtask: activity.subtask,
+      status: activity.status,
+      isLocked: false, // Derived projection
+      createdAt: activity.created_at,
+      createdBy: activity.submitted_by,
+      updatedAt: activity.updated_at ?? undefined,
+      updatedBy: activity.updated_at ? activity.submitted_by : undefined, // Simplification for projection
+    };
   }
 
   private async publishEventSafely(event: unknown): Promise<void> {
@@ -102,50 +79,28 @@ export class OpenActivityService implements IOpenActivityService {
     }
   }
 
-  /**
-   * REM-004: Defence-in-Depth Layer 2.
-   *
-   * Verifies that the activity's Programme Revision remains operationally
-   * current (Approved + isCurrent). This check is independent of isLocked
-   * and fires on EVERY operational mutation path.
-   *
-   * This closes the failure window identified in AUDIT-015 F-03:
-   *   R1 → Superseded (commit) → post-commit handler not yet run
-   *   → R1 activity still isLocked=false
-   *   → WITHOUT this check, mutation would be allowed.
-   *
-   * With this check, once R1.status = 'Superseded' the mutation is rejected
-   * REGARDLESS of whether OpenActivityTerminationHandler has executed.
-   *
-   * Returns Failure(ActivityRevisionSupersededError) when the revision is no
-   * longer operational. Returns null (safe to proceed) otherwise.
-   * When no revisionRepository is wired (e.g. isolated unit tests), this
-   * check is skipped gracefully — production code MUST wire the repo.
-   */
   private async assertRevisionOperational(
-    activity: import('@/types/openActivity').OpenActivity
-  ): Promise<import('@/lib/result').Result<null, import('@/lib/errors').BaseAppError> | null> {
-    if (!this.revisionRepo) {
-      return null; // No repo wired — skip (unit-test isolation mode)
-    }
-    if (!activity.revisionId) {
-      return null; // Activity not bound to a revision — skip
-    }
-    const revRes = await this.revisionRepo.findById(activity.revisionId);
-    if (isFailure(revRes)) return revRes as unknown as import('@/lib/result').Result<null, import('@/lib/errors').BaseAppError>;
+    activity: Activity
+  ): Promise<Result<null, BaseAppError> | null> {
+    if (!this.revisionRepo) return null;
+    if (!activity.revision_id) return null;
+    
+    const revRes = await this.revisionRepo.findById(activity.revision_id);
+    if (isFailure(revRes)) return revRes as unknown as Result<null, BaseAppError>;
+    
     const revision = revRes.value;
     if (!revision || revision.status !== 'Approved' || !revision.isCurrent) {
       const status = revision ? revision.status : 'missing';
       return Failure(
         new ActivityRevisionSupersededError(
-          `Activity revision '${activity.revisionId}' is no longer operationally current (status: ${status}). Mutation rejected.`
+          `Activity revision '${activity.revision_id}' is no longer operationally current (status: ${status}). Mutation rejected.`
         )
       );
     }
-    return null; // Revision is operational — safe to proceed
+    return null;
   }
 
-  public async createActivity(cmd: CreateActivityCommand): Promise<Result<OpenActivity, BaseAppError>> {
+  public async createActivity(cmd: CreateActivityCommand): Promise<Result<OpenActivityDto, BaseAppError>> {
     if (!cmd.revisionId || cmd.revisionId.trim() === '') {
       return Failure(new ActivityValidationError('revisionId is required'));
     }
@@ -160,15 +115,9 @@ export class OpenActivityService implements IOpenActivityService {
     if (this.revisionRepo) {
       const revRes = await this.revisionRepo.findById(cmd.revisionId);
       if (isFailure(revRes)) return Failure(revRes.error);
-      if (!revRes.value) {
-        return Failure(new ActivityValidationError(`Revision not found: ${cmd.revisionId}`));
-      }
-      if (revRes.value.programmeId !== cmd.programmeId) {
-        return Failure(new ActivityValidationError('programme/revision mismatch'));
-      }
-      if (revRes.value.status === 'Draft') {
-        return Failure(new ActivityValidationError('Cannot create activity under Draft revision'));
-      }
+      if (!revRes.value) return Failure(new ActivityValidationError(`Revision not found: ${cmd.revisionId}`));
+      if (revRes.value.programmeId !== cmd.programmeId) return Failure(new ActivityValidationError('programme/revision mismatch'));
+      if (revRes.value.status === 'Draft') return Failure(new ActivityValidationError('Cannot create activity under Draft revision'));
       if (revRes.value.status === 'Archived' || revRes.value.status === 'Superseded') {
         return Failure(new ActivityValidationError(`Cannot create activity under ${revRes.value.status} revision`));
       }
@@ -176,256 +125,39 @@ export class OpenActivityService implements IOpenActivityService {
 
     if (cmd.taskId && this.taskRepo) {
       const task = await this.taskRepo.getTaskById(cmd.taskId);
-      if (!task) {
-        return Failure(new ActivityValidationError(`Task not found: ${cmd.taskId}`));
-      }
-      if (task.revision_id !== cmd.revisionId) {
-        return Failure(new ActivityValidationError('task/revision mismatch'));
-      }
-      if (task.programme_id !== cmd.programmeId) {
-        return Failure(new ActivityValidationError('programme/task mismatch'));
-      }
+      if (!task) return Failure(new ActivityValidationError(`Task not found: ${cmd.taskId}`));
+      if (task.revision_id !== cmd.revisionId) return Failure(new ActivityValidationError('task/revision mismatch'));
+      if (task.programme_id !== cmd.programmeId) return Failure(new ActivityValidationError('programme/task mismatch'));
     }
 
-    const requestId = generateUuid();
     const now = this.clock.nowIso();
     const activityId = generateUuid();
 
-    // TRE auto-resolution: only when caller did not supply a tradeSelection
-    let resolvedTradeInfo: OpenActivity['tradeInfo'] = cmd.tradeSelection;
-
-    if (cmd.tradeSelection === undefined) {
-      const treCtx: TreResolutionContext = {
-        siteDiaryId: cmd.siteDiaryId,
-        programmeId: cmd.programmeId,
-        revisionId: cmd.revisionId,
-        mspTaskId: cmd.taskId,
-        activityName: cmd.activityName,
-      };
-
-      const treStart = Date.now();
-      const treResult = await this.treEngine.resolveTradeRecommendation(treCtx);
-      const durationMs = Date.now() - treStart;
-
-      if (isSuccess(treResult)) {
-        resolvedTradeInfo = mapTreSelectionToActivityTrade(treResult.value);
-
-        const resolutionStage = ((): TreResolutionObservabilityEvent['resolutionStage'] => {
-          switch (treResult.value.resolutionSource) {
-            case 'MSP_RESOURCE': return 'MSP_RESOURCE';
-            case 'KNOWLEDGE_ENGINE': return 'KNOWLEDGE_ENGINE';
-            case 'TRADE_LIBRARY': return 'TRADE_LIBRARY';
-          }
-        })();
-
-        const observabilityEvent: TreResolutionObservabilityEvent = {
-          requestId,
-          activityId,
-          programmeId: cmd.programmeId,
-          taskId: cmd.taskId,
-          resolutionStage,
-          resolutionOutcome: 'RESOLVED',
-          failureReason: null,
-          failureCode: null,
-          durationMs,
-          timestamp: this.clock.nowIso(),
-        };
-        this.logger.info('TRE resolution succeeded', { treResolution: observabilityEvent });
-      } else {
-        // Soft failure — TRE failure MUST NEVER fail activity creation
-        const error = treResult.error;
-        const isNotFound = error.errorCode === 'NO_TRADE_RECOMMENDATION_FOUND';
-
-        const observabilityEvent: TreResolutionObservabilityEvent = {
-          requestId,
-          activityId,
-          programmeId: cmd.programmeId,
-          taskId: cmd.taskId,
-          resolutionStage: 'ALL_SOURCES_EXHAUSTED',
-          resolutionOutcome: isNotFound ? 'NOT_FOUND' : 'ENGINE_ERROR',
-          failureReason: error.message,
-          failureCode: error.errorCode,
-          durationMs,
-          timestamp: this.clock.nowIso(),
-        };
-
-        if (isNotFound) {
-          this.logger.warn(
-            'TRE resolution exhausted all sources — activity will be created without trade assignment',
-            { treResolution: observabilityEvent }
-          );
-        } else {
-          this.logger.error(
-            'TRE engine error — activity will be created without trade assignment',
-            { treResolution: observabilityEvent }
-          );
-        }
-
-        resolvedTradeInfo = undefined;
-      }
-    }
-
-    // WRE auto-resolution: only when caller did not supply workforceCount and trade is resolved
-    let resolvedWorkforceCount: number | undefined = cmd.workforceCount;
-
-    if (cmd.workforceCount === undefined && resolvedTradeInfo !== undefined) {
-      const wreCtx: WorkforceResolutionContext = {
-        siteDiaryId: cmd.siteDiaryId,
-        programmeId: cmd.programmeId,
-        revisionId: cmd.revisionId,
-        mspTaskId: cmd.taskId,
-        activityName: cmd.activityName,
-        tradeSelection: resolvedTradeInfo,
-        location: cmd.location,
-      };
-
-      const wreStart = Date.now();
-      const wreResult = await this.workforceEngine.resolveWorkforceRecommendation(wreCtx);
-      const durationMs = Date.now() - wreStart;
-
-      if (isSuccess(wreResult)) {
-        resolvedWorkforceCount = mapWreResolutionToActivityWorkforceCount(wreResult.value);
-
-        const observabilityEvent: WorkforceResolutionObservabilityEvent = {
-          requestId,
-          activityId,
-          programmeId: cmd.programmeId,
-          tradeId: resolvedTradeInfo.tradeId,
-          resolutionSource: wreResult.value.resolutionSource,
-          confidenceLevel: wreResult.value.confidenceLevel,
-          evaluationStage: wreResult.value.diagnostics.evaluationStage,
-          durationMs,
-          workforceCount: resolvedWorkforceCount,
-          timestamp: this.clock.nowIso(),
-        };
-        this.logger.info('WRE resolution succeeded', { wreResolution: observabilityEvent });
-      } else {
-        // Soft failure — WRE failure MUST NEVER fail activity creation
-        const error = wreResult.error;
-        const isNotFound = error.errorCode === 'NO_WORKFORCE_RECOMMENDATION_FOUND';
-
-        const observabilityEvent: WorkforceResolutionObservabilityEvent = {
-          requestId,
-          activityId,
-          programmeId: cmd.programmeId,
-          tradeId: resolvedTradeInfo.tradeId,
-          resolutionSource: null,
-          confidenceLevel: null,
-          evaluationStage: 'ALL_SOURCES_EXHAUSTED',
-          durationMs,
-          workforceCount: 0,
-          timestamp: this.clock.nowIso(),
-        };
-
-        if (isNotFound) {
-          this.logger.warn(
-            'WRE resolution exhausted all sources — activity will be created without workforce assignment',
-            { wreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
-          );
-        } else {
-          this.logger.error(
-            'WRE engine error — activity will be created without workforce assignment',
-            { wreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
-          );
-        }
-      }
-    }
-
-    // MRE auto-resolution: only when caller did not supply materialSnapshot and trade is resolved
-    let resolvedMaterialSnapshot: MaterialRecommendationSnapshot | undefined = cmd.materialSnapshot;
-
-    if (cmd.materialSnapshot === undefined && resolvedTradeInfo !== undefined) {
-      const mreCtx: MaterialResolutionContext = {
-        siteDiaryId: cmd.siteDiaryId,
-        programmeId: cmd.programmeId,
-        revisionId: cmd.revisionId,
-        mspTaskId: cmd.taskId,
-        activityName: cmd.activityName,
-        tradeSelection: resolvedTradeInfo,
-        policy: {
-          allowSubstitution: true,
-          allowPartialRecommendation: true,
-          includeOptionalMaterials: true,
-          respectRegionalRestriction: false,
-          respectSupplierRestriction: false,
-        }
-      };
-
-      const mreStart = Date.now();
-      const mreResult = await this.materialEngine.resolveMaterialRecommendation(mreCtx);
-      const durationMs = Date.now() - mreStart;
-
-      if (isSuccess(mreResult)) {
-        resolvedMaterialSnapshot = mapMreResolutionToSnapshot(activityId, cmd.siteDiaryId, mreResult.value);
-
-        const observabilityEvent: MaterialResolutionObservabilityEvent = {
-          requestId,
-          activityId,
-          programmeId: cmd.programmeId,
-          tradeId: resolvedTradeInfo.tradeId,
-          resolutionSource: mreResult.value.resolutionSource,
-          confidenceLevel: mreResult.value.confidenceLevel,
-          evaluationStage: mreResult.value.diagnostics.evaluationStage,
-          durationMs,
-          materialCount: mreResult.value.recommendation.items.length,
-          estimatedCost: mreResult.value.recommendation.totalEstimatedCost,
-          timestamp: this.clock.nowIso(),
-        };
-        this.logger.info('MRE resolution succeeded', { mreResolution: observabilityEvent });
-      } else {
-        const error = mreResult.error;
-        const isNotFound = error.errorCode === 'NO_MATERIAL_RECOMMENDATION_FOUND';
-
-        const observabilityEvent: MaterialResolutionObservabilityEvent = {
-          requestId,
-          activityId,
-          programmeId: cmd.programmeId,
-          tradeId: resolvedTradeInfo.tradeId,
-          resolutionSource: null,
-          confidenceLevel: null,
-          evaluationStage: 'ALL_SOURCES_EXHAUSTED',
-          durationMs,
-          materialCount: 0,
-          estimatedCost: null,
-          timestamp: this.clock.nowIso(),
-        };
-
-        if (isNotFound) {
-          this.logger.warn(
-            'MRE resolution exhausted all sources - activity will be created without materials',
-            { mreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
-          );
-        } else {
-          this.logger.error(
-            'MRE engine error - activity will be created without materials',
-            { mreResolution: observabilityEvent, failureReason: error.message, failureCode: error.errorCode }
-          );
-        }
-      }
-    }
-
     try {
-      const newActivity: OpenActivity = {
-        activityId,
-        siteDiaryId: cmd.siteDiaryId,
-        programmeId: cmd.programmeId,
-        revisionId: cmd.revisionId,
-        taskId: cmd.taskId,
-        activityName: cmd.activityName,
-        location: cmd.location,
-        tradeInfo: resolvedTradeInfo,
-        workforceCount: resolvedWorkforceCount,
-        materialSnapshot: resolvedMaterialSnapshot,
-        status: 'Planned',
-        isLocked: false,
-        createdAt: now,
-        createdBy: cmd.createdBy,
+      const newActivity: Activity = {
+        activity_id: activityId,
+        programme_id: cmd.programmeId,
+        revision_id: cmd.revisionId,
+        task_id: cmd.taskId ?? '',
+        activity_uid: `ACT-${activityId.substring(0, 8)}`,
+        ahi: null,
+        ahi_display_name: null,
+        subtask: cmd.activityName,
+        subtask_display_name: null,
+        activity_date: now.split('T')[0] ?? '',
+        actual_start_date: null,
+        completed_date: null,
+        status: ActivityStatus.New,
+        weather: null,
+        notes: '',
+        submitted_by: cmd.createdBy,
+        created_at: now,
+        updated_at: null,
       };
 
       const logEntry: ActivityLogEntry = {
         logId: generateUuid(),
         activityId,
-        siteDiaryId: cmd.siteDiaryId,
         eventType: 'NEW',
         snapshotData: { ...newActivity },
         loggedAt: now,
@@ -434,24 +166,25 @@ export class OpenActivityService implements IOpenActivityService {
 
       const txResult = await this.txManager.execute(async () => {
         const createRes = await this.activityRepo.create(newActivity);
-        if (isFailure(createRes)) return Failure(createRes.error);
+        if (isFailure(createRes)) return createRes;
 
         const logRes = await this.logRepo.appendLog(logEntry);
-        if (isFailure(logRes)) return Failure(logRes.error);
+        if (isFailure(logRes)) return logRes;
 
         return Success(createRes.value);
       });
 
       if (isSuccess(txResult)) {
-        await this.publishEventSafely(new ActivityCreatedEvent(txResult.value));
+        await this.publishEventSafely(new ActivityCreatedEvent(this.mapToDto(txResult.value)));
+        return Success(this.mapToDto(txResult.value));
       }
-      return txResult;
+      return txResult as unknown as FailureResult<BaseAppError>;
     } catch (err: unknown) {
       return Failure(new UnknownError(err instanceof Error ? err.message : 'Failed to create activity', { cause: err }));
     }
   }
 
-  public async updateActivity(cmd: UpdateActivityCommand): Promise<Result<OpenActivity, BaseAppError>> {
+  public async updateActivity(cmd: UpdateActivityCommand): Promise<Result<OpenActivityDto, BaseAppError>> {
     if (cmd.activityName !== undefined) {
       try {
         validateActivityName(cmd.activityName);
@@ -465,29 +198,20 @@ export class OpenActivityService implements IOpenActivityService {
       const existingRes = await this.activityRepo.findById(cmd.activityId);
       if (isFailure(existingRes)) return Failure(existingRes.error);
       if (!existingRes.value) return Failure(new ActivityNotFoundError('Activity not found'));
-      if (existingRes.value.isLocked) return Failure(new ActivityLockedError('Cannot update locked activity'));
 
-      // REM-004: Defence-in-Depth Layer 2 — revision operational check
       const revCheck = await this.assertRevisionOperational(existingRes.value);
       if (revCheck !== null && isFailure(revCheck)) return Failure(revCheck.error);
 
-
       const updatedAt = this.clock.nowIso();
-      const updatedActivity: OpenActivity = {
+      const updatedActivity: Activity = {
         ...existingRes.value,
-        activityName: cmd.activityName ?? existingRes.value.activityName,
-        location: cmd.location ?? existingRes.value.location,
-        tradeInfo: cmd.tradeSelection ?? existingRes.value.tradeInfo,
-        workforceCount: cmd.workforceCount ?? existingRes.value.workforceCount,
-        materialSnapshot: cmd.materialSnapshot ?? existingRes.value.materialSnapshot,
-        updatedAt,
-        updatedBy: cmd.updatedBy,
+        subtask: cmd.activityName ?? existingRes.value.subtask,
+        updated_at: updatedAt,
       };
 
       const logEntry: ActivityLogEntry = {
         logId: generateUuid(),
         activityId: cmd.activityId,
-        siteDiaryId: existingRes.value.siteDiaryId,
         eventType: 'UPDATE',
         snapshotData: { ...updatedActivity },
         loggedAt: updatedAt,
@@ -496,18 +220,19 @@ export class OpenActivityService implements IOpenActivityService {
 
       const txResult = await this.txManager.execute(async () => {
         const updateRes = await this.activityRepo.update(updatedActivity);
-        if (isFailure(updateRes)) return Failure(updateRes.error);
+        if (isFailure(updateRes)) return updateRes;
 
         const logRes = await this.logRepo.appendLog(logEntry);
-        if (isFailure(logRes)) return Failure(logRes.error);
+        if (isFailure(logRes)) return logRes;
 
         return Success(updateRes.value);
       });
 
       if (isSuccess(txResult)) {
-        await this.publishEventSafely(new ActivityUpdatedEvent(txResult.value));
+        await this.publishEventSafely(new ActivityUpdatedEvent(this.mapToDto(txResult.value)));
+        return Success(this.mapToDto(txResult.value));
       }
-      return txResult;
+      return txResult as unknown as FailureResult<BaseAppError>;
     } catch (err: unknown) {
       return Failure(new UnknownError(err instanceof Error ? err.message : 'Failed to update activity', { cause: err }));
     }
@@ -518,14 +243,12 @@ export class OpenActivityService implements IOpenActivityService {
     targetStatus: ActivityStatus,
     actorId: string,
     extraLogData?: Record<string, unknown>
-  ): Promise<Result<OpenActivity, BaseAppError>> {
+  ): Promise<Result<OpenActivityDto, BaseAppError>> {
     try {
       const existingRes = await this.activityRepo.findById(activityId);
       if (isFailure(existingRes)) return Failure(existingRes.error);
       if (!existingRes.value) return Failure(new ActivityNotFoundError('Activity not found'));
-      if (existingRes.value.isLocked) return Failure(new ActivityLockedError('Cannot update status on locked activity'));
 
-      // REM-004: Defence-in-Depth Layer 2 — revision operational check
       const revCheck = await this.assertRevisionOperational(existingRes.value);
       if (revCheck !== null && isFailure(revCheck)) return Failure(revCheck.error);
 
@@ -533,17 +256,15 @@ export class OpenActivityService implements IOpenActivityService {
       validateActivityStateTransition(fromStatus, targetStatus);
 
       const now = this.clock.nowIso();
-      const updatedActivity: OpenActivity = {
+      const updatedActivity: Activity = {
         ...existingRes.value,
         status: targetStatus,
-        updatedAt: now,
-        updatedBy: actorId,
+        updated_at: now,
       };
 
       const logEntry: ActivityLogEntry = {
         logId: generateUuid(),
         activityId,
-        siteDiaryId: existingRes.value.siteDiaryId,
         eventType: 'UPDATE',
         snapshotData: { ...updatedActivity, ...extraLogData },
         loggedAt: now,
@@ -552,67 +273,43 @@ export class OpenActivityService implements IOpenActivityService {
 
       const txResult = await this.txManager.execute(async () => {
         const updateRes = await this.activityRepo.update(updatedActivity);
-        if (isFailure(updateRes)) return Failure(updateRes.error);
+        if (isFailure(updateRes)) return updateRes;
 
         const logRes = await this.logRepo.appendLog(logEntry);
-        if (isFailure(logRes)) return Failure(logRes.error);
+        if (isFailure(logRes)) return logRes;
 
         return Success(updateRes.value);
       });
 
       if (isSuccess(txResult)) {
         await this.publishEventSafely(new ActivityStatusChangedEvent(activityId, fromStatus, targetStatus, actorId));
+        return Success(this.mapToDto(txResult.value));
       }
-      return txResult;
+      return txResult as unknown as FailureResult<BaseAppError>;
     } catch (err: unknown) {
       if (err instanceof BaseAppError) return Failure(err);
       return Failure(new UnknownError(err instanceof Error ? err.message : 'Status transition failed', { cause: err }));
     }
   }
 
-  public async startActivity(activityId: string, actorId: string): Promise<Result<OpenActivity, BaseAppError>> {
+  public async startActivity(activityId: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>> {
     const existingRes = await this.activityRepo.findById(activityId);
     if (isFailure(existingRes)) return Failure(existingRes.error);
     if (!existingRes.value) return Failure(new ActivityNotFoundError('Activity not found'));
 
-    try {
-      validateManpower(existingRes.value.workforceCount);
-    } catch (err: unknown) {
-      if (err instanceof BaseAppError) return Failure(err);
-      return Failure(new ActivityValidationError(err instanceof Error ? err.message : 'Validation failed'));
-    }
-
-    return this.transitionStatusWithLog(activityId, 'InProgress', actorId);
+    return this.transitionStatusWithLog(activityId, ActivityStatus.InProgress, actorId);
   }
 
-  public async suspendActivity(activityId: string, reason: string, actorId: string): Promise<Result<OpenActivity, BaseAppError>> {
-    try {
-      validateReason(reason, 'suspendActivity');
-    } catch (err: unknown) {
-      if (err instanceof BaseAppError) return Failure(err);
-      return Failure(new ActivityValidationError(err instanceof Error ? err.message : 'Validation failed'));
-    }
-
-    return this.transitionStatusWithLog(activityId, 'Suspended', actorId, { suspendReason: reason });
+  public async suspendActivity(_activityId: string, _reason: string, _actorId: string): Promise<Result<OpenActivityDto, BaseAppError>> {
+    return Failure(new InvalidActivityStateError('Administrative suspension is currently unsupported (SPEC-001 not implemented)'));
   }
 
-  public async completeActivity(activityId: string, actorId: string): Promise<Result<OpenActivity, BaseAppError>> {
-    return this.transitionStatusWithLog(activityId, 'Completed', actorId);
+  public async completeActivity(activityId: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>> {
+    return this.transitionStatusWithLog(activityId, ActivityStatus.Completed, actorId);
   }
 
-  public async cancelActivity(activityId: string, reason: string, actorId: string): Promise<Result<OpenActivity, BaseAppError>> {
-    try {
-      validateReason(reason, 'cancelActivity');
-    } catch (err: unknown) {
-      if (err instanceof BaseAppError) return Failure(err);
-      return Failure(new ActivityValidationError(err instanceof Error ? err.message : 'Validation failed'));
-    }
-
-    return this.transitionStatusWithLog(activityId, 'Cancelled', actorId, { cancelReason: reason });
-  }
-
-  public async getActivitiesForDiary(siteDiaryId: string): Promise<Result<OpenActivity[], BaseAppError>> {
-    return this.activityRepo.findBySiteDiaryId(siteDiaryId);
+  public async cancelActivity(_activityId: string, _reason: string, _actorId: string): Promise<Result<OpenActivityDto, BaseAppError>> {
+    return Failure(new InvalidActivityStateError('Administrative cancellation is currently unsupported (SPEC-001 not implemented)'));
   }
 
   public async getActivityHistory(activityId: string): Promise<Result<ActivityLogEntry[], BaseAppError>> {

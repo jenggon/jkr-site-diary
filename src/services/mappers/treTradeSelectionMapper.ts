@@ -1,5 +1,12 @@
 import { TradeSelection as TreTradeSelection, TradeResolutionSource } from '@/types/tre';
-import { TradeSelection as ActivityTradeSelection, TradeSource } from '@/types/openActivity';
+export type TradeSource = 'MSPResource' | 'TradeLibrary' | 'KnowledgeEngine';
+
+export interface ActivityTradeSelection {
+  readonly tradeId: string;
+  readonly tradeCode: string;
+  readonly tradeName: string;
+  readonly source: TradeSource;
+}
 
 /**
  * Maps a TRE-domain TradeSelection to an Activity-domain TradeSelection.

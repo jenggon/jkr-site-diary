@@ -7,13 +7,13 @@ import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
 import { SyncDomainEventPublisher } from '@/events/SyncDomainEventPublisher';
 import { OpenActivityTerminationHandler } from '@/events/handlers/OpenActivityTerminationHandler';
-import { OpenActivityRepository } from '@/repositories/OpenActivityRepository';
+import { ActivityRepository } from '@/repositories/ActivityRepository';
 import { IDomainEventPublisher, IDomainEvent } from '@/events/IDomainEventPublisher';
-import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
+import { IActivityRepository } from '@/repositories/IActivityRepository';
 
 export interface CreateProgrammeServiceOptions {
   readonly eventPublisher?: IDomainEventPublisher;
-  readonly activityRepository?: IOpenActivityRepository;
+  readonly activityRepository?: IActivityRepository;
 }
 
 /**
@@ -30,7 +30,7 @@ export function createProgrammeService(options?: CreateProgrammeServiceOptions):
   let publisher = options?.eventPublisher;
   if (!publisher) {
     const syncPublisher = new SyncDomainEventPublisher();
-    const activityRepo = options?.activityRepository ?? new OpenActivityRepository();
+    const activityRepo = options?.activityRepository ?? new ActivityRepository();
     const terminationHandler = new OpenActivityTerminationHandler({
       activityRepository: activityRepo,
       logger,
