@@ -40,6 +40,7 @@ export interface IProgrammeService {
   archiveProgramme(programmeId: string, actorId: string): Promise<Result<Programme, BaseAppError>>;
   createRevision(cmd: CreateRevisionCommand): Promise<Result<ProgrammeRevision, BaseAppError>>;
   approveRevision(revisionId: string, actorId: string): Promise<Result<ProgrammeRevision, BaseAppError>>;
+  archiveRevision(revisionId: string, actorId: string): Promise<Result<ProgrammeRevision, BaseAppError>>;
   lockProgramme(programmeId: string, actorId: string): Promise<Result<void, BaseAppError>>;
   unlockProgramme(programmeId: string, actorId: string): Promise<Result<void, BaseAppError>>;
   getProgramme(programmeId: string): Promise<Result<Programme | null, BaseAppError>>;
