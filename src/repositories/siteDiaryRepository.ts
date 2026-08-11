@@ -137,11 +137,32 @@ export async function updateSiteDiary(
   return result as SiteDiary;
 }
 
+/**
+ * Retrieve the most recent Site Diary record belonging to an Activity.
+ * Spec: F-02 (Manpower Copy)
+ */
+export async function getLatestSiteDiaryByActivity(activityId: string): Promise<SiteDiary | null> {
+  const { data, error } = await supabase
+    .from('site_diary')
+    .select('*')
+    .eq('activity_id', activityId)
+    .order('activity_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to get latest site diary by activity: ${error.message}`);
+  }
+
+  return data as SiteDiary | null;
+}
+
 export const siteDiaryRepository = {
   createSiteDiary,
   getSiteDiaryById,
   getSiteDiaryByActivityAndDate,
   getSiteDiariesByActivity,
+  getLatestSiteDiaryByActivity,
   getSiteDiariesByRevision,
   updateSiteDiary,
 };
