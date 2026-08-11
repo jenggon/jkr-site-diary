@@ -37,8 +37,7 @@ export class LazyPlatformServiceContainer implements PlatformServiceContainer {
 
   public openActivity(): IOpenActivityService {
     if (!this._openActivityService) {
-      // Pass the shared TRE and WRE instances â€” not a new one
-      this._openActivityService = createOpenActivityService(this.treEngine(), this.workforceEngine(), this.materialEngine());
+      this._openActivityService = createOpenActivityService();
     }
     return this._openActivityService;
   }

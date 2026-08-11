@@ -1,139 +1,111 @@
-import { describe, it, expect, vi } from 'vitest';
-import { OpenActivityService } from '@/services/OpenActivityService';
-import { ITreEngineService } from '@/services/ITreEngineService';
-import { IMaterialEngineService } from '@/services/IMaterialEngineService';
-import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
-import { IOpenActivityRepository } from '@/repositories/IOpenActivityRepository';
-import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivityLogRepository';
-import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
-
-const mockMreNoOp: IMaterialEngineService = {
-  recommend: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
-  resolveMaterialRecommendation: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
-} as unknown as IMaterialEngineService;
-
+import { describe, it, expect } from 'vitest';
+import { WorkforceEngineService } from '@/services/WorkforceEngineService';
+import { TreEngineService } from '@/services/TreEngineService';
+import { ProgramKerjaBoundaryService, ProgramKerjaBoundaryServiceDependencies } from '@/services/ProgramKerjaBoundaryService';
 import { SystemClock } from '@/lib/clock';
-import { logger } from '@/lib/logger';
-import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
-import { isSuccess, Success } from '@/lib/result';
-import { OpenActivity } from '@/types/openActivity';
+import { isSuccess } from '@/lib/result';
+import { MspWorkforceResourceRecord, IMspWorkforceRepository } from '@/repositories/IMspWorkforceRepository';
+import { Logger } from '@/lib/logger';
+describe('WorkforceEngineService Integration (WRE sequentially after TRE)', () => {
+  const clock = new SystemClock();
+  const silentLogger = {
+    info: () => {}, error: () => {}, warn: () => {}, debug: () => {}, child: () => silentLogger,
+  } as unknown as Logger;
 
-describe('openActivityWreIntegration', () => {
   it('orchestrates TRE followed by WRE sequentially during activity creation', async () => {
-    const workforceEngine = {
-      resolveWorkforceRecommendation: async () => ({
-        success: true,
-        value: {
-          recommendation: { items: [], totalWorkforceCount: 42 },
-          resolutionSource: 'TRADE_WORKFORCE_LIBRARY',
-          confidenceLevel: 'HIGH',
-          diagnostics: { evaluationStage: 'TRADE_WORKFORCE_LIBRARY' }
-        }
-      })
-    } as unknown as IWorkforceEngineService;
-    
-    const mockActivityRepo: IOpenActivityRepository = {
-      findById: async () => Success({} as OpenActivity),
-      findBySiteDiaryId: async () => Success([]),
-      findByRevisionId: async () => Success([]),
-      create: async (a: OpenActivity) => Success(a),
-      update: async (a: OpenActivity) => Success(a),
-      updateStatus: async (_id: string, _status: import('@/types/openActivity').ActivityStatus) => Success({} as OpenActivity),
-    };
-
-    const mockLogRepo: IActivityLogRepository = {
-      appendLog: async (e: ActivityLogEntry) => Success(e),
-      findLogsByActivityId: async () => Success([]),
-    };
-
-    const txManager = new DatabaseTransactionManager();
-    const clock = new SystemClock();
-    const eventPublisher = new NoopDomainEventPublisher();
-
-    const mockTreEngine = {
-      resolveTradeRecommendation: async () => ({
-        success: true,
-        value: {
-          tradeId: 'mock-trade-1',
-          tradeCode: 'GENERAL_WORKER',
-          tradeName: 'Buruh Am',
-          tradeCategory: 'General',
-          resolutionSource: 'TRADE_LIBRARY'
-        }
-      })
-    } as unknown as ITreEngineService;
-
-    const service = new OpenActivityService({
-      activityRepository: mockActivityRepo,
-      logRepository: mockLogRepo,
-      transactionManager: txManager,
-      clock,
-      logger,
-      eventPublisher,
-      treEngine: mockTreEngine,
-      workforceEngine,
-      materialEngine: mockMreNoOp,
+    // 1. Setup mock TRE boundary to resolve a known trade
+    const mockBoundaryService = new ProgramKerjaBoundaryService({
+      taskRepository: {
+        getTaskById: async () => ({
+          task_id: 'task-10',
+          programme_id: 'prog-1',
+          revision_id: 'rev-1',
+          task_uid: 10,
+          task_guid: null,
+          wbs: '1.2',
+          task_name: 'Concreting Task',
+          parent_task_uid: null,
+          outline_level: 1,
+          outline_number: '1.2',
+          trade_code: 'CONCRETOR',
+          trade_name: 'Concrete Specialist',
+          display_order: 1,
+          planned_start: null,
+          planned_finish: null,
+          planned_duration_days: null,
+          is_milestone: false,
+          is_critical: false,
+          is_summary: false,
+          constraint_type: null,
+          constraint_date: null,
+          created_at: '2026-08-01',
+          created_by: 'user-1',
+        }),
+      } as unknown as ProgramKerjaBoundaryServiceDependencies['taskRepository'],
     });
 
-    const result = await service.createActivity({
+    const treEngine = new TreEngineService({
+      programKerjaBoundaryService: mockBoundaryService,
+      tradeLibraryRepository: { getDefaultTrade: async () => null, getTradeByCode: async () => null, getTradeById: async () => null },
+      knowledgeEngineAdapter: { getTopRecommendation: async () => null },
+      clock,
+      logger: silentLogger,
+    });
+
+    // 2. Resolve TRE
+    const treResult = await treEngine.resolveTradeRecommendation({
       siteDiaryId: 'diary-integration-1',
       programmeId: 'prog-1',
       revisionId: 'rev-1',
+      mspTaskId: 'task-10',
       activityName: 'Kerja-kerja Konkrit Asas',
-      createdBy: 'test-user',
     });
 
-    expect(isSuccess(result)).toBe(true);
-    if (isSuccess(result)) {
-      const activity = result.value;
-      expect(activity.tradeInfo).toBeDefined();
-      expect(activity.workforceCount).toBeDefined();
-    }
-  });
+    expect(isSuccess(treResult)).toBe(true);
+    const resolvedTrade = isSuccess(treResult) ? treResult.value : undefined;
+    expect(resolvedTrade).toBeDefined();
 
-  it('skips WRE if caller supplies workforceCount', async () => {
-    const workforceEngine = {
-      resolveWorkforceRecommendation: async () => ({})
-    } as unknown as IWorkforceEngineService;
-    
-    const mockActivityRepo: IOpenActivityRepository = {
-      findById: async () => Success({} as OpenActivity),
-      findBySiteDiaryId: async () => Success([]),
-      findByRevisionId: async () => Success([]),
-      create: async (a: OpenActivity) => Success(a),
-      update: async (a: OpenActivity) => Success(a),
-      updateStatus: async (_id: string, _status: import('@/types/openActivity').ActivityStatus) => Success({} as OpenActivity),
-    };
-    const mockLogRepo: IActivityLogRepository = {
-      appendLog: async (e: ActivityLogEntry) => Success(e),
-      findLogsByActivityId: async () => Success([]),
+    // 3. Setup WRE with a mock repository that responds to the TRE result
+    const sampleMspWorkforceTrade: MspWorkforceResourceRecord = {
+      roleCode: 'SKILLED',
+      tradeId: resolvedTrade!.tradeId,
+      tradeCode: resolvedTrade!.tradeCode,
+      tradeName: resolvedTrade!.tradeName,
+      allocatedCount: 42,
+      skillLevel: 'Skilled',
+      isMandatory: true,
     };
 
-    const service = new OpenActivityService({
-      activityRepository: mockActivityRepo,
-      logRepository: mockLogRepo,
-      transactionManager: new DatabaseTransactionManager(),
-      clock: new SystemClock(),
-      logger,
-      eventPublisher: new NoopDomainEventPublisher(),
-      treEngine: { resolveTradeRecommendation: async () => ({ success: true, value: { tradeId: 'x', tradeCode: 'x', tradeName: 'x', tradeCategory: 'x', resolutionSource: 'MSP_RESOURCE' } }) } as unknown as ITreEngineService,
-      workforceEngine,
-      materialEngine: mockMreNoOp,
+    const wreEngine = new WorkforceEngineService({
+      mspWorkforceRepository: {
+        findWorkforceByMspTask: async (_progId: string, taskId: string) => {
+          if (taskId === 'task-10') {
+            return [sampleMspWorkforceTrade];
+          }
+          return [];
+        },
+      } as unknown as IMspWorkforceRepository,
+      tradeWorkforceLibraryRepository: { getWorkforceCompositionByTrade: async () => null },
+      workforceRuleRepository: { getRulesByDiscipline: async () => [] },
+      evaluatorRegistry: { getEvaluatorsForDiscipline: () => [], register: () => {} },
+      clock,
+      logger: silentLogger,
     });
 
-    const result = await service.createActivity({
-      siteDiaryId: 'diary-integration-2',
+    // 4. Resolve WRE passing the TRE context
+    const wreResult = await wreEngine.resolveWorkforceRecommendation({
+      siteDiaryId: 'diary-integration-1',
       programmeId: 'prog-1',
       revisionId: 'rev-1',
-      activityName: 'Kerja Am',
-      workforceCount: 99,
-      createdBy: 'test-user',
+      mspTaskId: 'task-10',
+      activityName: 'Concreting Task',
+      tradeSelection: resolvedTrade!,
     });
 
-    expect(isSuccess(result)).toBe(true);
-    if (isSuccess(result)) {
-      const activity = result.value;
-      expect(activity.workforceCount).toBe(99);
+    expect(isSuccess(wreResult)).toBe(true);
+    if (isSuccess(wreResult)) {
+      expect(wreResult.value.recommendation.totalWorkforceCount).toBe(42);
+      expect(wreResult.value.resolutionSource).toBe('MSP_RESOURCE');
     }
   });
 });

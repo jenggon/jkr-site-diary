@@ -3,7 +3,7 @@ import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
 import { toSuccessResponse, createdResponse, toErrorResponse, pagedResponse } from '@/app/api/_shared/response';
 import { mapActivityToResponseDto, mapActivityLogToResponseDto } from '@/app/api/_shared/activity.mapper';
 import { ActivityNotFoundError, ActivityValidationError, ActivityLockedError } from '@/errors/activityErrors';
-import { OpenActivity, ActivityLogEntry } from '@/types/openActivity';
+import { OpenActivityDto, ActivityLogEntry, ActivityStatus } from '@/types/openActivity';
 
 describe('Activity API Shared Infrastructure', () => {
   describe('httpErrorMapper', () => {
@@ -65,36 +65,30 @@ describe('Activity API Shared Infrastructure', () => {
   });
 
   describe('activity mappers', () => {
-    it('should map OpenActivity domain entity to OpenActivityResponseDto explicitly', () => {
-      const entity: OpenActivity = {
+    it('should map OpenActivityDto projection to OpenActivityResponseDto explicitly', () => {
+      const dtoProjection: OpenActivityDto = {
         activityId: 'act-1',
-        siteDiaryId: 'diary-100',
         programmeId: 'prog-1',
+        revisionId: 'rev-1',
         taskId: 'task-5',
-        activityName: 'Kerja Memasang Tetulang',
-        location: { buildingId: 'b-1', floorLevel: 'Level 2' },
-        tradeInfo: { tradeId: 't-1', tradeCode: 'CON', tradeName: 'Concrete', source: 'TradeLibrary' },
-        workforceCount: 8,
-        status: 'InProgress',
+        subtask: 'Kerja Memasang Tetulang',
+        status: ActivityStatus.InProgress,
         isLocked: false,
         createdAt: '2026-08-08T00:00:00.000Z',
         createdBy: 'user-supervisor',
       };
 
-      const dto = mapActivityToResponseDto(entity);
+      const dto = mapActivityToResponseDto(dtoProjection);
       expect(dto.activity_id).toBe('act-1');
-      expect(dto.site_diary_id).toBe('diary-100');
-      expect(dto.location?.building_id).toBe('b-1');
-      expect(dto.trade_info?.source).toBe('TradeLibrary');
-      expect(dto.workforce_count).toBe(8);
-      expect(dto.status).toBe('InProgress');
+      expect(dto.programme_id).toBe('prog-1');
+      expect(dto.subtask).toBe('Kerja Memasang Tetulang');
+      expect(dto.status).toBe('In Progress');
     });
 
     it('should map ActivityLogEntry domain entity to ActivityLogEntryResponseDto explicitly', () => {
       const log: ActivityLogEntry = {
         logId: 'log-1',
         activityId: 'act-1',
-        siteDiaryId: 'diary-100',
         eventType: 'NEW',
         snapshotData: { name: 'test' },
         loggedAt: '2026-08-08T00:00:00.000Z',

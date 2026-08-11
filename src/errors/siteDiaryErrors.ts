@@ -26,3 +26,12 @@ export class SiteDiaryRevisionNotApprovedError extends BaseAppError {
     super(message, options);
   }
 }
+
+export class InvalidSiteDiaryStateError extends BaseAppError {
+  public readonly errorCode = 'INVALID_SITE_DIARY_STATE';
+  public readonly httpStatus = 400;
+
+  constructor(message: string = 'Invalid Site Diary state transition', options?: ErrorOptions) {
+    super(message, options);
+  }
+}

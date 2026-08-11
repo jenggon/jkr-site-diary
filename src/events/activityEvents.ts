@@ -1,6 +1,6 @@
 import { generateUuid } from '@/lib/uuid';
 import { nowIso } from '@/lib/clock';
-import { OpenActivity, ActivityStatus } from '@/types/openActivity';
+import { ActivityStatus, OpenActivityDto } from '@/types/openActivity';
 import { IDomainEvent } from './IDomainEventPublisher';
 
 export class ActivityCreatedEvent implements IDomainEvent {
@@ -9,12 +9,11 @@ export class ActivityCreatedEvent implements IDomainEvent {
   public readonly occurredAt: string = nowIso();
   public readonly payload: Record<string, unknown>;
 
-  constructor(activity: OpenActivity) {
+  constructor(activity: OpenActivityDto) {
     this.payload = {
       activityId: activity.activityId,
-      siteDiaryId: activity.siteDiaryId,
       programmeId: activity.programmeId,
-      activityName: activity.activityName,
+      subtask: activity.subtask,
       status: activity.status,
       createdBy: activity.createdBy,
       createdAt: activity.createdAt,
@@ -28,11 +27,10 @@ export class ActivityUpdatedEvent implements IDomainEvent {
   public readonly occurredAt: string = nowIso();
   public readonly payload: Record<string, unknown>;
 
-  constructor(activity: OpenActivity) {
+  constructor(activity: OpenActivityDto) {
     this.payload = {
       activityId: activity.activityId,
-      siteDiaryId: activity.siteDiaryId,
-      activityName: activity.activityName,
+      subtask: activity.subtask,
       status: activity.status,
       updatedBy: activity.updatedBy ?? null,
       updatedAt: activity.updatedAt ?? null,

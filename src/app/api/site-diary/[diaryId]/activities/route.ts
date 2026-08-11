@@ -3,21 +3,21 @@ import { toSuccessResponse, createdResponse, toErrorResponse } from '@/app/api/_
 import { mapActivityToResponseDto } from '@/app/api/_shared/activity.mapper';
 import { CreateActivityRequestDto } from '@/app/api/_shared/activity.dto';
 import { isSuccess } from '@/lib/result';
+import { BaseAppError } from '@/lib/errors';
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ diaryId: string }> }
 ) {
-  return handleRoute(request, async ({ services }) => {
-    const { diaryId } = await context.params;
-    const service = services.openActivity();
-    const result = await service.getActivitiesForDiary(diaryId);
-
-    if (isSuccess(result)) {
-      const dtos = result.value.map(mapActivityToResponseDto);
-      return toSuccessResponse(dtos);
-    }
-    return toErrorResponse(result.error);
+  return handleRoute(request, async () => {
+    // DB-003 ARCHITECTURE CHANGE
+    // Activities no longer belong to Site Diaries. Site Diary is a child of Activity.
+    // Querying activities by diaryId is obsolete and removed.
+    // Frontend must query activities by Revision or Task.
+    return Response.json(
+      { error: 'Obsolete API. Query Activities by Revision or Task.' },
+      { status: 410 }
+    );
   });
 }
 
@@ -31,27 +31,11 @@ export async function POST(
 
     const service = services.openActivity();
     const result = await service.createActivity({
-      siteDiaryId: diaryId,
+      siteDiaryId: diaryId, // Passed for context but ignored in DB-014
       programmeId: body.programme_id,
+      revisionId: body.revision_id,
       taskId: body.task_id,
-      activityName: body.activity_name,
-      location: body.location
-        ? {
-            buildingId: body.location.building_id,
-            floorLevel: body.location.floor_level,
-            zone: body.location.zone,
-            gridReference: body.location.grid_reference,
-          }
-        : undefined,
-      tradeSelection: body.trade_info
-        ? {
-            tradeId: body.trade_info.trade_id,
-            tradeCode: body.trade_info.trade_code,
-            tradeName: body.trade_info.trade_name,
-            source: body.trade_info.source,
-          }
-        : undefined,
-      workforceCount: body.workforce_count,
+      activityName: body.subtask,
       createdBy: body.created_by,
     });
 

@@ -1,32 +1,24 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { OpenActivityService } from '@/services/OpenActivityService';
-import { OpenActivityRepository } from '@/repositories/OpenActivityRepository';
+import { ActivityRepository } from '@/repositories/ActivityRepository';
 import { ActivityLogRepository } from '@/repositories/ActivityLogRepository';
 import { IDatabaseAdapter } from '@/repositories/adapters/IDatabaseAdapter';
 import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
-
-const mockMreNoOp: IMaterialEngineService = {
-  recommend: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
-  resolveMaterialRecommendation: vi.fn().mockResolvedValue({ success: false, error: { errorCode: 'NO_MATERIAL_RECOMMENDATION_FOUND', message: 'Mock not found' } }),
-} as unknown as IMaterialEngineService;
-
 import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
 import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
 import { isSuccess, Success, Failure } from '@/lib/result';
 import { ActivityNotFoundError } from '@/errors/activityErrors';
-import { ITreEngineService } from '@/services/ITreEngineService';
-import { IMaterialEngineService } from '@/services/IMaterialEngineService';
-import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
+import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
+import { ProgrammeRevision } from '@/types/programmeRevision';
 
-describe('OpenActivityService Integration Scenarios', () => {
-  const mockDiaryRows: Map<string, Record<string, unknown>> = new Map();
+describe('OpenActivityService Integration (DB-003 Remediation)', () => {
+  const mockActivityRows: Map<string, Record<string, unknown>> = new Map();
   const mockLogRows: ActivityLogRowInternal[] = [];
 
   interface ActivityLogRowInternal {
     log_id: string;
     activity_id: string;
-    site_diary_id: string;
     event_type: 'NEW' | 'UPDATE';
     snapshot_data: Record<string, unknown>;
     logged_at: string;
@@ -35,9 +27,9 @@ describe('OpenActivityService Integration Scenarios', () => {
 
   const mockAdapter: IDatabaseAdapter = {
     selectOne: async <T>(table: string, filter: Record<string, unknown>) => {
-      if (table === 'site_diary') {
-        const id = filter.id as string;
-        const item = mockDiaryRows.get(id);
+      if (table === 'activity') {
+        const id = filter.activity_id as string;
+        const item = mockActivityRows.get(id);
         if (item) return Success(item as T);
         return Success(null);
       }
@@ -45,9 +37,9 @@ describe('OpenActivityService Integration Scenarios', () => {
     },
 
     selectMany: async <T>(table: string, filter?: Record<string, unknown>) => {
-      if (table === 'site_diary') {
+      if (table === 'activity') {
         const results: T[] = [];
-        for (const item of mockDiaryRows.values()) {
+        for (const item of mockActivityRows.values()) {
           let match = true;
           if (filter) {
             for (const [k, v] of Object.entries(filter)) {
@@ -58,7 +50,7 @@ describe('OpenActivityService Integration Scenarios', () => {
         }
         return Success(results);
       }
-      if (table === 'site_diary_logs') {
+      if (table === 'site_diary_logs') { // Assuming ActivityLogRepository still uses this or similar
         const results: T[] = [];
         const actId = filter?.activity_id as string;
         for (const log of mockLogRows) {
@@ -70,9 +62,9 @@ describe('OpenActivityService Integration Scenarios', () => {
     },
 
     insert: async <T>(table: string, row: Record<string, unknown>) => {
-      if (table === 'site_diary') {
-        const id = row.id as string;
-        mockDiaryRows.set(id, row);
+      if (table === 'activity') {
+        const id = row.activity_id as string;
+        mockActivityRows.set(id, row);
         return Success(row as T);
       }
       if (table === 'site_diary_logs') {
@@ -83,12 +75,12 @@ describe('OpenActivityService Integration Scenarios', () => {
     },
 
     update: async <T>(table: string, filter: Record<string, unknown>, updates: Record<string, unknown>) => {
-      if (table === 'site_diary') {
-        const id = filter.id as string;
-        const existing = mockDiaryRows.get(id);
+      if (table === 'activity') {
+        const id = filter.activity_id as string;
+        const existing = mockActivityRows.get(id);
         if (!existing) return Failure(new ActivityNotFoundError('Not found'));
         const updated = { ...existing, ...updates };
-        mockDiaryRows.set(id, updated);
+        mockActivityRows.set(id, updated);
         return Success(updated as T);
       }
       return Failure(new ActivityNotFoundError('Table not found'));
@@ -99,41 +91,73 @@ describe('OpenActivityService Integration Scenarios', () => {
     },
   };
 
-  const activityRepo = new OpenActivityRepository(mockAdapter);
+  const activityRepo = new ActivityRepository(mockAdapter);
   const logRepo = new ActivityLogRepository(mockAdapter);
   const txManager = new DatabaseTransactionManager();
   const clock = new SystemClock();
   const logger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} } as unknown as Logger;
   const eventPublisher = new NoopDomainEventPublisher();
 
-  // Minimal no-op TRE mock — integration tests here focus on OAS persistence behaviour
-  const mockTreEngine: ITreEngineService = {
-    resolveTradeRecommendation: async () => ({ success: false, error: new ActivityNotFoundError('no trade') }),
-  };
 
-  const mockWreEngine = {
-    resolveWorkforceRecommendation: async () => ({ success: false, error: new ActivityNotFoundError('no workforce') }),
-  } as unknown as IWorkforceEngineService;
+
+  const mockRevisionRepo: IProgrammeRevisionRepository = {
+    findById: async (id) => Success({
+      revisionId: id,
+      programmeId: 'prog-999',
+      revisionNumber: 1,
+      revisionTitle: 'Rev',
+      isCurrent: true,
+      status: 'Approved',
+      createdAt: '2026-08-01',
+      createdBy: 'user',
+    }),
+    findByProgrammeId: async () => Success([]),
+    findActiveRevision: async () => Success(null),
+    create: async (r) => Success(r),
+    updateStatus: async (id, s) => Success({ revisionId: id, status: s } as unknown as ProgrammeRevision),
+  };
 
   const service = new OpenActivityService({
     activityRepository: activityRepo,
     logRepository: logRepo,
     transactionManager: txManager,
+    revisionRepository: mockRevisionRepo,
+    taskRepository: {
+      getTaskById: async () => ({
+        task_id: 'task-999',
+        programme_id: 'prog-999',
+        revision_id: 'rev-999',
+        task_uid: 1,
+        task_guid: null,
+        wbs: '1',
+        task_name: 'Task 999',
+        parent_task_uid: null,
+        outline_level: 1,
+        display_order: 1,
+        planned_start: null,
+        planned_finish: null,
+        planned_duration_days: null,
+        is_milestone: false,
+        is_critical: false,
+        is_summary: false,
+        constraint_type: null,
+        constraint_date: null,
+        created_at: '2026-08-01',
+        created_by: 'user',
+      }),
+    },
     clock,
     logger,
     eventPublisher,
-    treEngine: mockTreEngine,
-    workforceEngine: mockWreEngine,
-      materialEngine: mockMreNoOp,
   });
 
-  it('should execute createActivity and write single site_diary row + append-only site_diary_log', async () => {
+  it('should execute createActivity and write single activity row + append-only site_diary_log', async () => {
     const createRes = await service.createActivity({
-      siteDiaryId: 'diary-888',
+      siteDiaryId: 'diary-888', // This won't be persisted on Activity, but might be on Log or returned in DTO
       programmeId: 'prog-999',
       revisionId: 'rev-999',
+      taskId: 'task-999',
       activityName: 'Memasang Papan Acuan',
-      workforceCount: 6,
       createdBy: 'user-supervisor',
     });
 
@@ -141,9 +165,9 @@ describe('OpenActivityService Integration Scenarios', () => {
     if (isSuccess(createRes)) {
       const actId = createRes.value.activityId;
 
-      // Verify site_diary table contains single row
-      expect(mockDiaryRows.has(actId)).toBe(true);
-      expect(mockDiaryRows.size).toBe(1);
+      // Verify activity table contains single row
+      expect(mockActivityRows.has(actId)).toBe(true);
+      expect(mockActivityRows.size).toBe(1);
 
       // Verify site_diary_logs contains 'NEW' event entry
       const historyRes = await service.getActivityHistory(actId);
@@ -155,31 +179,32 @@ describe('OpenActivityService Integration Scenarios', () => {
     }
   });
 
-  it('should execute updateActivity and update single site_diary row + append UPDATE log', async () => {
-    const listRes = await service.getActivitiesForDiary('diary-888');
-    expect(isSuccess(listRes)).toBe(true);
+  it('should execute updateActivity and update single activity row + append UPDATE log', async () => {
+    // Assuming 'act-1' exists in mockActivityRows from the previous test, or we'll fetch whatever is there.
+    // Instead, let's just get the first created one manually or use the map.
+    const createdActs = Array.from(mockActivityRows.values());
+    expect(createdActs.length).toBeGreaterThan(0);
+    
+    const actId = createdActs[0]!.activity_id as string;
 
-    if (isSuccess(listRes) && listRes.value.length > 0) {
-      const actId = listRes.value[0]!.activityId;
+    const updateRes = await service.updateActivity({
+      activityId: actId,
+      activityName: 'Memasang Papan Acuan Blok B',
+      updatedBy: 'user-supervisor',
+    });
 
-      const updateRes = await service.updateActivity({
-        activityId: actId,
-        activityName: 'Memasang Papan Acuan Blok B',
-        updatedBy: 'user-supervisor',
-      });
+    expect(isSuccess(updateRes)).toBe(true);
 
-      expect(isSuccess(updateRes)).toBe(true);
+    // Verify activity table STILL has 1 row (UPDATE modified existing row, no duplicates)
+    expect(mockActivityRows.size).toBe(1);
+    expect(mockActivityRows.get(actId)?.subtask).toBe('Memasang Papan Acuan Blok B');
 
-      // Verify site_diary table STILL has 1 row (UPDATE modified existing row, no duplicates)
-      expect(mockDiaryRows.size).toBe(1);
-
-      // Verify site_diary_logs now has 2 entries (NEW + UPDATE)
-      const historyRes = await service.getActivityHistory(actId);
-      expect(isSuccess(historyRes)).toBe(true);
-      if (isSuccess(historyRes)) {
-        expect(historyRes.value.length).toBe(2);
-        expect(historyRes.value[1]?.eventType).toBe('UPDATE');
-      }
+    // Verify site_diary_logs now has 2 entries (NEW + UPDATE)
+    const historyRes = await service.getActivityHistory(actId);
+    expect(isSuccess(historyRes)).toBe(true);
+    if (isSuccess(historyRes)) {
+      expect(historyRes.value.length).toBe(2);
+      expect(historyRes.value[1]?.eventType).toBe('UPDATE');
     }
   });
 });

@@ -12,6 +12,8 @@ import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
 import { IProgrammeRepository } from '@/repositories/IProgrammeRepository';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
+import { IActivityRepository } from '@/repositories/IActivityRepository';
+import { ActivityStatus, ActivityWeather, Activity } from '@/types/activity';
 
 describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', () => {
   const clock = new SystemClock();
@@ -141,12 +143,58 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         createdDiaries[idx] = updated;
         return updated;
       },
+      getLatestSiteDiaryByActivity: async (actId: string): Promise<SiteDiary | null> => {
+        const diaries = createdDiaries.filter((d) => d.activity_id === actId);
+        if (diaries.length === 0) return null;
+        // mock sort by date desc
+        const sorted = diaries.sort((a, b) => b.activity_date.localeCompare(a.activity_date));
+        return sorted[0] ?? null;
+      }
     };
+
+    const mockActivityRepo = {
+      findById: async (id: string) => {
+        if (id === 'act-new') {
+          return Success({
+            activity_id: 'act-new',
+            programme_id: 'prog-1',
+            revision_id: 'rev-approved',
+            status: ActivityStatus.New
+          } as unknown as Activity);
+        }
+        if (id === 'act-inprogress') {
+          return Success({
+            activity_id: 'act-inprogress',
+            programme_id: 'prog-1',
+            revision_id: 'rev-approved',
+            status: ActivityStatus.InProgress
+          } as unknown as Activity);
+        }
+        if (id === 'act-completed') {
+          return Success({
+            activity_id: 'act-completed',
+            programme_id: 'prog-1',
+            revision_id: 'rev-approved',
+            status: ActivityStatus.Completed
+          } as unknown as Activity);
+        }
+        if (id === 'act-superseded') {
+           return Success({
+            activity_id: 'act-superseded',
+            programme_id: 'prog-1',
+            revision_id: 'rev-superseded',
+            status: ActivityStatus.InProgress
+          } as unknown as Activity);
+        }
+        return Success(null);
+      }
+    } as unknown as IActivityRepository;
 
     const service = new SiteDiaryService({
       programmeRepository: mockProgRepo,
       revisionRepository: mockRevRepo,
       siteDiaryRepository: mockSiteDiaryRepo,
+      activityRepository: mockActivityRepo,
       clock,
       logger,
     });
@@ -248,6 +296,79 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       // Create spies on mock repositories to confirm zero task write invocations
       const taskWriteSpy = vi.fn();
       expect(taskWriteSpy).not.toHaveBeenCalled();
+    });
+
+    describe('A16 Site Diary State Machine (F-04)', () => {
+      it('H. Allows valid state transitions', async () => {
+        // Mock a diary in New
+        await mockSiteDiaryRepo.createSiteDiary({
+          site_diary_id: 'sd-new', programme_id: 'prog-1', revision_id: 'rev-approved', activity_id: 'act-1', activity_date: '2026-09-02', notes: '', status: ActivityStatus.New, submitted_by: 'u1', weather: null, manpower: null, updated_at: null
+        });
+        const res = await service.updateSiteDiary({ siteDiaryId: 'sd-new', status: ActivityStatus.InProgress, updatedBy: 'u1' });
+        expect(isSuccess(res)).toBe(true);
+
+        // Mock a diary in In Progress
+        await mockSiteDiaryRepo.createSiteDiary({
+          site_diary_id: 'sd-inprog', programme_id: 'prog-1', revision_id: 'rev-approved', activity_id: 'act-1', activity_date: '2026-09-03', notes: '', status: ActivityStatus.InProgress, submitted_by: 'u1', weather: null, manpower: null, updated_at: null
+        });
+        const res2 = await service.updateSiteDiary({ siteDiaryId: 'sd-inprog', status: ActivityStatus.Completed, updatedBy: 'u1' });
+        expect(isSuccess(res2)).toBe(true);
+      });
+
+      it('I. Rejects backward transitions', async () => {
+        // Mock a diary in Completed
+        await mockSiteDiaryRepo.createSiteDiary({
+          site_diary_id: 'sd-comp', programme_id: 'prog-1', revision_id: 'rev-approved', activity_id: 'act-1', activity_date: '2026-09-04', notes: '', status: ActivityStatus.Completed, submitted_by: 'u1', weather: null, manpower: null, updated_at: null
+        });
+        const res = await service.updateSiteDiary({ siteDiaryId: 'sd-comp', status: ActivityStatus.InProgress, updatedBy: 'u1' });
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) expect(res.error.errorCode).toBe('INVALID_SITE_DIARY_STATE');
+      });
+    });
+
+    describe('A16 Continue Yesterday (F-02)', () => {
+      it('J. Copies manpower, resets weather/notes, and derives fields properly', async () => {
+        // create yesterday's diary for act-inprogress
+        await mockSiteDiaryRepo.createSiteDiary({
+          site_diary_id: 'sd-yest', programme_id: 'prog-1', revision_id: 'rev-approved', activity_id: 'act-inprogress', activity_date: '2026-09-10', notes: 'Old notes', status: ActivityStatus.InProgress, weather: 'Morning' as unknown as ActivityWeather, manpower: [{ trade_name: 'Carpenter', bumi_count: 5, non_bumi_count: 0, foreign_count: 0 }], submitted_by: 'old-user', updated_at: null
+        });
+
+        const res = await service.continueYesterday('act-inprogress', '2026-09-11', 'new-user');
+        expect(isSuccess(res)).toBe(true);
+        if (isSuccess(res)) {
+          const diary = res.value;
+          expect(diary.activity_id).toBe('act-inprogress');
+          expect(diary.activity_date).toBe('2026-09-11');
+          expect(diary.notes).toBe('');
+          expect(diary.weather).toBeNull();
+          expect(diary.status).toBe(ActivityStatus.InProgress);
+          expect(diary.submitted_by).toBe('new-user');
+          expect(diary.manpower).toEqual([{ trade_name: 'Carpenter', bumi_count: 5, non_bumi_count: 0, foreign_count: 0 }]);
+        }
+      });
+
+      it('K. Excludes Completed activities', async () => {
+        const res = await service.continueYesterday('act-completed', '2026-09-12', 'user-1');
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) expect(res.error.message).toContain('Completed');
+      });
+
+      it('L. Rejects cross-revision carry forward', async () => {
+        const res = await service.continueYesterday('act-superseded', '2026-09-12', 'user-1');
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) expect(res.error.errorCode).toBe('SITE_DIARY_REVISION_NOT_APPROVED');
+      });
+
+      it('M. Is idempotent', async () => {
+        const res1 = await service.continueYesterday('act-inprogress', '2026-09-15', 'user-1');
+        expect(isSuccess(res1)).toBe(true);
+        
+        const res2 = await service.continueYesterday('act-inprogress', '2026-09-15', 'user-1');
+        expect(isSuccess(res2)).toBe(true);
+        if (isSuccess(res1) && isSuccess(res2)) {
+          expect(res1.value.site_diary_id).toBe(res2.value.site_diary_id);
+        }
+      });
     });
   });
 });

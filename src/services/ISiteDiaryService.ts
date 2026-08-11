@@ -30,4 +30,6 @@ export interface ISiteDiaryService {
   getSiteDiariesByActivity(activityId: string): Promise<Result<SiteDiary[], BaseAppError>>;
   getSiteDiariesByRevision(revisionId: string): Promise<Result<SiteDiary[], BaseAppError>>;
   updateSiteDiary(cmd: UpdateSiteDiaryCommand): Promise<Result<SiteDiary, BaseAppError>>;
+  continueYesterday(activityId: string, targetDate: string, actorId: string): Promise<Result<SiteDiary, BaseAppError>>;
+  carryForwardActiveOperations(programmeId: string, targetDate: string, actorId: string): Promise<Result<SiteDiary[], BaseAppError>>;
 }

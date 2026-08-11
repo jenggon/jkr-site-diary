@@ -35,3 +35,12 @@ export class ActivityLockedError extends BaseAppError {
     super(message, options);
   }
 }
+
+export class ActivityRevisionSupersededError extends BaseAppError {
+  public readonly errorCode = 'ACTIVITY_REVISION_SUPERSEDED';
+  public readonly httpStatus = 409;
+
+  constructor(message: string = 'Activity belongs to a superseded revision and cannot be mutated', options?: ErrorOptions) {
+    super(message, options);
+  }
+}

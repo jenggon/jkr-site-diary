@@ -7,7 +7,6 @@ import { IActivityLogRepository, ActivityLogEntry } from './IActivityLogReposito
 export interface ActivityLogRow {
   readonly log_id: string;
   readonly activity_id: string;
-  readonly site_diary_id: string;
   readonly event_type: 'NEW' | 'UPDATE';
   readonly snapshot_data: Record<string, unknown>;
   readonly logged_at: string;
@@ -25,7 +24,6 @@ export class ActivityLogRepository implements IActivityLogRepository {
     return {
       logId: row.log_id,
       activityId: row.activity_id,
-      siteDiaryId: row.site_diary_id,
       eventType: row.event_type,
       snapshotData: row.snapshot_data,
       loggedAt: row.logged_at,
@@ -37,7 +35,6 @@ export class ActivityLogRepository implements IActivityLogRepository {
     const row: Record<string, unknown> = {
       log_id: entry.logId,
       activity_id: entry.activityId,
-      site_diary_id: entry.siteDiaryId,
       event_type: entry.eventType,
       snapshot_data: entry.snapshotData,
       logged_at: entry.loggedAt,
