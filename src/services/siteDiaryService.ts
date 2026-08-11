@@ -15,7 +15,7 @@ import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionR
 import { ProgrammeRepository } from '@/repositories/ProgrammeRepository';
 import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
-import { ActivityRepository } from '@/repositories/ActivityRepository';
+import { ActivityRepository } from '@/repositories/activityRepository';
 import { siteDiaryRepository as defaultSiteDiaryRepo } from '@/repositories/siteDiaryRepository';
 import { ISiteDiaryService, CreateSiteDiaryCommand, UpdateSiteDiaryCommand } from './ISiteDiaryService';
 import { ActivityStatus, Activity } from '@/types/activity';

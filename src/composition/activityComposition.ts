@@ -1,6 +1,6 @@
 import { OpenActivityService } from '@/services/OpenActivityService';
 import { IOpenActivityService } from '@/services/IOpenActivityService';
-import { ActivityRepository } from '@/repositories/ActivityRepository';
+import { ActivityRepository } from '@/repositories/activityRepository';
 import { ActivityLogRepository } from '@/repositories/ActivityLogRepository';
 import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
 import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';

@@ -7,7 +7,7 @@ import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
 import { SyncDomainEventPublisher } from '@/events/SyncDomainEventPublisher';
 import { OpenActivityTerminationHandler } from '@/events/handlers/OpenActivityTerminationHandler';
-import { ActivityRepository } from '@/repositories/ActivityRepository';
+import { ActivityRepository } from '@/repositories/activityRepository';
 import { IDomainEventPublisher, IDomainEvent } from '@/events/IDomainEventPublisher';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
 

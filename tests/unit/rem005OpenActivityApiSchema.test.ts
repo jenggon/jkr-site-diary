@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { OpenActivityService } from '@/services/OpenActivityService';
-import { ActivityRepository, ActivityRow } from '@/repositories/ActivityRepository';
+import { ActivityRepository, ActivityRow } from '@/repositories/activityRepository';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivityLogRepository';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';

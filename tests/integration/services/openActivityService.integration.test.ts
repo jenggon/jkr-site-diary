@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { OpenActivityService } from '@/services/OpenActivityService';
-import { ActivityRepository } from '@/repositories/ActivityRepository';
+import { ActivityRepository } from '@/repositories/activityRepository';
 import { ActivityLogRepository } from '@/repositories/ActivityLogRepository';
 import { IDatabaseAdapter } from '@/repositories/adapters/IDatabaseAdapter';
 import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
