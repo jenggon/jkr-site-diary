@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
+import { extractIdentity } from '@/app/api/_shared/identity';
+import { isValidUuid } from '@/lib/uuid';
 
 type RouteParams = {
   params: Promise<{ revisionId: string }>;
@@ -12,35 +14,22 @@ type RouteParams = {
  */
 export async function POST(request: Request, context: RouteParams) {
   try {
+    const actorId = extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
+    }
+
     const { revisionId } = await context.params;
 
-    if (!revisionId || typeof revisionId !== 'string') {
+    if (!revisionId || !isValidUuid(revisionId)) {
       return NextResponse.json(
         { error: 'Missing or invalid route parameter: revisionId' },
         { status: 400 }
       );
     }
 
-    const body = await request.json();
-
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { error: 'Invalid payload: Request body must be a valid JSON object' },
-        { status: 400 }
-      );
-    }
-
-    const { approvedBy } = body;
-
-    if (!approvedBy || typeof approvedBy !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: approvedBy' },
-        { status: 400 }
-      );
-    }
-
     const service = createProgrammeService();
-    const result = await service.approveRevision(revisionId, approvedBy);
+    const result = await service.approveRevision(revisionId, actorId);
 
     if (isSuccess(result)) {
       return NextResponse.json({ data: result.value }, { status: 200 });

@@ -252,6 +252,22 @@ export class ProgrammeService implements IProgrammeService {
     }
   }
 
+  public async archiveRevision(revisionId: string, actorId: string): Promise<Result<ProgrammeRevision, BaseAppError>> {
+    try {
+      const targetRes = await this.revisionRepo.findById(revisionId);
+      if (isFailure(targetRes)) return Failure(targetRes.error);
+      if (!targetRes.value) return Failure(new ProgrammeNotFoundError('Revision not found'));
+
+      const targetRevision = targetRes.value;
+      validateProgrammeRevisionTransition(targetRevision.status, 'Archived');
+
+      return this.revisionRepo.updateStatus(revisionId, 'Archived', actorId);
+    } catch (err: unknown) {
+      if (err instanceof BaseAppError) return Failure(err);
+      return Failure(new UnknownError(err instanceof Error ? err.message : 'Archive revision failed', { cause: err }));
+    }
+  }
+
   public async lockProgramme(programmeId: string, _actorId: string): Promise<Result<void, BaseAppError>> {
     const existingRes = await this.programmeRepo.findById(programmeId);
     if (isFailure(existingRes)) return Failure(existingRes.error);
