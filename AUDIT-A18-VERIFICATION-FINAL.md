@@ -1,47 +1,95 @@
 # AUDIT-A18-VERIFICATION-FINAL
 
-## Objective
-The objective of Audit A18 was to securely integrate the existing frontend Site Diary workflow with the verified, canonical A16/A17 REST API backend boundary, replacing legacy string-based direct Supabase mutations with fully authenticated, canonical UUID-based API interactions (Programme $\rightarrow$ Revision $\rightarrow$ Task $\rightarrow$ Activity $\rightarrow$ Site Diary).
+## Objective and Disposition
 
-## Executive Verdict
-**VERDICT: A — PASS / CLOSED**
-**A18 SCORE: 9.0 / 10**
-**IMPLEMENTATION STATUS: DEFERRED TO A19**
+The original A18 objective was to securely integrate the existing frontend Site Diary workflow with the verified canonical A16/A17 REST API boundary, replacing legacy string-based direct Supabase mutations with authenticated, canonical UUID-based interactions:
 
-*Note: This closure indicates that A18 successfully identified and defended the architectural boundary. Frontend implementation is explicitly deferred to A19 because forcing integration within A18 would have required violating the canonical Activity Lifecycle.*
+Programme -> Revision -> Task -> Activity -> Site Diary.
 
-## KPI Matrix
-| KPI | Target | Achieved | Status |
-|---|---|---|---|
-| Trace Canonical Contracts | 100% | 100% | PASS |
-| Legacy Identity Analyzed | 100% | 100% | PASS |
-| Activity Lifecycle Verified | 100% | 100% | PASS |
-| Defend A17 API Integrity | Zero modifications | Zero modifications | PASS |
-| Prevent Unsafe Translation | Zero fallback APIs | Zero fallback APIs | PASS |
-| Prevent Lifecycle Mismatch | Full compliance | Full compliance | PASS |
+**VERDICT: B — PASS WITH CONDITIONS**
 
-## Evidence Log
-The findings that necessitated deferring the implementation are comprehensively documented in the following artifacts:
+A18 is closed as an **architectural audit/reconnaissance milestone**, not as a completed frontend implementation milestone. The audit established and defended the canonical integration boundary; the original frontend implementation objective was not completed and is formally transferred to A19.
 
-1. **AUDIT-A18-INTEGRATION-BLOCKER-RECONNAISSANCE**
-   Proved that the legacy `msp_tasks` UI operates on strings (`ahi`, `subtask`) and possesses no capability to derive the canonical UUIDs (`programme_id`, `revision_id`, `task_id`) required by the A17 Site Diary REST API.
+## Final Scores
 
-2. **AUDIT-A18-CANONICAL-INTEGRATION-DESIGN**
-   Designed a structurally sound frontend boundary requiring the orchestration of Context (Programme $\rightarrow$ Revision) to retrieve canonical `task_id`s, preparing the way for canonical execution.
+| Measure | Score / Result |
+|---|---|
+| A18 Objective Completion | **2/10** |
+| A18 Audit Quality | **6/10** |
+| A18 Closure Eligibility | **YES — as an audit/reconnaissance milestone** |
+| A19 Handoff Validity | **YES** |
 
-3. **AUDIT-A18-LIFECYCLE-MISMATCH**
-   Identified that creating an Activity (`POST /api/activity`) is a genuine operational state transition (publishing `ActivityCreatedEvent` and generating a `NEW` lifecycle log). Automatically intercepting the "Submit Site Diary" form to blindly provision Activities was rejected as a severe architectural lifecycle mismatch.
+## Audit Success vs. Implementation Completion
 
-4. **AUDIT-A18-ACTIVITY-LIFECYCLE-RECONNAISSANCE**
-   Verified the explicit existence of the Activity State Machine (`New` $\rightarrow$ `InProgress` $\rightarrow$ `Completed`) and identified that a completely new capability—the "Open Activities" frontend dashboard—is required to bridge the gap between starting a task and logging daily execution against it.
+### Audit/reconnaissance success
 
-## A19 Trigger
-The remaining implementation scope is formally escalated and transitioned to a new Audit Sequence:
+- The canonical contract and ownership chain was established: Programme -> Revision -> Task -> Activity -> Site Diary.
+- The Activity lifecycle boundary was verified: Activity creation and transition are operational lifecycle actions, not an implicit Site Diary side effect.
+- A17 API integrity was preserved: no A17 API contract was changed and no unsafe translation endpoint was added.
+- A18 introduced no source, migration, test, or protected-domain changes.
+
+### Implementation completion
+
+The frontend integration and replacement of legacy direct Supabase mutations were **not completed**. The remaining implementation is deferred to A19 and must not be represented as an A18 implementation success.
+
+## Architectural Blocker
+
+Legacy frontend
+
+Programme / Revision blind
+
+↓
+
+legacy `msp_tasks` string identifiers (`ahi` / `subtask`)
+
+↓
+
+no canonical Task / Activity lifecycle orchestration
+
+↓
+
+cannot safely integrate Site Diary without an Activity lifecycle UI
+
+The legacy frontend cannot safely fabricate the canonical `task_id` and `activity_id` required by the Site Diary API. Automatically creating an Activity during Site Diary submission would make a genuine Activity lifecycle transition implicit and would violate the established architecture.
+
+## Evidence Record
+
+The following artifacts were cited by the prior closure documentation but are absent from the working repository and searched Git refs:
+
+- `AUDIT-A18-INTEGRATION-BLOCKER-RECONNAISSANCE.md`
+- `AUDIT-A18-CANONICAL-INTEGRATION-DESIGN.md`
+- `AUDIT-A18-LIFECYCLE-MISMATCH.md`
+- `AUDIT-A18-ACTIVITY-LIFECYCLE-RECONNAISSANCE.md`
+
+They have not been reconstructed or fabricated. This absence is reflected in the A18 Audit Quality score.
+
+Repository evidence independently confirms the blocker: the legacy frontend retains direct `site_diary` and `site_diary_logs` Supabase mutations using legacy identifiers, while the canonical Site Diary API requires canonical UUID `programme_id`, `revision_id`, and `activity_id` values. Activity creation appends a `NEW` lifecycle log and publishes an Activity-created event.
+
+## A19 Formal Handoff
+
 **A19: Open Activities & Activity Lifecycle Frontend Integration**
 
+A19 owns the remaining implementation work:
+
+- Programme selection/context
+- Approved Revision selection/context
+- canonical Task selection
+- explicit Activity provisioning
+- explicit Activity Start
+- Open Activities selection/dashboard
+- Site Diary creation against Activity
+- Carry Forward
+- Activity completion
+- removal of legacy direct Supabase writes from the canonical workflow
+
 ## Governance Statement
-- No A01–A17 protected domain logic was modified.
+
+- No A01–A17 protected domain logic was modified by A18.
 - No A17 API contracts were altered.
-- No direct Supabase writes were preserved or excused.
+- No new direct Supabase writes were introduced by A18; however, existing legacy direct Supabase mutations remain in the frontend and are explicitly deferred to A19.
 - No fragile backend translation capabilities were invented.
-- A18 correctly identified a complex architectural boundary and defended the integrity of the Activity engine.
+- No fake Activity provisioning was introduced.
+
+## Closure Statement
+
+A18 is now formally closed as PASS WITH CONDITIONS: the audit/reconnaissance objective was substantially achieved, the original frontend implementation objective was not completed, the implementation is explicitly transferred to A19, and the closure documentation no longer claims otherwise.
