@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { extractIdentity } from '@/app/api/_shared/identity';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
 
@@ -17,7 +18,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { programme_code, programme_name, created_by } = body;
+    const actorId = await extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { programme_code, programme_name } = body;
 
     if (!programme_code || typeof programme_code !== 'string') {
       return NextResponse.json(
@@ -33,12 +39,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!created_by || typeof created_by !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: created_by' },
-        { status: 400 }
-      );
-    }
+
 
     const service = createProgrammeService();
     const result = await service.createProgramme({
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
       contractStartDate: body.contract_start_date,
       contractCompletionDate: body.contract_completion_date,
       defectLiabilityEnd: body.defect_liability_end,
-      createdBy: created_by,
+      createdBy: actorId,
     });
 
     if (isSuccess(result)) {

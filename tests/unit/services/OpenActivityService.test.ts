@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from 'vitest';
 import { OpenActivityService } from '@/services/OpenActivityService';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
@@ -94,14 +93,14 @@ describe('OpenActivityService', () => {
       logger: overrides?.logger ?? mockLogger,
       eventPublisher: overrides?.eventPublisher ?? mockEventPublisher,
       revisionRepository: {
-        findById: async () => import("@/lib/result").then(m => m.Success({ revisionId: 'rev-001', programmeId: 'prog-1', status: 'Approved', isCurrent: true } as unknown)),
-      } as unknown,
+        findById: async () => import("@/lib/result").then(m => m.Success({ revisionId: 'rev-001', programmeId: 'prog-1', status: 'Approved', isCurrent: true } as unknown as import('@/types/programmeRevision').ProgrammeRevision)),
+      } as unknown as import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository,
       taskRepository: {
         getTaskById: async () => ({
           task_id: 'task-1',
           programme_id: 'prog-1',
           revision_id: 'rev-001',
-        } as unknown),
+        } as unknown as import('@/types/task').Task),
       },
     });
   }
@@ -202,8 +201,8 @@ describe('OpenActivityService', () => {
 
     it('2. Invalid/nonexistent task -> rejection', async () => {
       const s = new OpenActivityService({
-        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
-        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        activityRepository: { create: async (a: Activity) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityRepository,
+        logRepository: { appendLog: async (a: ActivityLogEntry) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityLogRepository,
         transactionManager: mockTxManager,
         clock: mockClock,
         logger: mockLogger,
@@ -228,8 +227,8 @@ describe('OpenActivityService', () => {
 
     it('3. Task belonging to another Programme -> rejection', async () => {
       const s = new OpenActivityService({
-        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
-        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        activityRepository: { create: async (a: Activity) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityRepository,
+        logRepository: { appendLog: async (a: ActivityLogEntry) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityLogRepository,
         transactionManager: mockTxManager,
         clock: mockClock,
         logger: mockLogger,
@@ -239,7 +238,7 @@ describe('OpenActivityService', () => {
             task_id: 'task-1',
             programme_id: 'wrong-prog',
             revision_id: 'rev-001',
-          } as unknown),
+          } as unknown as import('@/types/task').Task),
         },
       });
 
@@ -258,8 +257,8 @@ describe('OpenActivityService', () => {
 
     it('4. Task belonging to another Revision -> rejection', async () => {
       const s = new OpenActivityService({
-        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
-        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        activityRepository: { create: async (a: Activity) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityRepository,
+        logRepository: { appendLog: async (a: ActivityLogEntry) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityLogRepository,
         transactionManager: mockTxManager,
         clock: mockClock,
         logger: mockLogger,
@@ -269,7 +268,7 @@ describe('OpenActivityService', () => {
             task_id: 'task-1',
             programme_id: 'prog-1',
             revision_id: 'wrong-rev',
-          } as unknown),
+          } as unknown as import('@/types/task').Task),
         },
       });
 
@@ -288,8 +287,8 @@ describe('OpenActivityService', () => {
 
     it('5. Valid Programme + Revision + Task -> successful canonical Activity provisioning', async () => {
       const s = new OpenActivityService({
-        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
-        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        activityRepository: { create: async (a: Activity) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityRepository,
+        logRepository: { appendLog: async (a: ActivityLogEntry) => import("@/lib/result").then(m => m.Success(a)) } as unknown as IActivityLogRepository,
         transactionManager: mockTxManager,
         clock: mockClock,
         logger: mockLogger,
@@ -299,7 +298,7 @@ describe('OpenActivityService', () => {
             task_id: 'task-1',
             programme_id: 'prog-1',
             revision_id: 'rev-001',
-          } as unknown),
+          } as unknown as import('@/types/task').Task),
         },
       });
 

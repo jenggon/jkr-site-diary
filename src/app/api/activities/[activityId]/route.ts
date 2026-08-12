@@ -1,4 +1,6 @@
+import { NextResponse } from 'next/server';
 import { handleRoute } from '@/app/api/_shared/handleRoute';
+import { extractIdentity } from '@/app/api/_shared/identity';
 import { toSuccessResponse, toErrorResponse } from '@/app/api/_shared/response';
 import { mapActivityToResponseDto } from '@/app/api/_shared/activity.mapper';
 import { UpdateActivityRequestDto } from '@/app/api/_shared/activity.dto';
@@ -48,14 +50,19 @@ export async function PATCH(
   context: { params: Promise<{ activityId: string }> }
 ) {
   return handleRoute(request, async ({ services }) => {
+    const actorId = await extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { activityId } = await context.params;
     const body: UpdateActivityRequestDto = await request.json();
 
     const service = services.openActivity();
     const result = await service.updateActivity({
       activityId,
-      activityName: body.activity_name, // Mapped to subtask internally
-      updatedBy: body.updated_by,
+      activityName: body.subtask, // Mapped to subtask internally
+      updatedBy: actorId,
     });
 
     if (isSuccess(result)) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { extractIdentity } from '@/app/api/_shared/identity';
 import { taskService } from '@/services/taskService';
 
 /**
@@ -16,7 +17,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { programme_id, revision_id, task_uid, task_name, created_by } = body;
+    const actorId = await extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { programme_id, revision_id, task_uid, task_name } = body;
 
     if (!programme_id || typeof programme_id !== 'string') {
       return NextResponse.json(
@@ -46,14 +52,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!created_by || typeof created_by !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: created_by' },
-        { status: 400 }
-      );
-    }
 
-    const task = await taskService.createTask(body);
+
+    const task = await taskService.createTask({ ...body, created_by: actorId });
     return NextResponse.json({ data: task }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(

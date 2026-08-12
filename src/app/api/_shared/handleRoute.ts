@@ -20,6 +20,6 @@ export async function handleRoute(
     return await handler({ ctx, services });
   } catch (error: unknown) {
     childLogger.error('Unhandled exception trapped in handleRoute', { error });
-    return toErrorResponse(error, 500);
+    return toErrorResponse(error instanceof Error ? error : String(error), 500);
   }
 }

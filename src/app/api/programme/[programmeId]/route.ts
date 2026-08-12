@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { extractIdentity } from '@/app/api/_shared/identity';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
 
@@ -62,6 +63,11 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
+    const actorId = await extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const service = createProgrammeService();
     const result = await service.updateProgramme({
       programmeId,
@@ -72,7 +78,7 @@ export async function PATCH(request: Request, context: RouteParams) {
       contractStartDate: body.contract_start_date ?? body.contractStartDate,
       contractCompletionDate: body.contract_completion_date ?? body.contractCompletionDate,
       defectLiabilityEnd: body.defect_liability_end ?? body.defectLiabilityEnd,
-      updatedBy: body.updated_by ?? body.updatedBy ?? 'system',
+      updatedBy: actorId,
     });
 
     if (isSuccess(result)) {

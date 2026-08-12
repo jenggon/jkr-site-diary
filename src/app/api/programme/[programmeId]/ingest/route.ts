@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { extractIdentity } from '@/app/api/_shared/identity';
 import { createMspIngestionService } from '@/composition/mspIngestionComposition';
 import { isSuccess } from '@/lib/result';
 
@@ -23,10 +24,14 @@ export async function POST(
       );
     }
 
+    const actorId = await extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const contentType = request.headers.get('content-type') ?? '';
     let fileName = 'ingested_project.xml';
     let fileBuffer: Buffer;
-    let createdBy = 'system';
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -48,7 +53,6 @@ export async function POST(
       fileName = file.name || fileName;
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
-      createdBy = (formData.get('created_by') as string) || createdBy;
     } else if (contentType.includes('application/json')) {
       const json = await request.json();
       if (!json || typeof json !== 'object') {
@@ -60,7 +64,6 @@ export async function POST(
       }
 
       fileName = json.file_name ?? fileName;
-      createdBy = json.created_by ?? createdBy;
       fileBuffer = Buffer.from(json.xml_content, 'utf-8');
 
       if (fileBuffer.length > MAX_FILE_SIZE_BYTES) {
@@ -81,7 +84,7 @@ export async function POST(
       programmeId,
       fileName,
       fileBuffer,
-      createdBy,
+      createdBy: actorId,
     });
 
     if (isSuccess(result)) {
