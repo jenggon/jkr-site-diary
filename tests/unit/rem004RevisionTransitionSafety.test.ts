@@ -78,6 +78,7 @@ function makeActivityRepo(activity: Activity): IActivityRepository {
   return {
     findById: async () => Success(stored),
     findByRevisionId: async () => Success([stored]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
     create: async (a) => { stored = { ...a }; return Success(a); },
     update: async (a) => { stored = { ...a }; return Success(a); },
     updateStatus: async (_id, status) => {

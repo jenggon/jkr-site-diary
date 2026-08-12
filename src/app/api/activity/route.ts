@@ -1,5 +1,17 @@
 import { NextResponse } from 'next/server';
-import { activityService } from '@/services/activityService';
+import { createOpenActivityService } from '@/composition/openActivityComposition';
+import { extractIdentity } from '@/app/api/_shared/identity';
+import { z } from 'zod';
+import { isValidUuid } from '@/lib/uuid';
+import { isFailure } from '@/lib/result';
+import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
+
+const createActivitySchema = z.object({
+  programme_id: z.string().refine(isValidUuid, 'Invalid UUID for programme_id'),
+  revision_id: z.string().refine(isValidUuid, 'Invalid UUID for revision_id'),
+  task_id: z.string().refine(isValidUuid, 'Invalid UUID for task_id').optional(),
+  subtask: z.string().min(1, 'subtask is required'),
+});
 
 /**
  * POST /api/activity
@@ -7,7 +19,12 @@ import { activityService } from '@/services/activityService';
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const actorId = extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => null);
 
     if (!body || typeof body !== 'object') {
       return NextResponse.json(
@@ -16,59 +33,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const { programme_id, revision_id, task_id, subtask, activity_date, notes, submitted_by } = body;
+    const parseResult = createActivitySchema.safeParse(body);
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors.map(e => e.message).join(', ');
+      return NextResponse.json({ error: `Validation failed: ${errorMsg}` }, { status: 400 });
+    }
 
-    if (!programme_id || typeof programme_id !== 'string') {
+    const openActivityService = createOpenActivityService();
+    const result = await openActivityService.createActivity({
+      programmeId: parseResult.data.programme_id,
+      revisionId: parseResult.data.revision_id,
+      taskId: parseResult.data.task_id,
+      activityName: parseResult.data.subtask,
+      createdBy: actorId,
+    });
+
+    if (isFailure(result)) {
       return NextResponse.json(
-        { error: 'Missing required field: programme_id' },
-        { status: 400 }
+        { error: result.error.message },
+        { status: mapErrorToHttpStatus(result.error) }
       );
     }
 
-    if (!revision_id || typeof revision_id !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: revision_id' },
-        { status: 400 }
-      );
-    }
-
-    if (!task_id || typeof task_id !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: task_id' },
-        { status: 400 }
-      );
-    }
-
-    if (!subtask || typeof subtask !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: subtask' },
-        { status: 400 }
-      );
-    }
-
-    if (!activity_date || typeof activity_date !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: activity_date' },
-        { status: 400 }
-      );
-    }
-
-    if (!notes || typeof notes !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: notes' },
-        { status: 400 }
-      );
-    }
-
-    if (!submitted_by || typeof submitted_by !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: submitted_by' },
-        { status: 400 }
-      );
-    }
-
-    const activity = await activityService.createActivity(body);
-    return NextResponse.json({ data: activity }, { status: 201 });
+    return NextResponse.json({ data: result.value }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to create activity' },

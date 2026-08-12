@@ -138,6 +138,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const mockRepo: IActivityRepository = {
       findById: async (id) => Success(activities.find((a) => a.activity_id === id) ?? null),
       findByRevisionId: async (revId) => Success(activities.filter((a) => a.revision_id === revId)),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
       create: async (a) => Success(a),
       update: async (a) => {
         updateCalled = true;
@@ -173,6 +174,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const mockActivityRepo: IActivityRepository = {
       findById: async () => Success(null),
       findByRevisionId: async () => Success([]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
       create: async (a) => Success(a),
       update: async (a) => Success(a),
       updateStatus: async (id, status) => Success({ activity_id: id, status } as unknown as Activity),
@@ -336,6 +338,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
       activityRepository: {
         findById: async () => Success(null),
         findByRevisionId: async () => Success([]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
         create: async (a) => Success(a),
         update: async (a) => Success(a),
         updateStatus: async (id, status) => Success({ activity_id: id, status } as unknown as Activity),
@@ -381,6 +384,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const mockRepo: IActivityRepository = {
       findById: async () => Success(null),
       findByRevisionId: async () => Success([]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
       create: async (a) => Success(a),
       update: async (a) => {
         updateCalled = true;

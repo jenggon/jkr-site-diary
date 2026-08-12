@@ -72,6 +72,7 @@ describe('OpenActivityService', () => {
     const activityRepo: IActivityRepository = {
       findById: async () => Success(sampleActivity),
       findByRevisionId: async () => Success([sampleActivity]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
       create: async (a) => Success(a),
       update: async (a) => Success(a),
       updateStatus: async (id, status) => Success({ ...sampleActivity, activity_id: id, status }),

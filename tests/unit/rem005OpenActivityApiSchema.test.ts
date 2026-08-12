@@ -130,6 +130,7 @@ describe('REM-005 Canonical Activity API and Schema Mapping Test Suite', () => {
       create: async (act) => { capturedActivity = act; return Success(act); },
       findById: async () => Success(null),
       findByRevisionId: async () => Success([]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
       update: async () => { throw new Error('Not implemented'); },
       updateStatus: async () => { throw new Error('Not implemented'); },
     };
@@ -170,6 +171,7 @@ describe('REM-005 Canonical Activity API and Schema Mapping Test Suite', () => {
       create: async (act) => Success(act),
       findById: async () => Success(null),
       findByRevisionId: async () => Success([]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
       update: async () => { throw new Error('Not implemented'); },
       updateStatus: async () => { throw new Error('Not implemented'); },
     };
@@ -252,6 +254,7 @@ describe('REM-005 Canonical Activity API and Schema Mapping Test Suite', () => {
       create: async (act) => Success(act),
       findById: async () => Success(null),
       findByRevisionId: async () => Success([]),
+      findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
       update: async () => { throw new Error('Not implemented'); },
       updateStatus: async () => { throw new Error('Not implemented'); },
     };

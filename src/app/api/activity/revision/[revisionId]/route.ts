@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { activityService } from '@/services/activityService';
+import { ActivityRepository } from '@/repositories/ActivityRepository';
+import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
+import { supabase } from '@/lib/supabase';
+import { extractIdentity } from '@/app/api/_shared/identity';
+import { isFailure } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ revisionId: string }>;
@@ -11,6 +15,11 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
+    const actorId = extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
+    }
+
     const { revisionId } = await context.params;
 
     if (!revisionId || typeof revisionId !== 'string') {
@@ -20,9 +29,14 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const activities = await activityService.getActivitiesByRevision(revisionId);
+    const repo = new ActivityRepository(new SupabaseDatabaseAdapter(supabase));
+    const result = await repo.findByRevisionId(revisionId);
 
-    return NextResponse.json({ data: activities }, { status: 200 });
+    if (isFailure(result)) {
+      return NextResponse.json({ error: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to retrieve activities by revision' },

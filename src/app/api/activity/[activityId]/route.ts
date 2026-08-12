@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { activityService } from '@/services/activityService';
+import { createOpenActivityService } from '@/composition/openActivityComposition';
+import { ActivityRepository } from '@/repositories/ActivityRepository';
+import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
+import { supabase } from '@/lib/supabase';
+import { extractIdentity } from '@/app/api/_shared/identity';
+import { isFailure } from '@/lib/result';
+import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
 
 type RouteParams = {
   params: Promise<{ activityId: string }>;
@@ -11,6 +17,11 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
+    const actorId = extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
+    }
+
     const { activityId } = await context.params;
 
     if (!activityId || typeof activityId !== 'string') {
@@ -20,16 +31,21 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const activity = await activityService.getActivityById(activityId);
+    const repo = new ActivityRepository(new SupabaseDatabaseAdapter(supabase));
+    const result = await repo.findById(activityId);
 
-    if (!activity) {
+    if (isFailure(result)) {
+      return NextResponse.json({ error: result.error.message }, { status: 500 });
+    }
+
+    if (!result.value) {
       return NextResponse.json(
         { error: 'Activity not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ data: activity }, { status: 200 });
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to retrieve activity' },
@@ -44,6 +60,11 @@ export async function GET(request: Request, context: RouteParams) {
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
+    const actorId = extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
+    }
+
     const { activityId } = await context.params;
 
     if (!activityId || typeof activityId !== 'string') {
@@ -53,7 +74,7 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
 
     if (!body || typeof body !== 'object') {
       return NextResponse.json(
@@ -62,9 +83,21 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const updatedActivity = await activityService.updateActivity(activityId, body);
+    const openActivityService = createOpenActivityService();
+    const result = await openActivityService.updateActivity({
+      activityId,
+      activityName: body.subtask,
+      updatedBy: actorId
+    });
 
-    return NextResponse.json({ data: updatedActivity }, { status: 200 });
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: mapErrorToHttpStatus(result.error) }
+      );
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to update activity' },
