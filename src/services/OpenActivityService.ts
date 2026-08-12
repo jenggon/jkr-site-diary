@@ -123,11 +123,17 @@ export class OpenActivityService implements IOpenActivityService {
       }
     }
 
-    if (cmd.taskId && this.taskRepo) {
+    if (!cmd.taskId || cmd.taskId.trim() === '') {
+      return Failure(new ActivityValidationError('taskId is required'));
+    }
+
+    if (this.taskRepo) {
       const task = await this.taskRepo.getTaskById(cmd.taskId);
       if (!task) return Failure(new ActivityValidationError(`Task not found: ${cmd.taskId}`));
       if (task.revision_id !== cmd.revisionId) return Failure(new ActivityValidationError('task/revision mismatch'));
       if (task.programme_id !== cmd.programmeId) return Failure(new ActivityValidationError('programme/task mismatch'));
+    } else {
+      return Failure(new ActivityValidationError('taskRepository is required in composition for Activity provisioning'));
     }
 
     const now = this.clock.nowIso();
@@ -138,7 +144,7 @@ export class OpenActivityService implements IOpenActivityService {
         activity_id: activityId,
         programme_id: cmd.programmeId,
         revision_id: cmd.revisionId,
-        task_id: cmd.taskId ?? '',
+        task_id: cmd.taskId,
         activity_uid: `ACT-${activityId.substring(0, 8)}`,
         ahi: null,
         ahi_display_name: null,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createOpenActivityService } from '@/composition/openActivityComposition';
+import { createOpenActivityService } from '@/composition/activityComposition';
 import { ActivityRepository } from '@/repositories/ActivityRepository';
 import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
 import { supabase } from '@/lib/supabase';
@@ -17,7 +17,7 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
-    const actorId = extractIdentity(request);
+    const actorId = await extractIdentity(request);
     if (!actorId) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
@@ -60,7 +60,7 @@ export async function GET(request: Request, context: RouteParams) {
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
-    const actorId = extractIdentity(request);
+    const actorId = await extractIdentity(request);
     if (!actorId) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }

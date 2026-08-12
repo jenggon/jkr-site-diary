@@ -149,7 +149,7 @@ describe('REM-005 Canonical Activity API and Schema Mapping Test Suite', () => {
       siteDiaryId: 'sd-100', // Still accepted by service API for context, but not persisted on Activity
       programmeId: dto.programme_id,
       revisionId: dto.revision_id,
-      taskId: dto.task_id,
+      taskId: dto.task_id ?? 'task-r1',
       activityName: dto.subtask,
       createdBy: dto.created_by,
     });
@@ -182,6 +182,7 @@ describe('REM-005 Canonical Activity API and Schema Mapping Test Suite', () => {
       siteDiaryId: 'sd-100',
       programmeId: 'prog-1',
       revisionId: '', // Empty / missing revision_id
+      taskId: 'task-r1',
       activityName: 'Concrete Pouring',
       createdBy: 'user-1',
     });
@@ -201,6 +202,7 @@ describe('REM-005 Canonical Activity API and Schema Mapping Test Suite', () => {
       siteDiaryId: 'sd-100',
       programmeId: 'prog-1', // Mismatch with revOtherProg
       revisionId: 'rev-r1',
+      taskId: 'task-r1',
       activityName: 'Concrete Pouring',
       createdBy: 'user-1',
     });

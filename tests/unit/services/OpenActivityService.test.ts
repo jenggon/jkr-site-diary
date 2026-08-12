@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from 'vitest';
 import { OpenActivityService } from '@/services/OpenActivityService';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
@@ -92,6 +93,16 @@ describe('OpenActivityService', () => {
       clock: mockClock,
       logger: overrides?.logger ?? mockLogger,
       eventPublisher: overrides?.eventPublisher ?? mockEventPublisher,
+      revisionRepository: {
+        findById: async () => import("@/lib/result").then(m => m.Success({ revisionId: 'rev-001', programmeId: 'prog-1', status: 'Approved', isCurrent: true } as unknown)),
+      } as unknown,
+      taskRepository: {
+        getTaskById: async () => ({
+          task_id: 'task-1',
+          programme_id: 'prog-1',
+          revision_id: 'rev-001',
+        } as unknown),
+      },
     });
   }
 
@@ -105,16 +116,22 @@ describe('OpenActivityService', () => {
       siteDiaryId: 'diary-100',
       programmeId: 'prog-1',
       revisionId: 'rev-001',
+      taskId: 'task-1',
       activityName: 'Kerja-kerja Memasang Tetulang',
       createdBy: 'user-1',
     });
 
+    if (isFailure(result)) {
+      console.log('FAIL RESULT:', result);
+    }
     expect(isSuccess(result)).toBe(true);
     if (isSuccess(result)) {
       expect(result.value.subtask).toBe('Kerja-kerja Memasang Tetulang');
       expect(result.value.status).toBe(ActivityStatus.New);
       expect(result.value.programmeId).toBe('prog-1');
       expect(result.value.revisionId).toBe('rev-001');
+    } else {
+      console.log('FAIL RESULT:', result);
     }
   });
 
@@ -160,5 +177,140 @@ describe('OpenActivityService', () => {
     if (isFailure(result)) {
       expect(result.error.errorCode).toBe('INVALID_ACTIVITY_STATE');
     }
+  });
+
+  // -----------------------------------------------------------------------
+  // Canonical Activity Provisioning Tests (Blocker 2)
+  // -----------------------------------------------------------------------
+
+  describe('Canonical Activity Provisioning', () => {
+    it('1. Missing task_id -> 400 (ActivityValidationError)', async () => {
+      const service = createService();
+      const result = await service.createActivity({
+        programmeId: 'prog-1',
+        revisionId: 'rev-001',
+        taskId: '', // missing
+        activityName: 'Test',
+        createdBy: 'user-1',
+      });
+      expect(isFailure(result)).toBe(true);
+      if (isFailure(result)) {
+        expect(result.error).toBeInstanceOf(Error);
+        expect(result.error.message).toContain('taskId is required');
+      }
+    });
+
+    it('2. Invalid/nonexistent task -> rejection', async () => {
+      const s = new OpenActivityService({
+        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        transactionManager: mockTxManager,
+        clock: mockClock,
+        logger: mockLogger,
+        eventPublisher: mockEventPublisher,
+        taskRepository: {
+          getTaskById: async () => null,
+        },
+      });
+
+      const result = await s.createActivity({
+        programmeId: 'prog-1',
+        revisionId: 'rev-001',
+        taskId: 'invalid-task',
+        activityName: 'Test',
+        createdBy: 'user-1',
+      });
+      expect(isFailure(result)).toBe(true);
+      if (isFailure(result)) {
+        expect(result.error.message).toContain('Task not found');
+      }
+    });
+
+    it('3. Task belonging to another Programme -> rejection', async () => {
+      const s = new OpenActivityService({
+        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        transactionManager: mockTxManager,
+        clock: mockClock,
+        logger: mockLogger,
+        eventPublisher: mockEventPublisher,
+        taskRepository: {
+          getTaskById: async () => ({
+            task_id: 'task-1',
+            programme_id: 'wrong-prog',
+            revision_id: 'rev-001',
+          } as unknown),
+        },
+      });
+
+      const result = await s.createActivity({
+        programmeId: 'prog-1',
+        revisionId: 'rev-001',
+        taskId: 'task-1',
+        activityName: 'Test',
+        createdBy: 'user-1',
+      });
+      expect(isFailure(result)).toBe(true);
+      if (isFailure(result)) {
+        expect(result.error.message).toContain('programme/task mismatch');
+      }
+    });
+
+    it('4. Task belonging to another Revision -> rejection', async () => {
+      const s = new OpenActivityService({
+        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        transactionManager: mockTxManager,
+        clock: mockClock,
+        logger: mockLogger,
+        eventPublisher: mockEventPublisher,
+        taskRepository: {
+          getTaskById: async () => ({
+            task_id: 'task-1',
+            programme_id: 'prog-1',
+            revision_id: 'wrong-rev',
+          } as unknown),
+        },
+      });
+
+      const result = await s.createActivity({
+        programmeId: 'prog-1',
+        revisionId: 'rev-001',
+        taskId: 'task-1',
+        activityName: 'Test',
+        createdBy: 'user-1',
+      });
+      expect(isFailure(result)).toBe(true);
+      if (isFailure(result)) {
+        expect(result.error.message).toContain('task/revision mismatch');
+      }
+    });
+
+    it('5. Valid Programme + Revision + Task -> successful canonical Activity provisioning', async () => {
+      const s = new OpenActivityService({
+        activityRepository: { create: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        logRepository: { appendLog: async (a: any) => import("@/lib/result").then(m => m.Success(a)) } as unknown,
+        transactionManager: mockTxManager,
+        clock: mockClock,
+        logger: mockLogger,
+        eventPublisher: mockEventPublisher,
+        taskRepository: {
+          getTaskById: async () => ({
+            task_id: 'task-1',
+            programme_id: 'prog-1',
+            revision_id: 'rev-001',
+          } as unknown),
+        },
+      });
+
+      const result = await s.createActivity({
+        programmeId: 'prog-1',
+        revisionId: 'rev-001',
+        taskId: 'task-1',
+        activityName: 'Test Activity',
+        createdBy: 'user-1',
+      });
+      expect(isSuccess(result)).toBe(true);
+    });
   });
 });

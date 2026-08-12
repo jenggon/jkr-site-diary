@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createOpenActivityService } from '@/composition/openActivityComposition';
+import { createOpenActivityService } from '@/composition/activityComposition';
 import { extractIdentity } from '@/app/api/_shared/identity';
 import { z } from 'zod';
 import { isValidUuid } from '@/lib/uuid';
@@ -9,7 +9,7 @@ import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
 const createActivitySchema = z.object({
   programme_id: z.string().refine(isValidUuid, 'Invalid UUID for programme_id'),
   revision_id: z.string().refine(isValidUuid, 'Invalid UUID for revision_id'),
-  task_id: z.string().refine(isValidUuid, 'Invalid UUID for task_id').optional(),
+  task_id: z.string().refine(isValidUuid, 'Invalid UUID for task_id'),
   subtask: z.string().min(1, 'subtask is required'),
 });
 
@@ -19,7 +19,7 @@ const createActivitySchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    const actorId = extractIdentity(request);
+    const actorId = await extractIdentity(request);
     if (!actorId) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }

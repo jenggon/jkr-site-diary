@@ -1,16 +1,24 @@
-export function extractIdentity(request: Request): string | null {
-  const userId = request.headers.get('x-user-id');
-  if (userId && userId.trim() !== '') {
-    return userId.trim();
-  }
-  
+import { getSupabaseServerClient } from '@/lib/supabase';
+
+export async function extractIdentity(request: Request): Promise<string | null> {
   const authHeader = request.headers.get('authorization');
-  if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
-    // In the future, this is where JWT verification would occur.
-    // For now, if there is a bearer token, we extract its value as a simple mock identity fallback.
-    const token = authHeader.substring(7).trim();
-    if (token) return token;
+  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
+    return null;
   }
 
-  return null;
+  const token = authHeader.substring(7).trim();
+  if (!token) return null;
+
+  try {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser(token);
+    
+    if (error || !data.user) {
+      return null;
+    }
+    
+    return data.user.id;
+  } catch (err) {
+    return null;
+  }
 }

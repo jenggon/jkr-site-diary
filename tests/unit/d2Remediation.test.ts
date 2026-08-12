@@ -246,6 +246,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
       siteDiaryId: 'sd-1',
       programmeId: 'prog-1',
       revisionId: '',
+      taskId: 'task-1',
       activityName: 'Test Activity',
       createdBy: 'user-1',
     });
@@ -255,7 +256,8 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const resMismatchProg = await service.createActivity({
       siteDiaryId: 'sd-1',
       programmeId: 'prog-2', // Mismatch!
-      revisionId: 'rev-valid',
+      revisionId: 'rev-001',
+      taskId: 'task-1',
       activityName: 'Test Activity',
       createdBy: 'user-1',
     });
@@ -355,6 +357,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
       siteDiaryId: 'sd-1',
       programmeId: 'prog-1',
       revisionId: 'rev-draft',
+      taskId: 'task-1',
       activityName: 'Draft Activity',
       createdBy: 'user-1',
     });
@@ -364,6 +367,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
       siteDiaryId: 'sd-1',
       programmeId: 'prog-1',
       revisionId: 'rev-archived',
+      taskId: 'task-1',
       activityName: 'Archived Activity',
       createdBy: 'user-1',
     });
@@ -373,6 +377,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
       siteDiaryId: 'sd-1',
       programmeId: 'prog-1',
       revisionId: 'rev-superseded',
+      taskId: 'task-1',
       activityName: 'Superseded Activity',
       createdBy: 'user-1',
     });

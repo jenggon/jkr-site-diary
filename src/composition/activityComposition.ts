@@ -3,6 +3,7 @@ import { IOpenActivityService } from '@/services/IOpenActivityService';
 import { ActivityRepository } from '@/repositories/activityRepository';
 import { ActivityLogRepository } from '@/repositories/ActivityLogRepository';
 import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
+import { taskRepository } from '@/repositories/taskRepository';
 import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
 import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
@@ -31,5 +32,6 @@ export function createOpenActivityService(): IOpenActivityService {
     // REM-004: Wire revision repository so assertRevisionOperational() enforces
     // revision lifecycle validity on every mutation path in production.
     revisionRepository: revisionRepo,
+    taskRepository: taskRepository,
   });
 }

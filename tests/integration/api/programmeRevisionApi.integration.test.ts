@@ -10,6 +10,14 @@ vi.mock('@/composition/programmeComposition', () => ({
   createProgrammeService: vi.fn(),
 }));
 
+vi.mock('@/app/api/_shared/identity', () => ({
+  extractIdentity: vi.fn(async (req) => {
+    const auth = req.headers?.get?.('authorization') || req.headers?.['authorization'] || req.headers?.get?.('x-user-id') || req.headers?.['x-user-id'];
+    if (!auth) return null;
+    return 'test-actor';
+  }),
+}));
+
 describe('Programme Revision API Routes', () => {
   const mockService = {
     createRevision: vi.fn(),

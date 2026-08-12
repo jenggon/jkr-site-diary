@@ -17,7 +17,7 @@ const carryForwardSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const actorId = extractIdentity(req);
+    const actorId = await extractIdentity(req);
     if (!actorId) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }

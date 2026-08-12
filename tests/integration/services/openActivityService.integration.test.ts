@@ -50,7 +50,7 @@ describe('OpenActivityService Integration (DB-003 Remediation)', () => {
         }
         return Success(results);
       }
-      if (table === 'site_diary_logs') { // Assuming ActivityLogRepository still uses this or similar
+      if (table === 'activity_logs') { // Assuming ActivityLogRepository still uses this or similar
         const results: T[] = [];
         const actId = filter?.activity_id as string;
         for (const log of mockLogRows) {
@@ -67,7 +67,7 @@ describe('OpenActivityService Integration (DB-003 Remediation)', () => {
         mockActivityRows.set(id, row);
         return Success(row as T);
       }
-      if (table === 'site_diary_logs') {
+      if (table === 'activity_logs') {
         mockLogRows.push(row as unknown as ActivityLogRowInternal);
         return Success(row as T);
       }

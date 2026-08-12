@@ -7,7 +7,7 @@ export interface CreateActivityCommand {
   readonly siteDiaryId?: string; // Still accepted for routing or context, but ignored in Activity DB
   readonly programmeId: string;
   readonly revisionId: string;
-  readonly taskId?: string | undefined;
+  readonly taskId: string;
   readonly activityName: string;
   readonly createdBy: string;
 }

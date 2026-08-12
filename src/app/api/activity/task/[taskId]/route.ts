@@ -15,7 +15,7 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
-    const actorId = extractIdentity(request);
+    const actorId = await extractIdentity(request);
     if (!actorId) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }

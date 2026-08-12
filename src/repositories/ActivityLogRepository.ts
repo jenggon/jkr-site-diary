@@ -41,13 +41,13 @@ export class ActivityLogRepository implements IActivityLogRepository {
       logged_by: entry.loggedBy,
     };
 
-    const res = await this.adapter.insert<ActivityLogRow>('site_diary_logs', row);
+    const res = await this.adapter.insert<ActivityLogRow>('activity_logs', row);
     if (isFailure(res)) return Failure(res.error);
     return Success(this.mapRowToEntry(res.value));
   }
 
   public async findLogsByActivityId(activityId: string): Promise<Result<ActivityLogEntry[], BaseAppError>> {
-    const res = await this.adapter.selectMany<ActivityLogRow>('site_diary_logs', { activity_id: activityId });
+    const res = await this.adapter.selectMany<ActivityLogRow>('activity_logs', { activity_id: activityId });
     if (isFailure(res)) return Failure(res.error);
     return Success(res.value.map((r) => this.mapRowToEntry(r)));
   }
