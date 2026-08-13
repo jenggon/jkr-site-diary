@@ -1,5 +1,5 @@
 import { Result, Success, Failure, FailureResult, isFailure, isSuccess } from '@/lib/result';
-import { BaseAppError, UnknownError } from '@/lib/errors';
+import { BaseAppError, UnknownError, InfrastructureError } from '@/lib/errors';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
 import { generateUuid } from '@/lib/uuid';
@@ -241,6 +241,24 @@ export class OpenActivityService implements IOpenActivityService {
       return txResult as unknown as FailureResult<BaseAppError>;
     } catch (err: unknown) {
       return Failure(new UnknownError(err instanceof Error ? err.message : 'Failed to update activity', { cause: err }));
+    }
+  }
+
+  public async getOpenActivities(programmeId: string): Promise<Result<OpenActivityDto[], BaseAppError>> {
+    if (!programmeId || programmeId.trim() === '') {
+      return Failure(new ActivityValidationError('programmeId is required'));
+    }
+
+    try {
+      if (!this.activityRepo.findOpenActivitiesByProgramme) {
+         return Failure(new InfrastructureError('ActivityRepository does not support findOpenActivitiesByProgramme'));
+      }
+      const res = await this.activityRepo.findOpenActivitiesByProgramme(programmeId);
+      if (isFailure(res)) return Failure(res.error);
+
+      return Success(res.value.map(activity => this.mapToDto(activity)));
+    } catch (err: unknown) {
+      return Failure(new UnknownError(err instanceof Error ? err.message : 'Failed to get open activities', { cause: err }));
     }
   }
 

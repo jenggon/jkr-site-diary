@@ -99,6 +99,15 @@ export class ActivityRepository implements IActivityRepository {
     return Success(res.value.map((r) => this.mapRowToDomain(r)));
   }
 
+  public async findOpenActivitiesByProgramme(programmeId: string): Promise<Result<Activity[], BaseAppError>> {
+    const res = await this.adapter.selectMany<ActivityRow>('activity', {
+      programme_id: programmeId,
+      status: [ActivityStatus.New, ActivityStatus.InProgress]
+    });
+    if (isFailure(res)) return Failure(res.error);
+    return Success(res.value.map((r) => this.mapRowToDomain(r)));
+  }
+
   public async create(activity: Activity): Promise<Result<Activity, BaseAppError>> {
     const row = this.mapDomainToRow(activity);
     const res = await this.adapter.insert<ActivityRow>('activity', row);

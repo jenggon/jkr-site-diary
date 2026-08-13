@@ -57,7 +57,11 @@ export class SupabaseDatabaseAdapter implements IDatabaseAdapter {
       if (filter) {
         for (const [key, val] of Object.entries(filter)) {
           if (val !== undefined) {
-            query = query.eq(key, val);
+            if (Array.isArray(val)) {
+              query = query.in(key, val);
+            } else {
+              query = query.eq(key, val);
+            }
           }
         }
       }

@@ -65,4 +65,44 @@ describe('SupabaseDatabaseAdapter', () => {
       expect(result.value).toBe(true);
     }
   });
+
+  describe('selectMany', () => {
+    it('uses eq() for scalar filter values', async () => {
+      let eqCalled = false;
+      const mockClient = {
+        from: () => ({
+          select: () => ({
+            eq: (col: string, val: unknown) => {
+              expect(col).toBe('status');
+              expect(val).toBe('New');
+              eqCalled = true;
+              return Promise.resolve({ data: [{ id: 1 }], error: null });
+            }
+          })
+        })
+      } as unknown as SupabaseClient;
+      const adapter = new SupabaseDatabaseAdapter(mockClient);
+      await adapter.selectMany('activity', { status: 'New' });
+      expect(eqCalled).toBe(true);
+    });
+
+    it('uses in() for array filter values', async () => {
+      let inCalled = false;
+      const mockClient = {
+        from: () => ({
+          select: () => ({
+            in: (col: string, val: unknown) => {
+              expect(col).toBe('status');
+              expect(val).toEqual(['New', 'In Progress']);
+              inCalled = true;
+              return Promise.resolve({ data: [{ id: 1 }], error: null });
+            }
+          })
+        })
+      } as unknown as SupabaseClient;
+      const adapter = new SupabaseDatabaseAdapter(mockClient);
+      await adapter.selectMany('activity', { status: ['New', 'In Progress'] });
+      expect(inCalled).toBe(true);
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { siteDiaryService } from '@/services/siteDiaryService';
+import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
 
 type RouteParams = {
   params: Promise<{ activityId: string }>;
@@ -25,6 +25,7 @@ export async function GET(request: Request, context: RouteParams) {
     const date = searchParams.get('date');
 
     if (date) {
+      const siteDiaryService = createSiteDiaryService();
       const siteDiary = await siteDiaryService.getSiteDiaryByActivityAndDate(activityId, date);
 
       if (!siteDiary) {
@@ -37,6 +38,7 @@ export async function GET(request: Request, context: RouteParams) {
       return NextResponse.json({ data: siteDiary }, { status: 200 });
     }
 
+    const siteDiaryService = createSiteDiaryService();
     const siteDiaries = await siteDiaryService.getSiteDiariesByActivity(activityId);
 
     return NextResponse.json({ data: siteDiaries }, { status: 200 });

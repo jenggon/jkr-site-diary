@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { siteDiaryService } from '@/services/siteDiaryService';
+import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
 
 type RouteParams = {
   params: Promise<{ siteDiaryId: string }>;
@@ -20,6 +20,7 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
+    const siteDiaryService = createSiteDiaryService();
     const siteDiary = await siteDiaryService.getSiteDiaryById(siteDiaryId);
 
     if (!siteDiary) {
@@ -62,6 +63,7 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
+    const siteDiaryService = createSiteDiaryService();
     const updatedSiteDiary = await siteDiaryService.updateSiteDiary(siteDiaryId, body);
 
     return NextResponse.json({ data: updatedSiteDiary }, { status: 200 });

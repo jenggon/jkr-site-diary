@@ -73,6 +73,7 @@ describe('OpenActivityService', () => {
       findById: async () => Success(sampleActivity),
       findByRevisionId: async () => Success([sampleActivity]),
       findByTaskId: async () => import("@/lib/result").then(m => m.Success([])),
+      findOpenActivitiesByProgramme: async () => import("@/lib/result").then(m => m.Success([])),
       create: async (a) => Success(a),
       update: async (a) => Success(a),
       updateStatus: async (id, status) => Success({ ...sampleActivity, activity_id: id, status }),
@@ -311,5 +312,36 @@ describe('OpenActivityService', () => {
       });
       expect(isSuccess(result)).toBe(true);
     });
+  });
+
+  describe('getOpenActivities', () => {
+    it('should return open activities successfully', async () => {
+      const service = createService({
+        activityRepo: {
+          findOpenActivitiesByProgramme: async (progId: string) => 
+            Success([
+              { ...sampleActivity, activity_id: 'act-1', status: ActivityStatus.New, programme_id: progId },
+              { ...sampleActivity, activity_id: 'act-2', status: ActivityStatus.InProgress, programme_id: progId }
+            ]),
+        }
+      });
+      const result = await service.getOpenActivities('prog-1');
+      expect(isSuccess(result)).toBe(true);
+      if (isSuccess(result) && result.value) {
+        expect(result.value).toHaveLength(2);
+        expect(result.value?.[0]?.status).toBe(ActivityStatus.New);
+        expect(result.value?.[1]?.status).toBe(ActivityStatus.InProgress);
+      }
+    });
+
+    it('should return error if programmeId is missing', async () => {
+      const service = createService();
+      const result = await service.getOpenActivities('');
+      expect(isFailure(result)).toBe(true);
+      if (isFailure(result)) {
+        expect(result.error.message).toContain('programmeId is required');
+      }
+    });
+
   });
 });

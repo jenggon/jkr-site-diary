@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { siteDiaryService } from '@/services/siteDiaryService';
+import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
 
 type RouteParams = {
   params: Promise<{ revisionId: string }>;
@@ -20,6 +20,7 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
+    const siteDiaryService = createSiteDiaryService();
     const siteDiaries = await siteDiaryService.getSiteDiariesByRevision(revisionId);
 
     return NextResponse.json({ data: siteDiaries }, { status: 200 });

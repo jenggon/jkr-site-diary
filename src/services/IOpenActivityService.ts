@@ -21,6 +21,7 @@ export interface UpdateActivityCommand {
 export interface IOpenActivityService {
   createActivity(cmd: CreateActivityCommand): Promise<Result<OpenActivityDto, BaseAppError>>;
   updateActivity(cmd: UpdateActivityCommand): Promise<Result<OpenActivityDto, BaseAppError>>;
+  getOpenActivities(programmeId: string): Promise<Result<OpenActivityDto[], BaseAppError>>;
   startActivity(activityId: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>>;
   completeActivity(activityId: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>>;
   suspendActivity(activityId: string, reason: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>>;
