@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
+import { extractIdentity } from '@/app/api/_shared/identity';
+import { isSuccess } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ revisionId: string }>;
@@ -11,6 +13,11 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
+    const actorId = await extractIdentity(request);
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
+    }
+
     const { revisionId } = await context.params;
 
     if (!revisionId || typeof revisionId !== 'string') {
@@ -21,9 +28,13 @@ export async function GET(request: Request, context: RouteParams) {
     }
 
     const siteDiaryService = createSiteDiaryService();
-    const siteDiaries = await siteDiaryService.getSiteDiariesByRevision(revisionId);
+    const result = await siteDiaryService.getSiteDiariesByRevision(revisionId);
 
-    return NextResponse.json({ data: siteDiaries }, { status: 200 });
+    if (isSuccess(result)) {
+      return NextResponse.json({ data: result.value }, { status: 200 });
+    }
+
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to retrieve site diaries by revision' },
