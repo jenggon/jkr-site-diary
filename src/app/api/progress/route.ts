@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { progressService } from '@/services/progressService';
+import { createProgressService } from '@/composition/progressComposition';
+import { isFailure } from '@/lib/result';
+import { ValidationError } from '@/lib/errors';
 
 /**
  * POST /api/progress
@@ -60,8 +62,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const progress = await progressService.createProgress(body);
-    return NextResponse.json({ data: progress }, { status: 201 });
+    const actorId = request.headers.get('x-user-id') || 'SYSTEM';
+    const progressService = createProgressService();
+    const result = await progressService.createProgress(body, actorId);
+
+    if (isFailure(result)) {
+      const status = result.error instanceof ValidationError ? 400 : 500;
+      return NextResponse.json({ error: result.error.message }, { status });
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to create progress record' },

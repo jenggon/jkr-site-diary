@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { progressService } from '@/services/progressService';
+import { createProgressService } from '@/composition/progressComposition';
+import { isFailure } from '@/lib/result';
+import { ValidationError, InfrastructureError } from '@/lib/errors';
 
 type RouteParams = {
   params: Promise<{ progressId: string }>;
@@ -20,16 +22,21 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const progress = await progressService.getProgressById(progressId);
+    const progressService = createProgressService();
+    const result = await progressService.getProgressById(progressId);
 
-    if (!progress) {
+    if (isFailure(result)) {
+      return NextResponse.json({ error: result.error.message }, { status: 500 });
+    }
+
+    if (!result.value) {
       return NextResponse.json(
         { error: 'Progress record not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ data: progress }, { status: 200 });
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to retrieve progress record' },
@@ -62,9 +69,18 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const updatedProgress = await progressService.updateProgress(progressId, body);
+    // Attempt to extract actor ID, for instance from headers
+    const actorId = request.headers.get('x-user-id') || 'SYSTEM';
 
-    return NextResponse.json({ data: updatedProgress }, { status: 200 });
+    const progressService = createProgressService();
+    const result = await progressService.updateProgress(progressId, body, actorId);
+
+    if (isFailure(result)) {
+      const status = result.error instanceof ValidationError ? 400 : 500;
+      return NextResponse.json({ error: result.error.message }, { status });
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to update progress record' },
