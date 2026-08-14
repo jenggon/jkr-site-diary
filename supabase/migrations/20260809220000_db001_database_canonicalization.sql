@@ -8,27 +8,41 @@
 -- STEP 2 & 3: ARCHIVE LEGACY SITE DIARY & RENAME CONSTRAINTS
 -- ============================================================
 
--- Rename tables
-ALTER TABLE "public"."site_diary" RENAME TO "legacy_site_diary";
-ALTER TABLE "public"."site_diary_logs" RENAME TO "legacy_site_diary_logs";
+-- Resilient renaming using DO block
+DO $$
+BEGIN
+  -- Check if site_diary is the legacy table (e.g. has project_id column)
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'site_diary' AND column_name = 'project_id') THEN
+    ALTER TABLE "public"."site_diary" RENAME TO "legacy_site_diary";
+    ALTER INDEX IF EXISTS "site_diary_pkey" RENAME TO "legacy_site_diary_pkey";
+    
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'site_diary_project_id_fkey') THEN
+      ALTER TABLE "public"."legacy_site_diary" RENAME CONSTRAINT "site_diary_project_id_fkey" TO "legacy_site_diary_project_id_fkey";
+    END IF;
+  END IF;
 
--- Rename indexes (PostgreSQL auto-names PK indexes identically to the constraint)
-ALTER INDEX IF EXISTS "site_diary_pkey" RENAME TO "legacy_site_diary_pkey";
-ALTER INDEX IF EXISTS "site_diary_logs_pkey" RENAME TO "legacy_site_diary_logs_pkey";
+  -- Check if legacy site_diary_logs exists
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'site_diary_logs') THEN
+    ALTER TABLE "public"."site_diary_logs" RENAME TO "legacy_site_diary_logs";
+    ALTER INDEX IF EXISTS "site_diary_logs_pkey" RENAME TO "legacy_site_diary_logs_pkey";
 
--- Rename constraints to free up the canonical names
-ALTER TABLE "public"."legacy_site_diary" 
-    RENAME CONSTRAINT "site_diary_project_id_fkey" TO "legacy_site_diary_project_id_fkey";
-
-ALTER TABLE "public"."legacy_site_diary_logs" 
-    RENAME CONSTRAINT "fk_site_diary_logs" TO "legacy_fk_site_diary_logs";
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_site_diary_logs') THEN
+      ALTER TABLE "public"."legacy_site_diary_logs" RENAME CONSTRAINT "fk_site_diary_logs" TO "legacy_fk_site_diary_logs";
+    END IF;
+  END IF;
+END $$;
 
 -- ============================================================
 -- STEP 4: DEACTIVATE LEGACY REM-004
 -- ============================================================
 
-DROP TRIGGER IF EXISTS "check_activity_revision_operational_update" ON "public"."legacy_site_diary";
-DROP TRIGGER IF EXISTS "check_activity_revision_operational_insert" ON "public"."legacy_site_diary";
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'legacy_site_diary') THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS check_activity_revision_operational_update ON "public"."legacy_site_diary"';
+    EXECUTE 'DROP TRIGGER IF EXISTS check_activity_revision_operational_insert ON "public"."legacy_site_diary"';
+  END IF;
+END $$;
 
 -- ============================================================
 -- STEP 5 & 6 & 7: CANONICAL SITE_DIARY
@@ -36,7 +50,7 @@ DROP TRIGGER IF EXISTS "check_activity_revision_operational_insert" ON "public".
 -- 'site_diary' canonical creation (DEV-005A) was silently skipped previously due to legacy collision.
 -- ============================================================
 
-CREATE TABLE "public"."site_diary" (
+CREATE TABLE IF NOT EXISTS "public"."site_diary" (
     "site_diary_id" uuid                     NOT NULL DEFAULT gen_random_uuid(),
     "programme_id"  uuid                     NOT NULL,
     "revision_id"   uuid                     NOT NULL,
@@ -56,12 +70,12 @@ CREATE TABLE "public"."site_diary" (
     CONSTRAINT "site_diary_activity_id_fkey" FOREIGN KEY ("activity_id") REFERENCES "public"."activity" ("activity_id")
 );
 
-CREATE INDEX "idx_site_diary_programme_id" ON "public"."site_diary" USING btree ("programme_id");
-CREATE INDEX "idx_site_diary_revision_id" ON "public"."site_diary" USING btree ("revision_id");
-CREATE INDEX "idx_site_diary_activity_id" ON "public"."site_diary" USING btree ("activity_id");
-CREATE INDEX "idx_site_diary_activity_id_activity_date" ON "public"."site_diary" USING btree ("activity_id", "activity_date");
-CREATE INDEX "idx_site_diary_submitted_by" ON "public"."site_diary" USING btree ("submitted_by");
-CREATE INDEX "idx_site_diary_activity_date" ON "public"."site_diary" USING btree ("activity_date");
+CREATE INDEX IF NOT EXISTS "idx_site_diary_programme_id" ON "public"."site_diary" USING btree ("programme_id");
+CREATE INDEX IF NOT EXISTS "idx_site_diary_revision_id" ON "public"."site_diary" USING btree ("revision_id");
+CREATE INDEX IF NOT EXISTS "idx_site_diary_activity_id" ON "public"."site_diary" USING btree ("activity_id");
+CREATE INDEX IF NOT EXISTS "idx_site_diary_activity_id_activity_date" ON "public"."site_diary" USING btree ("activity_id", "activity_date");
+CREATE INDEX IF NOT EXISTS "idx_site_diary_submitted_by" ON "public"."site_diary" USING btree ("submitted_by");
+CREATE INDEX IF NOT EXISTS "idx_site_diary_activity_date" ON "public"."site_diary" USING btree ("activity_date");
 
 -- ============================================================
 -- STEP 8: REM-004 RELOCATION TO ACTIVITY
