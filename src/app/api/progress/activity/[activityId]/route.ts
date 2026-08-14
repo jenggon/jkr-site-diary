@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { progressService } from '@/services/progressService';
+import { createProgressService } from '@/composition/progressComposition';
+import { isFailure } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ activityId: string }>;
@@ -7,7 +8,7 @@ type RouteParams = {
 
 /**
  * GET /api/progress/activity/[activityId]
- * Retrieves all Progress records belonging to an Activity.
+ * Retrieves all Progress records for a specific Activity.
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
@@ -20,12 +21,17 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const progressRecords = await progressService.getProgressByActivity(activityId);
+    const progressService = createProgressService();
+    const result = await progressService.getProgressByActivity(activityId);
 
-    return NextResponse.json({ data: progressRecords }, { status: 200 });
+    if (isFailure(result)) {
+      return NextResponse.json({ error: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve progress records by activity' },
+      { error: error?.message || 'Failed to retrieve progress records' },
       { status: 500 }
     );
   }
