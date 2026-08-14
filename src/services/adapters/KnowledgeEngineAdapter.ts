@@ -11,9 +11,9 @@ export class KnowledgeEngineAdapter implements IKnowledgeEngineAdapter {
     this.knowledgeService = knowledgeService;
   }
 
-  public async getTopRecommendation(
+  public async getTopRecommendations(
     ctx: TreResolutionContext
-  ): Promise<KnowledgeTradeRecommendation | null> {
+  ): Promise<KnowledgeTradeRecommendation[]> {
     const result = await this.knowledgeService.evaluate({
       siteDiaryId: ctx.siteDiaryId,
       programmeId: ctx.programmeId,
@@ -22,17 +22,16 @@ export class KnowledgeEngineAdapter implements IKnowledgeEngineAdapter {
       subtaskName: ctx.subtaskName,
     });
 
-    if (isSuccess(result) && result.value !== null) {
-      const rec = result.value;
-      return {
+    if (isSuccess(result) && result.value) {
+      return result.value.map((rec, index) => ({
         recommendedTradeId: rec.recommendedTradeId,
         tradeCode: rec.tradeCode,
         tradeName: rec.tradeName,
         tradeCategory: rec.tradeCategory,
-        rank: 1,
-      };
+        rank: index + 1,
+      }));
     }
 
-    return null;
+    return [];
   }
 }

@@ -72,7 +72,7 @@ describe('TreEngineService Integration', () => {
     };
     
     const mockKeAdapter: IKnowledgeEngineAdapter = {
-      getTopRecommendation: async () => null,
+      getTopRecommendations: async () => [],
     };
 
     const treEngine = new TreEngineService({
@@ -109,7 +109,7 @@ describe('TreEngineService Integration', () => {
       getTradeById: async () => null,
     };
     const mockKeAdapter: IKnowledgeEngineAdapter = {
-      getTopRecommendation: async () => null,
+      getTopRecommendations: async () => [],
     };
 
     const treEngine = new TreEngineService({
@@ -145,7 +145,7 @@ describe('TreEngineService Integration', () => {
       getTradeById: async () => null,
     };
     const mockKeAdapter: IKnowledgeEngineAdapter = {
-      getTopRecommendation: async () => null,
+      getTopRecommendations: async () => [],
     };
 
     const treEngine = new TreEngineService({

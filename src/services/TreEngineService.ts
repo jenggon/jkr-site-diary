@@ -97,18 +97,28 @@ export class TreEngineService implements ITreEngineService {
       }
 
       // Priority 2: Knowledge Recommendation Engine
-      const keRecommendation = await this.knowledgeAdapter.getTopRecommendation(ctx);
-      if (keRecommendation) {
-        this.logger.info('TRE resolved via Priority 2 (Knowledge Engine)', {
-          tradeCode: keRecommendation.tradeCode,
-        });
-        return Success<TradeSelection>({
-          tradeId: keRecommendation.recommendedTradeId,
-          tradeCode: keRecommendation.tradeCode,
-          tradeName: keRecommendation.tradeName,
-          tradeCategory: keRecommendation.tradeCategory,
-          resolutionSource: 'KNOWLEDGE_ENGINE',
-        });
+      const keRecommendations = await this.knowledgeAdapter.getTopRecommendations(ctx);
+      if (keRecommendations && keRecommendations.length > 0) {
+        const topMatch = keRecommendations[0];
+        const alternatives = keRecommendations.slice(1).map((r) => r.tradeName);
+        
+        if (topMatch) {
+          this.logger.info('TRE resolved via Priority 2 (Knowledge Engine)', {
+            tradeCode: topMatch.tradeCode,
+          });
+          const baseSelection = {
+            tradeId: topMatch.recommendedTradeId,
+            tradeCode: topMatch.tradeCode,
+            tradeName: topMatch.tradeName,
+            tradeCategory: topMatch.tradeCategory,
+            resolutionSource: 'KNOWLEDGE_ENGINE' as const,
+          };
+          return Success<TradeSelection>(
+            alternatives.length > 0 
+              ? { ...baseSelection, alternatives }
+              : baseSelection
+          );
+        }
       }
 
       // Priority 3: Master Trade Library Baseline Fallback

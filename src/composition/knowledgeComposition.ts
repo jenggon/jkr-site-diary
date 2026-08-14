@@ -1,11 +1,6 @@
 import { KnowledgeEngineService } from '@/services/KnowledgeEngineService';
 import { IKnowledgeEngineService } from '@/services/IKnowledgeEngineService';
-import { KnowledgeRuleRepository } from '@/repositories/KnowledgeRuleRepository';
-import { RuleEvaluatorRegistry } from '@/services/evaluators/RuleEvaluatorRegistry';
-import { TaskRuleEvaluator } from '@/services/evaluators/TaskRuleEvaluator';
-import { BuildingTypeRuleEvaluator } from '@/services/evaluators/BuildingTypeRuleEvaluator';
-import { DisciplineRuleEvaluator } from '@/services/evaluators/DisciplineRuleEvaluator';
-import { HistoryRuleEvaluator } from '@/services/evaluators/HistoryRuleEvaluator';
+import { KnowledgeHistoryRepository } from '@/repositories/KnowledgeHistoryRepository';
 import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
 
@@ -15,19 +10,11 @@ import { logger } from '@/lib/logger';
  * Creates zero global singleton instances.
  */
 export function createKnowledgeEngineService(): IKnowledgeEngineService {
-  const ruleRepo = new KnowledgeRuleRepository();
-  const registry = new RuleEvaluatorRegistry();
-
-  registry.register(new TaskRuleEvaluator());
-  registry.register(new BuildingTypeRuleEvaluator());
-  registry.register(new DisciplineRuleEvaluator());
-  registry.register(new HistoryRuleEvaluator());
-
+  const historyRepo = new KnowledgeHistoryRepository();
   const clock = new SystemClock();
 
   return new KnowledgeEngineService({
-    ruleRepository: ruleRepo,
-    evaluatorRegistry: registry,
+    historyRepository: historyRepo,
     clock,
     logger,
   });

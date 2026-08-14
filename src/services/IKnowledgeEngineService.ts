@@ -8,5 +8,5 @@ export interface IKnowledgeEngineService {
    */
   evaluate(
     ctx: KnowledgeEvaluationContext
-  ): Promise<Result<KnowledgeRecommendation | null, BaseAppError>>;
+  ): Promise<Result<KnowledgeRecommendation[], BaseAppError>>;
 }

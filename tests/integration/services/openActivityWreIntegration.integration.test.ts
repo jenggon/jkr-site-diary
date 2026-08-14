@@ -47,7 +47,7 @@ describe('WorkforceEngineService Integration (WRE sequentially after TRE)', () =
     const treEngine = new TreEngineService({
       programKerjaBoundaryService: mockBoundaryService,
       tradeLibraryRepository: { getDefaultTrade: async () => null, getTradeByCode: async () => null, getTradeById: async () => null },
-      knowledgeEngineAdapter: { getTopRecommendation: async () => null },
+      knowledgeEngineAdapter: { getTopRecommendations: async () => [] },
       clock,
       logger: silentLogger,
     });

@@ -38,13 +38,22 @@ describe('TreEngineService', () => {
     tradeCategory: 'Skilled',
   };
 
-  const sampleKeTrade: KnowledgeTradeRecommendation = {
-    recommendedTradeId: 'trade-ke-1',
-    tradeCode: 'BAR_BENDER',
-    tradeName: 'Pemasang Besi',
-    tradeCategory: 'Skilled',
-    rank: 1,
-  };
+  const sampleKeTrades: KnowledgeTradeRecommendation[] = [
+    {
+      recommendedTradeId: 'trade-ke-1',
+      tradeCode: 'BAR_BENDER',
+      tradeName: 'Pemasang Besi',
+      tradeCategory: 'Skilled',
+      rank: 1,
+    },
+    {
+      recommendedTradeId: 'trade-ke-2',
+      tradeCode: 'CARPENTER',
+      tradeName: 'Tukang Kayu',
+      tradeCategory: 'Skilled',
+      rank: 2,
+    }
+  ];
 
   const sampleDefaultTrade: TradeLibrary = {
     trade_id: 'trade-def-1',
@@ -70,7 +79,7 @@ describe('TreEngineService', () => {
       getTradeById: vi.fn().mockResolvedValue(null),
     };
     const mockKeAdapter: IKnowledgeEngineAdapter = {
-      getTopRecommendation: vi.fn().mockResolvedValue(null),
+      getTopRecommendations: vi.fn().mockResolvedValue([]),
     };
 
     const service = new TreEngineService({
@@ -90,7 +99,7 @@ describe('TreEngineService', () => {
       expect(result.value.tradeName).toBe('Pekerja Konkrit');
     }
     expect(mockMspRepo.findResourceTradeByMspTask).toHaveBeenCalledWith('prog-1', 'task-100');
-    expect(mockKeAdapter.getTopRecommendation).not.toHaveBeenCalled();
+    expect(mockKeAdapter.getTopRecommendations).not.toHaveBeenCalled();
     expect(mockTradeLibRepo.getDefaultTrade).not.toHaveBeenCalled();
   });
 
@@ -104,7 +113,7 @@ describe('TreEngineService', () => {
       getTradeById: vi.fn().mockResolvedValue(null),
     };
     const mockKeAdapter: IKnowledgeEngineAdapter = {
-      getTopRecommendation: vi.fn().mockResolvedValue(sampleKeTrade),
+      getTopRecommendations: vi.fn().mockResolvedValue(sampleKeTrades),
     };
 
     const service = new TreEngineService({
@@ -121,9 +130,10 @@ describe('TreEngineService', () => {
     if (isSuccess(result)) {
       expect(result.value.resolutionSource).toBe('KNOWLEDGE_ENGINE');
       expect(result.value.tradeCode).toBe('BAR_BENDER');
+      expect(result.value.alternatives).toEqual(['Tukang Kayu']);
     }
     expect(mockMspRepo.findResourceTradeByMspTask).toHaveBeenCalled();
-    expect(mockKeAdapter.getTopRecommendation).toHaveBeenCalledWith(sampleContext);
+    expect(mockKeAdapter.getTopRecommendations).toHaveBeenCalledWith(sampleContext);
     expect(mockTradeLibRepo.getDefaultTrade).not.toHaveBeenCalled();
   });
 
@@ -137,7 +147,7 @@ describe('TreEngineService', () => {
       getTradeById: vi.fn().mockResolvedValue(null),
     };
     const mockKeAdapter: IKnowledgeEngineAdapter = {
-      getTopRecommendation: vi.fn().mockResolvedValue(null),
+      getTopRecommendations: vi.fn().mockResolvedValue([]),
     };
 
     const service = new TreEngineService({
@@ -168,7 +178,7 @@ describe('TreEngineService', () => {
       getTradeById: vi.fn().mockResolvedValue(null),
     };
     const mockKeAdapter: IKnowledgeEngineAdapter = {
-      getTopRecommendation: vi.fn().mockResolvedValue(null),
+      getTopRecommendations: vi.fn().mockResolvedValue([]),
     };
 
     const service = new TreEngineService({
