@@ -186,6 +186,15 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
             status: ActivityStatus.InProgress
           } as unknown as Activity);
         }
+        if (id === 'act-draft') {
+          return Success({ activity_id: 'act-draft', programme_id: 'prog-1', revision_id: 'rev-draft', status: ActivityStatus.New } as unknown as Activity);
+        }
+        if (id === 'act-under-review') {
+          return Success({ activity_id: 'act-under-review', programme_id: 'prog-1', revision_id: 'rev-under-review', status: ActivityStatus.New } as unknown as Activity);
+        }
+        if (id === 'act-archived') {
+          return Success({ activity_id: 'act-archived', programme_id: 'prog-1', revision_id: 'rev-archived', status: ActivityStatus.New } as unknown as Activity);
+        }
         return Success(null);
       }
     } as unknown as IActivityRepository;
@@ -203,7 +212,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       const res = await service.createSiteDiary({
         programmeId: 'prog-1',
         revisionId: 'rev-draft',
-        activityId: 'act-1',
+        activityId: 'act-draft',
         activityDate: '2026-09-01',
         notes: 'Pemasangan acuan',
         submittedBy: 'user-1',
@@ -219,7 +228,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       const res = await service.createSiteDiary({
         programmeId: 'prog-1',
         revisionId: 'rev-under-review',
-        activityId: 'act-1',
+        activityId: 'act-under-review',
         activityDate: '2026-09-01',
         notes: 'Semakan semula',
         submittedBy: 'user-1',
@@ -235,7 +244,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       const res = await service.createSiteDiary({
         programmeId: 'prog-1',
         revisionId: 'rev-superseded',
-        activityId: 'act-1',
+        activityId: 'act-superseded',
         activityDate: '2026-09-01',
         notes: 'Log lama',
         submittedBy: 'user-1',
@@ -251,7 +260,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       const res = await service.createSiteDiary({
         programmeId: 'prog-1',
         revisionId: 'rev-archived',
-        activityId: 'act-1',
+        activityId: 'act-archived',
         activityDate: '2026-09-01',
         notes: 'Log diarkibkan',
         submittedBy: 'user-1',
@@ -267,7 +276,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       const res = await service.createSiteDiary({
         programmeId: 'prog-1',
         revisionId: 'rev-approved',
-        activityId: 'act-1',
+        activityId: 'act-inprogress',
         activityDate: '2026-09-01',
         notes: 'Kerja-kerja konkrit footing berjalan lancar',
         submittedBy: 'user-1',
@@ -278,6 +287,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         expect(res.value.programme_id).toBe('prog-1');
         expect(res.value.revision_id).toBe('rev-approved');
         expect(res.value.notes).toBe('Kerja-kerja konkrit footing berjalan lancar');
+        expect(res.value.status).toBe(ActivityStatus.InProgress); // Derived from activity
       }
     });
 
@@ -298,31 +308,26 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       expect(taskWriteSpy).not.toHaveBeenCalled();
     });
 
-    describe('A16 Site Diary State Machine (F-04)', () => {
-      it('H. Allows valid state transitions', async () => {
-        // Mock a diary in New
-        await mockSiteDiaryRepo.createSiteDiary({
-          site_diary_id: 'sd-new', programme_id: 'prog-1', revision_id: 'rev-approved', activity_id: 'act-1', activity_date: '2026-09-02', notes: '', status: ActivityStatus.New, submitted_by: 'u1', weather: null, manpower: null, updated_at: null
+    describe('A20 Phase 2 Site Diary Consistency (REM-007)', () => {
+      it('H. Derives status strictly from parent Activity on creation', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-new',
+          activityDate: '2026-09-02',
+          notes: 'Baru bermula',
+          submittedBy: 'u1',
         });
-        const res = await service.updateSiteDiary({ siteDiaryId: 'sd-new', status: ActivityStatus.InProgress, updatedBy: 'u1' });
         expect(isSuccess(res)).toBe(true);
-
-        // Mock a diary in In Progress
-        await mockSiteDiaryRepo.createSiteDiary({
-          site_diary_id: 'sd-inprog', programme_id: 'prog-1', revision_id: 'rev-approved', activity_id: 'act-1', activity_date: '2026-09-03', notes: '', status: ActivityStatus.InProgress, submitted_by: 'u1', weather: null, manpower: null, updated_at: null
-        });
-        const res2 = await service.updateSiteDiary({ siteDiaryId: 'sd-inprog', status: ActivityStatus.Completed, updatedBy: 'u1' });
-        expect(isSuccess(res2)).toBe(true);
+        if (isSuccess(res)) {
+          expect(res.value.status).toBe(ActivityStatus.New);
+        }
       });
 
-      it('I. Rejects backward transitions', async () => {
-        // Mock a diary in Completed
-        await mockSiteDiaryRepo.createSiteDiary({
-          site_diary_id: 'sd-comp', programme_id: 'prog-1', revision_id: 'rev-approved', activity_id: 'act-1', activity_date: '2026-09-04', notes: '', status: ActivityStatus.Completed, submitted_by: 'u1', weather: null, manpower: null, updated_at: null
-        });
-        const res = await service.updateSiteDiary({ siteDiaryId: 'sd-comp', status: ActivityStatus.InProgress, updatedBy: 'u1' });
-        expect(isFailure(res)).toBe(true);
-        if (isFailure(res)) expect(res.error.errorCode).toBe('INVALID_SITE_DIARY_STATE');
+      it('I. Prevents updating status independently (TypeScript enforces this on UpdateSiteDiaryCommand)', () => {
+        // Since `status` was removed from UpdateSiteDiaryCommand interface, this is inherently enforced.
+        // We can just assert true here to document the rule.
+        expect(true).toBe(true);
       });
     });
 

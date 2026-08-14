@@ -22,25 +22,14 @@ export function validateActivityStateTransition(from: ActivityStatus, to: Activi
   }
 }
 
-const ALLOWED_SITE_DIARY_TRANSITIONS: Readonly<Record<ActivityStatus, readonly ActivityStatus[]>> = Object.freeze({
-  [ActivityStatus.New]: [ActivityStatus.InProgress],
-  [ActivityStatus.InProgress]: [ActivityStatus.Completed],
-  [ActivityStatus.Completed]: [],
-});
-
-export function canTransitionSiteDiary(from: ActivityStatus, to: ActivityStatus): boolean {
-  if (from === to) return true; // allow idempotent updates if same status
-  const allowed = ALLOWED_SITE_DIARY_TRANSITIONS[from];
-  return allowed ? allowed.includes(to) : false;
-}
-
-export function validateSiteDiaryStateTransition(from: ActivityStatus, to: ActivityStatus): void {
-  if (from === to) return; // Same state is OK
-  
-  if (from === ActivityStatus.Completed) {
-    throw new InvalidSiteDiaryStateError('Cannot transition from Completed state; it is terminal for daily entry');
-  }
-  if (!canTransitionSiteDiary(from, to)) {
-    throw new InvalidSiteDiaryStateError(`Cannot transition site diary from '${from}' to '${to}'`);
+/**
+ * DB-015 / REM-007 Rules:
+ * Site Diary is an immutable daily historical snapshot of Activity status.
+ * It does not have an independent state machine.
+ * Site Diary status MUST exactly reflect the parent Activity operational status at creation time.
+ */
+export function validateSiteDiaryStatusConsistency(activityStatus: ActivityStatus, siteDiaryStatus: ActivityStatus | null): void {
+  if (siteDiaryStatus !== null && siteDiaryStatus !== activityStatus) {
+    throw new InvalidSiteDiaryStateError(`Site Diary snapshot status '${siteDiaryStatus}' does not match authoritative Activity status '${activityStatus}'`);
   }
 }

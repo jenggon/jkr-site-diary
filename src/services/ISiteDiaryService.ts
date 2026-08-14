@@ -1,7 +1,7 @@
 import { Result } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
 import { SiteDiary, SiteDiaryManpower } from '@/types/siteDiary';
-import { ActivityStatus, ActivityWeather } from '@/types/activity';
+import { ActivityWeather } from '@/types/activity';
 
 export interface CreateSiteDiaryCommand {
   readonly programmeId: string;
@@ -10,7 +10,6 @@ export interface CreateSiteDiaryCommand {
   readonly activityDate: string;
   readonly weather?: ActivityWeather | null | undefined;
   readonly notes: string;
-  readonly status?: ActivityStatus | null | undefined;
   readonly manpower?: SiteDiaryManpower[] | null | undefined;
   readonly submittedBy: string;
 }
@@ -19,7 +18,6 @@ export interface UpdateSiteDiaryCommand {
   readonly siteDiaryId: string;
   readonly weather?: ActivityWeather | null | undefined;
   readonly notes?: string | undefined;
-  readonly status?: ActivityStatus | null | undefined;
   readonly manpower?: SiteDiaryManpower[] | null | undefined;
   readonly updatedBy: string;
 }

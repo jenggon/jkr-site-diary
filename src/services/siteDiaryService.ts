@@ -19,7 +19,7 @@ import { ActivityRepository } from '@/repositories/activityRepository';
 import { siteDiaryRepository as defaultSiteDiaryRepo } from '@/repositories/siteDiaryRepository';
 import { ISiteDiaryService, CreateSiteDiaryCommand, UpdateSiteDiaryCommand } from './ISiteDiaryService';
 import { ActivityStatus, Activity } from '@/types/activity';
-import { validateSiteDiaryStateTransition } from '@/statemachines/siteDiaryStateMachine';
+
 
 export interface ISiteDiaryRepositoryAdapter {
   createSiteDiary(data: Omit<SiteDiary, 'site_diary_id' | 'submitted_at'> & { site_diary_id?: string; submitted_at?: string }): Promise<SiteDiary>;
@@ -94,7 +94,20 @@ export class SiteDiaryService implements ISiteDiaryService {
         return Failure(new ProgrammeLockedError(`Programme is locked: ${cmd.programmeId}`));
       }
 
-      // 3. Programme Revision Safety Validation (D1 Revision Safety Rule)
+      // 3. Activity Context Validation
+      const actResult = await this.activityRepo.findById(cmd.activityId);
+      if (isFailure(actResult)) {
+        return Failure(actResult.error);
+      }
+      const activity = actResult.value;
+      if (!activity) {
+        return Failure(new SiteDiaryValidationError(`Activity not found: ${cmd.activityId}`));
+      }
+      if (activity.revision_id !== cmd.revisionId || activity.programme_id !== cmd.programmeId) {
+        return Failure(new SiteDiaryValidationError(`Activity mismatch: Activity belongs to revision ${activity.revision_id} but command specifies ${cmd.revisionId}`));
+      }
+
+      // 4. Programme Revision Safety Validation (D1 Revision Safety Rule)
       const revResult = await this.revisionRepo.findById(cmd.revisionId);
       if (isFailure(revResult)) {
         return Failure(revResult.error);
@@ -107,7 +120,7 @@ export class SiteDiaryService implements ISiteDiaryService {
         return Failure(new SiteDiaryValidationError(`programme/revision mismatch: revision ${cmd.revisionId} does not belong to programme ${cmd.programmeId}`));
       }
 
-      // 4. Reject Draft, UnderReview, Superseded, Archived Revisions
+      // 5. Reject Draft, UnderReview, Superseded, Archived Revisions
       if (revision.status !== 'Approved' || !revision.isCurrent) {
         this.logger.warn('Site Diary creation rejected due to revision state', {
           programmeId: cmd.programmeId,
@@ -122,7 +135,7 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
-      // 5. Create Site Diary Entity
+      // 6. Create Site Diary Entity
       const now = this.clock.nowIso();
       const siteDiaryId = generateUuid();
 
@@ -134,7 +147,7 @@ export class SiteDiaryService implements ISiteDiaryService {
         activity_date: cmd.activityDate,
         weather: cmd.weather ?? null,
         notes: cmd.notes.trim(),
-        status: cmd.status ?? null,
+        status: activity.status, // Derive status purely from the current parent Activity state
         manpower: cmd.manpower ?? null,
         submitted_by: cmd.submittedBy,
         submitted_at: now,
@@ -217,17 +230,6 @@ export class SiteDiaryService implements ISiteDiaryService {
 
       if (cmd.weather !== undefined) updates.weather = cmd.weather;
       if (cmd.notes !== undefined) updates.notes = cmd.notes;
-      if (cmd.status !== undefined) {
-        if (cmd.status !== null) {
-          const fromStatus = existing.status ?? ActivityStatus.New;
-          try {
-            validateSiteDiaryStateTransition(fromStatus, cmd.status);
-          } catch (e: unknown) {
-            return Failure(e instanceof BaseAppError ? e : new UnknownError(String(e), { cause: e }));
-          }
-        }
-        updates.status = cmd.status;
-      }
       if (cmd.manpower !== undefined) updates.manpower = cmd.manpower;
 
       const updated = await this.siteDiaryRepo.updateSiteDiary(cmd.siteDiaryId, updates);
@@ -252,6 +254,8 @@ export class SiteDiaryService implements ISiteDiaryService {
       if (activity.status === ActivityStatus.Completed) {
         return Failure(new SiteDiaryValidationError('Cannot carry forward a Completed activity'));
       }
+
+
 
       const revResult = await this.revisionRepo.findById(activity.revision_id);
       if (isFailure(revResult)) {
