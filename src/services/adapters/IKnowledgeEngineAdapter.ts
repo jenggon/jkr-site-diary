@@ -5,5 +5,5 @@ export interface IKnowledgeEngineAdapter {
    * Resolves Priority 2 source-specific Knowledge Engine recommendation model.
    * DEV-025 integration point.
    */
-  getTopRecommendation(ctx: TreResolutionContext): Promise<KnowledgeTradeRecommendation | null>;
+  getTopRecommendations(ctx: TreResolutionContext): Promise<KnowledgeTradeRecommendation[]>;
 }

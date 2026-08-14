@@ -3,11 +3,13 @@ import { ITreEngineService } from '@/services/ITreEngineService';
 import { IKnowledgeEngineService } from '@/services/IKnowledgeEngineService';
 import { IWorkforceEngineService } from '@/services/IWorkforceEngineService';
 import { IMaterialEngineService } from '@/services/IMaterialEngineService';
+import { IIntelligenceOrchestratorService } from '@/services/IntelligenceOrchestratorService';
 import { createOpenActivityService } from '@/composition/activityComposition';
 import { createTreEngineService } from '@/composition/treComposition';
 import { createKnowledgeEngineService } from '@/composition/knowledgeComposition';
 import { createWorkforceEngineService } from '@/composition/wreComposition';
 import { createMaterialEngineService } from '@/composition/mreComposition';
+import { createIntelligenceOrchestratorService } from '@/composition/intelligenceComposition';
 
 export interface PlatformServiceContainer {
   openActivity(): IOpenActivityService;
@@ -15,25 +17,16 @@ export interface PlatformServiceContainer {
   knowledgeEngine(): IKnowledgeEngineService;
   workforceEngine(): IWorkforceEngineService;
   materialEngine(): IMaterialEngineService;
+  intelligenceOrchestrator(): IIntelligenceOrchestratorService;
 }
 
-/**
- * Lazy-initializing platform service container.
- *
- * DEV-026: openActivity() injects the shared treEngine() instance
- * into createOpenActivityService() â€” ensuring a single TRE instance
- * is shared across the container lifetime (Refinement 1).
- *
- * Initialization order is safe: TreEngineService has zero dependency
- * on OpenActivityService, so calling this.treEngine() inside openActivity()
- * carries no circular dependency risk.
- */
 export class LazyPlatformServiceContainer implements PlatformServiceContainer {
   private _openActivityService?: IOpenActivityService | undefined;
   private _treEngineService?: ITreEngineService | undefined;
   private _knowledgeEngineService?: IKnowledgeEngineService | undefined;
   private _workforceEngineService?: IWorkforceEngineService | undefined;
   private _materialEngineService?: IMaterialEngineService | undefined;
+  private _intelligenceOrchestratorService?: IIntelligenceOrchestratorService | undefined;
 
   public openActivity(): IOpenActivityService {
     if (!this._openActivityService) {
@@ -67,5 +60,11 @@ export class LazyPlatformServiceContainer implements PlatformServiceContainer {
       this._materialEngineService = createMaterialEngineService();
     }
     return this._materialEngineService;
+  }
+  public intelligenceOrchestrator(): IIntelligenceOrchestratorService {
+    if (!this._intelligenceOrchestratorService) {
+      this._intelligenceOrchestratorService = createIntelligenceOrchestratorService();
+    }
+    return this._intelligenceOrchestratorService;
   }
 }

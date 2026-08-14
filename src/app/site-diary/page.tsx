@@ -648,237 +648,40 @@ export default function Home() {
     router.push('/login');
   };
 
-  const loadResources = async (
-    outline: string
-  ) => {
-
-    const response =
-      await fetch(
-        `/api/resources?outline=${encodeURIComponent(outline)}`
-      );
-
-    const data: string[] =
-      await response.json();
-
-    setResourceSuggestions(data);
-
-    //----------------------------------------------------
-    // MSP RESOURCE ADA
-    //----------------------------------------------------
-
-    if (data.length > 0) {
-
-      const trades = [
-
-        ...new Set(
-
-          data.map((resource: string) =>
-
-            resource
-              .replace(/[0-9]/g, "")
-              .trim()
-
-          )
-
-        ),
-
-      ];
-
-      setSuggestedTrades(trades);
-
-      setSelectedTrades([]);
-
-      return;
-
-    }
-
-    //----------------------------------------------------
-    // AHI KNOWLEDGE ENGINE
-    //----------------------------------------------------
-
-    const historyResponse =
-      await supabase
-        .from("site_diary_logs")
-        .select(`
-      manpower,
-      subtask,
-      created_at
-    `)
-        .eq("ahi", outline);
-
-    if (
-      !historyResponse.error &&
-      historyResponse.data &&
-      historyResponse.data.length > 0
-    ) {
-
-      const score: Record<string, number> = {};
-
-      const frequency: Record<string, number> = {};
-
-      historyResponse.data.forEach((row: any) => {
-
-        const manpower =
-          row.manpower || [];
-
-        manpower.forEach((trade: any) => {
-
-          if (!trade.trade_name)
-            return;
-
-          const name =
-            trade.trade_name;
-
-          if (!frequency[name]) {
-
-            frequency[name] = 0;
-
-          }
-
-          frequency[name]++;
-
-          if (!score[name]) {
-
-            score[name] = 0;
-
-          }
-
-          //--------------------------------
-          // AHI Match
-          //--------------------------------
-
-          score[name] += 20;
-
-          //--------------------------------
-          // Subtask Match
-          //--------------------------------
-
-          if (
-            row.subtask === selectedWorkPackage
-          ) {
-
-            score[name] += 50;
-
-          }
-
-          //--------------------------------
-          // Recency
-          //--------------------------------
-
-          const ageDays =
-
-            (
-              Date.now()
-
-              -
-
-              new Date(
-                row.created_at
-              ).getTime()
-
-            )
-
-            /
-
-            (
-              1000 * 60 * 60 * 24
-            );
-
-          score[name] +=
-
-            Math.max(
-
-              0,
-
-              30 - ageDays
-
-            );
-
-          //--------------------------------
-          // Frequency Weight
-          //--------------------------------
-
-          score[name] +=
-
-            frequency[name] * 15;
-
-        });
-
-      });
-
-      const topTrades =
-
-        Object.entries(score)
-
-          .sort(
-
-            (a, b) => {
-
-              if (
-
-                b[1] === a[1]
-
-              ) {
-
-                return (
-
-                  frequency[b[0]]
-
-                  -
-
-                  frequency[a[0]]
-
-                );
-
-              }
-
-              return b[1] - a[1];
-
-            }
-
-          )
-          .slice(0, 3)
-          .map(
-            ([name]) => name
-          );
-
-      if (topTrades.length > 0) {
-
-        setSuggestedTrades(topTrades);
-
+  const loadResources = async (outline: string) => {
+    try {
+      const params = new URLSearchParams();
+      params.append('taskId', outline); // outline maps to mspTaskId
+      params.append('activityName', projectName);
+      if (currentProgrammeId) params.append('programmeId', currentProgrammeId);
+      if (currentRevisionId) params.append('revisionId', currentRevisionId);
+
+      const response = await fetch(`/api/intelligence?${params.toString()}`);
+      if (!response.ok) {
+         console.warn('Intelligence API returned error:', await response.text());
+         return;
+      }
+      
+      const data = await response.json();
+      const tradeRes = data.tradeResolution;
+
+      if (tradeRes) {
+        if (tradeRes.resolutionSource === 'MSP_RESOURCE') {
+           setResourceSuggestions([tradeRes.tradeName]);
+           setSuggestedTrades([tradeRes.tradeName]);
+        } else if (tradeRes.resolutionSource === 'KNOWLEDGE_ENGINE') {
+           // Set array of top 3
+           const top3 = [tradeRes.tradeName, ...(tradeRes.alternatives || [])];
+           setSuggestedTrades(top3);
+        } else {
+           setSuggestedTrades([tradeRes.tradeName]);
+        }
         setSelectedTrades([]);
-
-        return;
-
       }
 
+    } catch (err) {
+      console.error('Failed to load intelligence resources', err);
     }
-
-    //----------------------------------------------------
-    // FALLBACK TRADE LIBRARY
-    //----------------------------------------------------
-
-    const fallbackResponse =
-      await supabase
-        .from("trade_library")
-        .select("trade_name")
-        .order("trade_name");
-
-    if (!fallbackResponse.error) {
-
-      const manualTrades =
-        fallbackResponse.data.map(
-          (x) => x.trade_name
-        );
-
-      setSuggestedTrades(
-        manualTrades
-      );
-
-      setSelectedTrades([]);
-
-    }
-
   };
 
   const handleBuildingChange = async (building: string) => {

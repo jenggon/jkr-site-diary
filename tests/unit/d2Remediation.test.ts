@@ -587,7 +587,7 @@ describe('D2 Remediation Test Suite (M01-M08)', () => {
     const treService = new TreEngineService({
       programKerjaBoundaryService: boundary,
       tradeLibraryRepository: { getDefaultTrade: async () => null, getTradeByCode: async () => null, getTradeById: async () => null },
-      knowledgeEngineAdapter: { getTopRecommendation: async () => null },
+      knowledgeEngineAdapter: { getTopRecommendations: async () => [] },
       clock,
       logger,
     });

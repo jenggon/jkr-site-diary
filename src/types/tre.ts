@@ -15,6 +15,7 @@ export interface TradeSelection {
   readonly tradeName: string;
   readonly tradeCategory: string | null;
   readonly resolutionSource: TradeResolutionSource;
+  readonly alternatives?: string[];
 }
 
 /** Input context for TRE evaluation */
