@@ -18,7 +18,10 @@ export interface OpenActivityDto {
   readonly programmeId: string;
   readonly revisionId?: string | undefined;
   readonly taskId?: string | undefined;
+  readonly ahi: string | null;
+  readonly ahiDisplayName: string | null;
   readonly subtask: string;
+  readonly subtaskDisplayName: string | null;
   readonly status: ActivityStatus;
   readonly isLocked: boolean; // Derived projection
   readonly createdAt: string;

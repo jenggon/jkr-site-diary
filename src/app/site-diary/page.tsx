@@ -88,8 +88,14 @@ export default function Home() {
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
 
-  const [supabaseConnected, setSupabaseConnected] = useState<boolean | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Canonical IDs (A20 Phase 5)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [editingRevisionId, setEditingRevisionId] = useState<string | null>(null);
+  const [currentRevisionId, setCurrentRevisionId] = useState<string | null>(null);
+  const [currentProgrammeId, setCurrentProgrammeId] = useState<string | null>(null);
+
+  const [formMode, setFormMode] = useState<"NEW" | "EDIT">("NEW");
 
   // Form states
   const [projectSummary, setProjectSummary] =
@@ -208,13 +214,6 @@ export default function Home() {
     showPreviousActivities,
     setShowPreviousActivities
   ] = useState(true);
-
-  const [formMode, setFormMode] =
-    useState<
-
-      "NEW" | "EDIT"
-
-    >("NEW");
 
   useEffect(() => {
   }, [formMode]);
@@ -391,98 +390,74 @@ export default function Home() {
           new Date(a.activity_date).getTime()
       )[0];
 
-  const loadReportToForm = async (
-    report: any
-  ) => {
+  const loadReportToForm = async (report: any) => {
 
-    setNotes(
-      report.notes || ""
-    );
+    setFormLoading(true);
 
-    setWorkStatus(
-      report.work_status
-    );
+    try {
+      setFormMode("EDIT");
+      setEditingReportId(null); // No longer editing a previous SITE DIARY record, just continuing the Activity
+      setEditingActivityId(report.activityId || report.id);
+      setEditingRevisionId(report.revision_id || report.revisionId);
 
-    setWeather(
-      report.weather || "Pagi"
-    );
+      setSelectedBuilding(report.ahi || "");
+      setSelectedBuildingName(report.ahi_display_name || report.ahi_name || report.ahi || "");
 
-    setActualStartDate(
-      report.actual_start_date ||
-      report.activity_date
-    );
+      setSelectedWorkPackage(report.subtask || "");
+      setSelectedWorkPackageName(report.subtask_display_name || report.subtask_name || report.subtask || "");
 
-    setSelectedBuilding(
-      report.ahi
-    );
+      // Default the weather/notes to empty for the new day
+      setWeather(null);
+      setNotes("");
 
-    setSelectedBuildingName(
-      report.ahi_display_name ||
-      report.ahi_name ||
-      report.ahi
-    );
+      // Start date remains the same as the original activity
+      setActualStartDate(report.actual_start_date || "");
+      
+      setWorkStatus(report.work_status || report.latest_status || report.status || "Sedang Laksana");
 
-    // Load semua workpackage dahulu
-    const workPackages = await handleBuildingChange(report.ahi);
+      setManpower({});
 
-    // Cari subtask sebenar daripada workpackage yang baru load
-    const selectedSubtask = workPackages.find(
-      (x: any) => x.outline_number === report.subtask
-    );
-
-    // Restore subtask
-    setSelectedWorkPackage(report.subtask);
-
-    setSelectedWorkPackageName(
-      selectedSubtask?.display_name ||
-      selectedSubtask?.task_name ||
-      report.subtask_name ||
-      report.subtask
-    );
-
-    // Load resource
-    await loadResources(report.subtask);
-
-    setSelectedTrades(
-      report.manpower.map(
-        (x: any) => x.trade_name
-      )
-    );
-
-    const restoredManpower =
-      report.manpower.reduce(
-        (
-          acc: any,
-          curr: any
-        ) => {
-
-          acc[curr.trade_name] = {
-            bumi: String(curr.bumi_count || 0),
-            nonBumi: String(curr.non_bumi_count || 0),
-            foreign: String(curr.foreign_count || 0),
-          };
-
-          return acc;
-
-        },
-        {}
-      );
-
-    setManpower(
-      restoredManpower
-    );
-
-    if (!report.site_diary_id) {
-
-      alert("site_diary_id missing");
-
-      return;
-
+    } catch (err) {
+      console.error("Gagal load data report:", err);
+    } finally {
+      setFormLoading(false);
     }
 
-    setEditingReportId(report.site_diary_id);
+  };
 
-    setFormMode("EDIT");
+  const resetToNewMode = () => {
+    setFormMode("NEW");
+    setEditingReportId(null);
+    setEditingActivityId(null);
+    setEditingRevisionId(null);
+    setLastRecalledId(null);
+    setSelectedBuilding("");
+
+    setSelectedBuildingName("");
+
+    setSelectedWorkPackage("");
+
+    setSelectedWorkPackageName("");
+
+    setSelectedTrades([]);
+
+    setSuggestedTrades([]);
+
+    setResourceSuggestions([]);
+
+    setCustomTrades([]);
+
+    setManpower({});
+
+    setNotes("");
+
+    setWorkStatus("Mula");
+
+    setWeather("Pagi");
+
+    setTradeSearch("");
+
+    setActualStartDate("");
 
   };
 
@@ -614,65 +589,42 @@ export default function Home() {
   }, []);
 
   async function loadPrevious() {
-
     if (!activityDate) return;
 
+    // A20 Phase 5: Fetch Canonical Open Activities instead of legacy site_diary
     const response = await fetch(
-      `/api/previous-activities?activityDate=${activityDate}`
+      `/api/activities/open?programmeId=0651e125-3ef4-47c4-a3fa-8aec49bdf979`
     );
 
-    const data = await response.json();
+    const json = await response.json();
+    if (json.data && json.data.length > 0) {
+      // Store the current revision and programme IDs from the first active task for reference
+      setCurrentRevisionId(json.data[0].revisionId);
+      setCurrentProgrammeId(json.data[0].programmeId);
+    }
 
-    const latestMap =
+    const latestMap = new Map();
 
-      new Map();
-
-    for (const item of data) {
-
-      const key =
-        item.ahi + "_" + item.subtask;
-
-      const existing =
-        latestMap.get(key);
-
-      if (
-
-        !existing ||
-
-        new Date(item.activity_date)
-
-        >
-
-        new Date(existing.activity_date)
-
-      ) {
-
-        latestMap.set(
-
-          key,
-
-          item
-
-        );
-
-      }
-
+    for (const item of (json.data || [])) {
+      const key = item.activityId;
+      latestMap.set(key, {
+        ...item,
+        id: item.activityId,
+        ahi: item.ahi,
+        ahi_display_name: item.ahiDisplayName,
+        subtask: item.subtask,
+        subtask_name: item.subtaskDisplayName,
+        activity_date: item.createdAt, // Just for UI sorting
+        work_status: item.status === 'In Progress' ? 'Sedang Laksana' : item.status,
+        latest_status: item.status === 'In Progress' ? 'Sedang Laksana' : item.status,
+        latest_date: item.updatedAt || item.createdAt,
+        active_since: item.createdAt
+      });
     }
 
     setPreviousActivities(
-
-      [...latestMap.values()]
-
-        .filter(
-
-          x =>
-
-            x.work_status !== "Siap"
-
-        )
-
+      [...latestMap.values()].filter(x => x.work_status !== "Siap" && x.work_status !== "Completed")
     );
-
   }
 
   useEffect(() => {
@@ -962,42 +914,6 @@ export default function Home() {
 
   };
 
-  const resetToNewMode = () => {
-
-    setEditingReportId("");
-
-    setFormMode("NEW");
-
-    setSelectedBuilding("");
-
-    setSelectedBuildingName("");
-
-    setSelectedWorkPackage("");
-
-    setSelectedWorkPackageName("");
-
-    setSelectedTrades([]);
-
-    setSuggestedTrades([]);
-
-    setResourceSuggestions([]);
-
-    setCustomTrades([]);
-
-    setManpower({});
-
-    setNotes("");
-
-    setWorkStatus("Mula");
-
-    setWeather("Pagi");
-
-    setTradeSearch("");
-
-    setActualStartDate("");
-
-  };
-
   async function checkDuplicateToday(
     building: string,
     subtask: string
@@ -1202,212 +1118,106 @@ export default function Home() {
 
     try {
 
-      let finalActualStartDate =
-        actualStartDate || activityDate;
+      let finalActivityId = editingActivityId;
+      let finalRevisionId = editingRevisionId || currentRevisionId;
+      const finalProgrammeId = currentProgrammeId || '0651e125-3ef4-47c4-a3fa-8aec49bdf979';
 
-      if (
-
-        formMode === "EDIT" &&
-
-        workStatus === "Siap"
-
-      ) {
-
-        finalActualStartDate =
-
-          latestReport?.actual_start_date ||
-
-          latestReport?.activity_date ||
-
-          activityDate;
-
-      }
-      // Cuba hantar ke Supabase jika jadual 'site_diary' wujud
-      let error;
-
-      if (editingReportId) {
-
-        const verify =
-          await supabase
-            .from("site_diary")
-            .select("*")
-            .eq("id", editingReportId);
-
-        const result = await supabase
-          .from("site_diary")
-          .update({
-            weather,
-            ahi: selectedBuilding,
-            subtask: selectedWorkPackage,
-            work_status: workStatus,
-            activity_date: activityDate,
-            actual_start_date: finalActualStartDate,
-            manpower: compiledManpower,
-            notes,
-            updated_at: new Date().toISOString(),
+      // 1. If we are in NEW mode and selected a task from SearchPicker, we MUST create the Open Activity first
+      if (!finalActivityId && selectedTaskId) {
+        const actRes = await fetch('/api/activities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            programmeId: finalProgrammeId,
+            revisionId: finalRevisionId,
+            taskId: selectedTaskId,
+            activityName: selectedWorkPackageName || "New Activity"
           })
-          .eq("id", editingReportId)
-          .select()
-          .single();
+        });
 
-        const updatedRows = result.data ? [result.data] : [];
-        const updateError = result.error;
-
-        error = updateError;
-
-        if (!updateError && updatedRows?.length) {
-
-          const logPayload = {
-
-            site_diary_id: updatedRows[0].id,
-
-            action: "UPDATE",
-
-            ahi: selectedBuilding,
-            ahi_name: selectedBuildingName,
-
-            subtask: selectedWorkPackage,
-            subtask_name: selectedWorkPackageName,
-
-            work_status: workStatus,
-
-            activity_date: activityDate,
-
-            actual_start_date: finalActualStartDate,
-
-            weather,
-
-            manpower: compiledManpower,
-
-            notes,
-
-            submitted_by: user?.email,
-
-          };
-
-          await supabase
-            .from("site_diary_logs")
-            .insert(logPayload);
-
+        if (!actRes.ok) {
+          const actErr = await actRes.json();
+          // If it already exists, the backend validation might fail, we should handle it gracefully in production, but for now we surface the error.
+          throw new Error(actErr.error || "Gagal membuka aktiviti baru");
         }
 
-      } else {
+        const actJson = await actRes.json();
+        finalActivityId = actJson.data.activityId;
+        finalRevisionId = actJson.data.revisionId || finalRevisionId;
+      }
 
-        const {
-          data: insertedRows,
-          error: insertError,
-        } =
-          await supabase
-            .from("site_diary")
-            .insert({
+      if (!finalActivityId) {
+        throw new Error("Sila pilih aktiviti / work package");
+      }
 
-              project_id:
-                "0651e125-3ef4-47c4-a3fa-8aec49bdf979",
+      // 2. Submit Site Diary
+      const payload = {
+        programme_id: finalProgrammeId,
+        revision_id: finalRevisionId,
+        activity_id: finalActivityId,
+        activity_date: activityDate,
+        notes,
+        weather,
+        manpower: compiledManpower
+      };
 
-              weather,
+      const res = await fetch('/api/site-diary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-              ahi:
-                selectedBuilding,
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Gagal menghantar laporan site diary");
+      }
 
-              subtask:
-                selectedWorkPackage,
-
-              work_status:
-                workStatus,
-
-              activity_date:
-                activityDate,
-
-              actual_start_date:
-                finalActualStartDate,
-
-              manpower:
-                compiledManpower,
-
-              notes,
-
-              submitted_by:
-                user?.email,
-
-            })
-            .select();
-
-        error =
-          insertError;
-
-        if (!insertError && insertedRows?.length) {
-
-          const logPayload = {
-
-            site_diary_id: insertedRows[0].id,
-
-            action: "NEW",
-
-            ahi: selectedBuilding,
-            ahi_name: selectedBuildingName,
-
-            subtask: selectedWorkPackage,
-            subtask_name: selectedWorkPackageName,
-
-            work_status: workStatus,
-
-            activity_date: activityDate,
-
-            actual_start_date: finalActualStartDate,
-
-            weather,
-
-            manpower: compiledManpower,
-
-            notes,
-
-            submitted_by: user?.email,
-
-          };
-
-          await supabase
-            .from("site_diary_logs")
-            .insert(logPayload);
-
+      // 3. Update Activity Status/State if necessary
+      // NOTE: According to A20 Phase 5 architecture, frontend should use specific endpoints to change Activity Status.
+      // For now, we use the PATCH /api/activities/[id] to just update the Activity (we leave status state handling to future phases or if they use the correct API).
+      if (workStatus !== "Sedang Laksana") {
+        // e.g. if they mark it Siap (Completed), we would call POST /api/activities/[id]/complete
+        if (workStatus === "Siap") {
+           await fetch(`/api/activities/${finalActivityId}/complete`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ completedBy: user?.email || 'system' })
+           });
+        } else if (workStatus === "Tangguh") {
+           await fetch(`/api/activities/${finalActivityId}/suspend`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ reason: notes, suspendedBy: user?.email || 'system' })
+           });
+        } else if (workStatus === "Batal") {
+           await fetch(`/api/activities/${finalActivityId}/cancel`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ reason: notes, cancelledBy: user?.email || 'system' })
+           });
         }
-      }
-
-      if (error) {
-
-        console.error(
-          "INSERT / UPDATE ERROR:",
-          error
-        );
-
       } else {
-
-        await loadReports();
-
-        await loadPrevious();
-
-        resetToNewMode();
-
-        setSubmitSuccess(true);
-
-        setTimeout(() => {
-
-          setSubmitSuccess(false);
-
-        }, 3000);
-
+        // Just started or in progress
+        await fetch(`/api/activities/${finalActivityId}/start`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ startedBy: user?.email || 'system' })
+        });
       }
 
-    } catch (err) {
+      await loadReports();
+      await loadPrevious();
+      resetToNewMode();
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+      }, 3000);
 
-      console.error(
-        "Ralat ketika menghantar laporan:",
-        err
-      );
-
+    } catch (err: any) {
+      console.error("Ralat ketika menghantar laporan:", err);
+      alert(err.message || "Ralat tidak diketahui");
     } finally {
-
       setFormLoading(false);
-
     }
   };
 

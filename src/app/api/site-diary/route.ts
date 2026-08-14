@@ -11,7 +11,9 @@ const createSiteDiarySchema = z.object({
   revision_id: z.string().refine(isValidUuid, 'Invalid UUID for revision_id'),
   activity_id: z.string().refine(isValidUuid, 'Invalid UUID for activity_id'),
   activity_date: z.string().refine(isValidIso8601, 'Invalid ISO8601 format for activity_date'),
+  weather: z.string().nullable().optional(),
   notes: z.string().min(1, 'notes cannot be empty'),
+  manpower: z.any().optional(),
 });
 
 /**
@@ -46,7 +48,9 @@ export async function POST(request: Request) {
       revisionId: parseResult.data.revision_id,
       activityId: parseResult.data.activity_id,
       activityDate: parseResult.data.activity_date,
+      weather: parseResult.data.weather as any,
       notes: parseResult.data.notes,
+      manpower: parseResult.data.manpower as any,
       submittedBy: actorId,
     });
 

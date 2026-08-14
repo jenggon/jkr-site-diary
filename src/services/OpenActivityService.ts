@@ -61,7 +61,10 @@ export class OpenActivityService implements IOpenActivityService {
       programmeId: activity.programme_id,
       revisionId: activity.revision_id,
       taskId: activity.task_id,
+      ahi: activity.ahi,
+      ahiDisplayName: activity.ahi_display_name,
       subtask: activity.subtask,
+      subtaskDisplayName: activity.subtask_display_name,
       status: activity.status,
       isLocked: false, // Derived projection
       createdAt: activity.created_at,
