@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { workforceService } from '@/services/workforceService';
+import { workforceService } from '@/composition/workforceComposition';
+import { isFailure } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ activityId: string }>;
@@ -20,9 +21,16 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const workforceRecords = await workforceService.getWorkforceByActivity(activityId);
+    const result = await workforceService.getWorkforceByActivity(activityId);
 
-    return NextResponse.json({ data: workforceRecords }, { status: 200 });
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to retrieve workforce records by activity' },

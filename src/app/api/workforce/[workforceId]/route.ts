@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { workforceService } from '@/services/workforceService';
+import { workforceService } from '@/composition/workforceComposition';
+import { isFailure } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ workforceId: string }>;
@@ -20,16 +21,23 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const workforce = await workforceService.getWorkforceById(workforceId);
+    const result = await workforceService.getWorkforceById(workforceId);
 
-    if (!workforce) {
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!result.value) {
       return NextResponse.json(
         { error: 'Workforce record not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ data: workforce }, { status: 200 });
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to retrieve workforce record' },
@@ -62,9 +70,16 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const updatedWorkforce = await workforceService.updateWorkforce(workforceId, body);
+    const result = await workforceService.updateWorkforce(workforceId, body);
 
-    return NextResponse.json({ data: updatedWorkforce }, { status: 200 });
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to update workforce record' },
