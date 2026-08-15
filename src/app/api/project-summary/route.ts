@@ -1,46 +1,8 @@
-import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { NextRequest, NextResponse } from 'next/server';
+import { a26QueryService } from '@/services/A26QueryService';
 
-export async function GET() {
-
-  const { data, error } =
-    await supabase
-
-      .from("msp_tasks")
-
-      .select(`
-        task_name,
-        start_date,
-        finish_date,
-        revision_id
-      `)
-
-      .eq(
-        "outline_number",
-        "0"
-      )
-
-      .single();
-
-  if (error) {
-
-    return NextResponse.json(
-
-      {
-        error:
-          error.message,
-      },
-
-      {
-        status: 500,
-      }
-
-    );
-
-  }
-
-  return NextResponse.json(
-    data
-  );
-
+export async function GET(request: NextRequest) {
+  const programmeId = request.nextUrl.searchParams.get('programmeId') ?? undefined;
+  try { return NextResponse.json(await a26QueryService.getProjectSummary(programmeId)); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to load project summary' }, { status: 500 }); }
 }
