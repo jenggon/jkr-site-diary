@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { approvalService } from '@/services/approvalService';
+import { approvalService } from '@/composition/approvalComposition';
+import { isFailure } from '@/lib/result';
 
 /**
  * POST /api/approval
@@ -46,11 +47,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const approval = await approvalService.createApproval(body);
-    return NextResponse.json({ data: approval }, { status: 201 });
-  } catch (error: any) {
+    const result = await approvalService.createApproval(body);
+
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 201 });
+  } catch (error) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error?.message || 'Failed to create approval request' },
+      { error: err?.message || 'Failed to create approval request' },
       { status: 500 }
     );
   }
