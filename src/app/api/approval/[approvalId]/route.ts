@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { approvalService } from '@/services/approvalService';
+import { approvalService } from '@/composition/approvalComposition';
+import { isFailure } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ approvalId: string }>;
@@ -20,19 +21,27 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const approval = await approvalService.getApprovalById(approvalId);
+    const result = await approvalService.getApprovalById(approvalId);
 
-    if (!approval) {
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!result.value) {
       return NextResponse.json(
         { error: 'Approval record not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ data: approval }, { status: 200 });
-  } catch (error: any) {
+    return NextResponse.json({ data: result.value }, { status: 200 });
+  } catch (error) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve approval record' },
+      { error: err?.message || 'Failed to retrieve approval record' },
       { status: 500 }
     );
   }
@@ -62,12 +71,20 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const updatedApproval = await approvalService.updateApproval(approvalId, body);
+    const result = await approvalService.updateApproval(approvalId, body);
 
-    return NextResponse.json({ data: updatedApproval }, { status: 200 });
-  } catch (error: any) {
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
+  } catch (error) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error?.message || 'Failed to update approval record' },
+      { error: err?.message || 'Failed to update approval record' },
       { status: 500 }
     );
   }

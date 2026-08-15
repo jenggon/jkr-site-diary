@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { approvalService } from '@/services/approvalService';
+import { approvalService } from '@/composition/approvalComposition';
+import { isFailure } from '@/lib/result';
 
 type RouteParams = {
   params: Promise<{ siteDiaryId: string }>;
@@ -20,12 +21,20 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const approvals = await approvalService.getApprovalsBySiteDiary(siteDiaryId);
+    const result = await approvalService.getApprovalsBySiteDiary(siteDiaryId);
 
-    return NextResponse.json({ data: approvals }, { status: 200 });
-  } catch (error: any) {
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ data: result.value }, { status: 200 });
+  } catch (error) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve approvals by site diary' },
+      { error: err?.message || 'Failed to retrieve approvals by site diary' },
       { status: 500 }
     );
   }
