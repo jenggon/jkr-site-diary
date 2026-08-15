@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { workforceService } from '@/services/workforceService';
+import { workforceService } from '@/composition/workforceComposition';
+import { isFailure } from '@/lib/result';
 
 /**
  * POST /api/workforce
@@ -53,8 +54,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const workforce = await workforceService.createWorkforce(body);
-    return NextResponse.json({ data: workforce }, { status: 201 });
+    const result = await workforceService.createWorkforce(body);
+
+    if (isFailure(result)) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(result.value, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to create workforce record' },
