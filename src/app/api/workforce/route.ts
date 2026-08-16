@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { workforceService } from '@/composition/workforceComposition';
+import { createWorkforceService } from '@/composition/workforceComposition';
 import { isFailure } from '@/lib/result';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 
 /**
  * POST /api/workforce
@@ -8,6 +9,8 @@ import { isFailure } from '@/lib/result';
  */
 export async function POST(request: Request) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json();
 
     if (!body || typeof body !== 'object') {
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await workforceService.createWorkforce(body);
+    const result = await createWorkforceService(identity.accessToken).createWorkforce({ ...body, actor_id: identity.actorId });
 
     if (isFailure(result)) {
       return NextResponse.json(

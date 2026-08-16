@@ -16,7 +16,7 @@ export class ProgrammeRowMapper implements IProgrammeRowMapper {
       contractCompletionDate: row.contract_completion_date ?? undefined,
       defectLiabilityEnd: row.defect_liability_end ?? undefined,
       currentRevisionId: row.current_revision_id ?? undefined,
-      status: row.status,
+      status: row.status === 'Archived' ? 'Archived' : 'Active',
       isLocked: row.is_locked,
       createdAt: row.created_at,
       createdBy: row.created_by,
@@ -39,7 +39,7 @@ export class ProgrammeRowMapper implements IProgrammeRowMapper {
       contract_completion_date: entity.contractCompletionDate ?? null,
       defect_liability_end: entity.defectLiabilityEnd ?? null,
       current_revision_id: entity.currentRevisionId ?? null,
-      status: entity.status,
+      status: entity.status === 'Active' ? 'Approved' : 'Archived',
       is_locked: entity.isLocked,
       created_at: entity.createdAt,
       created_by: entity.createdBy,
@@ -50,23 +50,23 @@ export class ProgrammeRowMapper implements IProgrammeRowMapper {
     };
   }
 
-  public toRevisionDomain(row: ProgrammeRevisionRow): ProgrammeRevision {
+  public toRevisionDomain(
+    row: ProgrammeRevisionRow,
+    currentRevisionId?: string | null
+  ): ProgrammeRevision {
     return {
       revisionId: row.revision_id,
       programmeId: row.programme_id,
-      revisionNumber: row.revision_number,
-      revisionTitle: row.revision_title,
-      isCurrent: row.is_current,
+      revisionNumber: row.revision_no,
+      revisionTitle: row.revision_name ?? '',
+      isCurrent: currentRevisionId === row.revision_id,
       status: row.status,
       msp_file_name: row.msp_file_name ?? undefined,
       msp_file_hash: row.msp_file_hash ?? undefined,
-      description: row.description ?? undefined,
       approvedAt: row.approved_at ?? undefined,
       approvedBy: row.approved_by ?? undefined,
       createdAt: row.created_at,
       createdBy: row.created_by,
-      updatedAt: row.updated_at ?? undefined,
-      updatedBy: row.updated_by ?? undefined,
     };
   }
 
@@ -74,19 +74,22 @@ export class ProgrammeRowMapper implements IProgrammeRowMapper {
     return {
       revision_id: entity.revisionId,
       programme_id: entity.programmeId,
-      revision_number: entity.revisionNumber,
-      revision_title: entity.revisionTitle,
-      is_current: entity.isCurrent,
+      revision_no: entity.revisionNumber,
+      revision_name: entity.revisionTitle,
       status: entity.status,
       msp_file_name: entity.msp_file_name ?? null,
       msp_file_hash: entity.msp_file_hash ?? null,
-      description: entity.description ?? null,
+      msp_imported_at: null,
+      msp_imported_by: null,
+      baseline_date: null,
+      approval_date: null,
+      effective_date: null,
       approved_at: entity.approvedAt ?? null,
       approved_by: entity.approvedBy ?? null,
+      archived_at: null,
+      archived_by: null,
       created_at: entity.createdAt,
       created_by: entity.createdBy,
-      updated_at: entity.updatedAt ?? null,
-      updated_by: entity.updatedBy ?? null,
     };
   }
 }

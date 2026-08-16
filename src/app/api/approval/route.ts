@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { approvalService } from '@/composition/approvalComposition';
+import { createApprovalService } from '@/composition/approvalComposition';
 import { isFailure } from '@/lib/result';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 
 /**
  * POST /api/approval
@@ -8,6 +9,8 @@ import { isFailure } from '@/lib/result';
  */
 export async function POST(request: Request) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json();
 
     if (!body || typeof body !== 'object') {
@@ -17,7 +20,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { programme_id, revision_id, activity_id, requested_by } = body;
+    const { programme_id, revision_id, activity_id } = body;
 
     if (!programme_id || typeof programme_id !== 'string') {
       return NextResponse.json(
@@ -40,14 +43,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!requested_by || typeof requested_by !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: requested_by' },
-        { status: 400 }
-      );
-    }
-
-    const result = await approvalService.createApproval(body);
+    const result = await createApprovalService(identity.accessToken).createApproval({
+      ...body,
+      requested_by: identity.actorId,
+    });
 
     if (isFailure(result)) {
       return NextResponse.json(

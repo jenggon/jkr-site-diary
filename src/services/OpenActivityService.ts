@@ -13,6 +13,7 @@ import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivi
 import { ITransactionManager } from '@/transactions/ITransactionManager';
 import { IDomainEventPublisher } from '@/events/IDomainEventPublisher';
 import { ActivityCreatedEvent, ActivityUpdatedEvent, ActivityStatusChangedEvent } from '@/events/activityEvents';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 import {
   IOpenActivityService,
   CreateActivityCommand,
@@ -28,6 +29,7 @@ export interface IOpenActivityServiceDependencies {
   readonly eventPublisher: IDomainEventPublisher;
   readonly revisionRepository?: import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository;
   readonly taskRepository?: { getTaskById(taskId: string): Promise<import('@/types/task').Task | null> };
+  readonly atomicRepository?: ResidualAtomicRepository;
 }
 
 export class OpenActivityService implements IOpenActivityService {
@@ -39,6 +41,7 @@ export class OpenActivityService implements IOpenActivityService {
   private readonly eventPublisher: IDomainEventPublisher;
   private readonly revisionRepo?: import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository;
   private readonly taskRepo?: { getTaskById(taskId: string): Promise<import('@/types/task').Task | null> };
+  private readonly atomicRepo: ResidualAtomicRepository | undefined;
 
   constructor(deps: IOpenActivityServiceDependencies) {
     this.activityRepo = deps.activityRepository;
@@ -53,6 +56,7 @@ export class OpenActivityService implements IOpenActivityService {
     if (deps.taskRepository !== undefined) {
       this.taskRepo = deps.taskRepository;
     }
+    this.atomicRepo = deps.atomicRepository;
   }
 
   private mapToDto(activity: Activity): OpenActivityDto {
@@ -173,6 +177,12 @@ export class OpenActivityService implements IOpenActivityService {
         loggedBy: cmd.createdBy,
       };
 
+      if (this.atomicRepo) {
+        const created = await this.atomicRepo.createActivity(newActivity as unknown as Record<string, unknown>, cmd.createdBy, activityId);
+        await this.publishEventSafely(new ActivityCreatedEvent(this.mapToDto(created)));
+        return Success(this.mapToDto(created));
+      }
+
       const txResult = await this.txManager.execute(async () => {
         const createRes = await this.activityRepo.create(newActivity);
         if (isFailure(createRes)) return createRes;
@@ -226,6 +236,12 @@ export class OpenActivityService implements IOpenActivityService {
         loggedAt: updatedAt,
         loggedBy: cmd.updatedBy,
       };
+
+      if (this.atomicRepo) {
+        const updated = await this.atomicRepo.updateActivity(cmd.activityId, { subtask: updatedActivity.subtask }, cmd.updatedBy);
+        await this.publishEventSafely(new ActivityUpdatedEvent(this.mapToDto(updated)));
+        return Success(this.mapToDto(updated));
+      }
 
       const txResult = await this.txManager.execute(async () => {
         const updateRes = await this.activityRepo.update(updatedActivity);
@@ -324,6 +340,13 @@ export class OpenActivityService implements IOpenActivityService {
     if (isFailure(existingRes)) return Failure(existingRes.error);
     if (!existingRes.value) return Failure(new ActivityNotFoundError('Activity not found'));
 
+    if (this.atomicRepo) {
+      try {
+        const updated = await this.atomicRepo.transitionActivity(activityId, 'start', actorId);
+        await this.publishEventSafely(new ActivityStatusChangedEvent(activityId, existingRes.value.status, ActivityStatus.InProgress, actorId));
+        return Success(this.mapToDto(updated));
+      } catch (err) { return Failure(new UnknownError(err instanceof Error ? err.message : 'Status transition failed', { cause: err })); }
+    }
     return this.transitionStatusWithLog(activityId, ActivityStatus.InProgress, actorId);
   }
 
@@ -332,6 +355,10 @@ export class OpenActivityService implements IOpenActivityService {
   }
 
   public async completeActivity(activityId: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>> {
+    if (this.atomicRepo) {
+      try { return Success(this.mapToDto(await this.atomicRepo.transitionActivity(activityId, 'complete', actorId))); }
+      catch (err) { return Failure(new UnknownError(err instanceof Error ? err.message : 'Status transition failed', { cause: err })); }
+    }
     return this.transitionStatusWithLog(activityId, ActivityStatus.Completed, actorId);
   }
 

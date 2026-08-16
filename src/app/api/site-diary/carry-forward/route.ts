@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
 import { isFailure } from '@/lib/result';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { z } from 'zod';
 import { isValidUuid } from '@/lib/uuid';
 import { isValidIso8601 } from '@/lib/clock';
@@ -17,8 +17,8 @@ const carryForwardSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const actorId = await extractIdentity(req);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(req);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
@@ -37,16 +37,16 @@ export async function POST(req: NextRequest) {
     }
 
     const { programmeId, activityId, targetDate } = parseResult.data;
-    const siteDiaryService = createSiteDiaryService();
+    const siteDiaryService = createSiteDiaryService(identity.accessToken);
 
     if (activityId) {
-      const result = await siteDiaryService.continueYesterday(activityId, targetDate, actorId);
+      const result = await siteDiaryService.continueYesterday(activityId, targetDate, identity.actorId);
       if (isFailure(result)) {
         return NextResponse.json({ error: result.error.message }, { status: result.error.httpStatus || 400 });
       }
       return NextResponse.json({ data: result.value });
     } else if (programmeId) {
-      const result = await siteDiaryService.carryForwardActiveOperations(programmeId, targetDate, actorId);
+      const result = await siteDiaryService.carryForwardActiveOperations(programmeId, targetDate, identity.actorId);
       if (isFailure(result)) {
         return NextResponse.json({ error: result.error.message }, { status: result.error.httpStatus || 400 });
       }

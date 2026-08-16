@@ -7,8 +7,10 @@ import { MspXmlParser } from '@/services/MspXmlParser';
 import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
 import { bulkCreateTasks } from '@/repositories/taskRepository';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
+import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
 
-export function createMspIngestionService(): IMspIngestionService {
+export function createMspIngestionService(accessToken?: string): IMspIngestionService {
   return new MspIngestionService({
     programmeRepository: new ProgrammeRepository(),
     revisionRepository: new ProgrammeRevisionRepository(),
@@ -17,5 +19,6 @@ export function createMspIngestionService(): IMspIngestionService {
     clock: new SystemClock(),
     logger: new Logger({ module: 'MspIngestionService' }),
     bulkCreateTasksFn: bulkCreateTasks,
+    ...(accessToken ? { atomicRepository: new ResidualAtomicRepository(getSupabaseAuthenticatedClient(accessToken)) } : {}),
   });
 }

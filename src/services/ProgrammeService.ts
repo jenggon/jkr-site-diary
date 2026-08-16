@@ -20,6 +20,7 @@ import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionR
 import { ITransactionManager } from '@/transactions/ITransactionManager';
 import { IDomainEventPublisher } from '@/events/IDomainEventPublisher';
 import { ProgrammeCreatedEvent, ProgrammeRevisionApprovedEvent, ProgrammeArchivedEvent } from '@/events/programmeEvents';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 import {
   IProgrammeService,
   CreateProgrammeCommand,
@@ -34,6 +35,7 @@ export interface IProgrammeServiceDependencies {
   readonly clock: IClock;
   readonly logger: Logger;
   readonly eventPublisher: IDomainEventPublisher;
+  readonly atomicRepository?: ResidualAtomicRepository;
 }
 
 export class ProgrammeService implements IProgrammeService {
@@ -43,6 +45,7 @@ export class ProgrammeService implements IProgrammeService {
   private readonly clock: IClock;
   private readonly logger: Logger;
   private readonly eventPublisher: IDomainEventPublisher;
+  private readonly atomicRepo: ResidualAtomicRepository | undefined;
 
   constructor(deps: IProgrammeServiceDependencies) {
     this.programmeRepo = deps.programmeRepository;
@@ -51,6 +54,7 @@ export class ProgrammeService implements IProgrammeService {
     this.clock = deps.clock;
     this.logger = deps.logger;
     this.eventPublisher = deps.eventPublisher;
+    this.atomicRepo = deps.atomicRepository;
   }
 
   private async publishEventSafely(event: unknown): Promise<void> {
@@ -109,6 +113,21 @@ export class ProgrammeService implements IProgrammeService {
         createdAt: now,
         createdBy: cmd.createdBy,
       };
+
+      if (this.atomicRepo) {
+        const created = await this.atomicRepo.createProgramme({
+          programme_code: cmd.programmeCode,
+          programme_name: cmd.programmeName,
+          employer_name: cmd.employerName ?? null,
+          contractor_name: cmd.contractorName ?? null,
+          supervising_officer: cmd.supervisingOfficer ?? null,
+          contract_start_date: cmd.contractStartDate ?? null,
+          contract_completion_date: cmd.contractCompletionDate ?? null,
+          defect_liability_end: cmd.defectLiabilityEnd ?? null,
+        }, cmd.createdBy, programmeId, revisionId);
+        await this.publishEventSafely(new ProgrammeCreatedEvent(created));
+        return Success(created);
+      }
 
       const txResult = await this.txManager.execute(async () => {
         const createProgRes = await this.programmeRepo.create(newProgramme);
@@ -171,6 +190,12 @@ export class ProgrammeService implements IProgrammeService {
 
       validateProgrammeStateTransition(existingRes.value.status, 'Archived');
 
+      if (this.atomicRepo) {
+        const archived = await this.atomicRepo.archiveProgramme(programmeId, actorId);
+        await this.publishEventSafely(new ProgrammeArchivedEvent(archived));
+        return Success(archived);
+      }
+
       const archiveRes = await this.programmeRepo.archive(programmeId, actorId);
       if (isSuccess(archiveRes)) {
         await this.publishEventSafely(new ProgrammeArchivedEvent(archiveRes.value));
@@ -226,6 +251,12 @@ export class ProgrammeService implements IProgrammeService {
 
       const previousRevisionId =
         activeRes.value && activeRes.value.revisionId !== revisionId ? activeRes.value.revisionId : null;
+
+      if (this.atomicRepo) {
+        const approved = await this.atomicRepo.approveRevision(revisionId, actorId);
+        await this.publishEventSafely(new ProgrammeRevisionApprovedEvent(approved, previousRevisionId));
+        return Success(approved);
+      }
 
       const txResult = await this.txManager.execute(async () => {
         if (activeRes.value && activeRes.value.revisionId !== revisionId) {

@@ -1,24 +1,24 @@
 import { getSupabaseServerClient } from '@/lib/supabase';
 
-export async function extractIdentity(request: Request): Promise<string | null> {
+export interface VerifiedIdentity {
+  readonly actorId: string;
+  readonly accessToken: string;
+}
+
+export async function extractVerifiedIdentity(request: Request): Promise<VerifiedIdentity | null> {
   const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.substring(7).trim();
-  if (!token) return null;
-
+  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) return null;
+  const accessToken = authHeader.substring(7).trim();
+  if (!accessToken) return null;
   try {
-    const supabase = getSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser(token);
-    
-    if (error || !data.user) {
-      return null;
-    }
-    
-    return data.user.id;
-  } catch (err) {
+    const { data, error } = await getSupabaseServerClient().auth.getUser(accessToken);
+    if (error || !data.user) return null;
+    return { actorId: data.user.id, accessToken };
+  } catch {
     return null;
   }
+}
+
+export async function extractIdentity(request: Request): Promise<string | null> {
+  return (await extractVerifiedIdentity(request))?.actorId ?? null;
 }

@@ -9,6 +9,7 @@ import { ITransactionManager } from '@/transactions/ITransactionManager';
 import { AuditEventType } from '@/types/audit';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 
 export interface IWorkforceServiceDependencies {
   readonly siteDiaryRepository: ISiteDiaryRepositoryAdapter;
@@ -19,6 +20,7 @@ export interface IWorkforceServiceDependencies {
   readonly transactionManager: ITransactionManager;
   readonly clock: IClock;
   readonly logger: Logger;
+  readonly atomicRepository?: ResidualAtomicRepository;
 }
 
 export class WorkforceService implements IWorkforceService {
@@ -30,6 +32,7 @@ export class WorkforceService implements IWorkforceService {
   private readonly txManager: ITransactionManager;
   private readonly clock: IClock;
   private readonly logger: Logger;
+  private readonly atomicRepo: ResidualAtomicRepository | undefined;
 
   constructor(deps: IWorkforceServiceDependencies) {
     this.siteDiaryRepo = deps.siteDiaryRepository;
@@ -40,6 +43,7 @@ export class WorkforceService implements IWorkforceService {
     this.txManager = deps.transactionManager;
     this.clock = deps.clock;
     this.logger = deps.logger;
+    this.atomicRepo = deps.atomicRepository;
   }
 
   private async validateContext(cmd: { activity_id: string; site_diary_id: string; revision_id: string }): Promise<Result<void, BaseAppError>> {
@@ -87,6 +91,10 @@ export class WorkforceService implements IWorkforceService {
         return Failure(new ValidationError(`Workforce counts cannot be negative`));
       }
 
+      if (this.atomicRepo) {
+        return Success(await this.atomicRepo.createWorkforce({ ...cmd, actor_id: undefined }, cmd.actor_id));
+      }
+
       return this.txManager.execute(async () => {
         const createdWorkforce = await this.workforceRepo.createWorkforce({
           ...cmd,
@@ -105,8 +113,8 @@ export class WorkforceService implements IWorkforceService {
           entity_name: 'WORKFORCE',
           entity_id: createdWorkforce.workforce_id,
           event_type: AuditEventType.Create,
-          performed_by: 'system',
-          user_role: 'system',
+          performed_by: cmd.actor_id,
+          user_role: 'authenticated',
           field_name: null,
           old_value: null,
           new_value: JSON.stringify(createdWorkforce),
@@ -189,6 +197,10 @@ export class WorkforceService implements IWorkforceService {
 
       const updatedAt = this.clock.nowIso();
 
+      if (this.atomicRepo) {
+        return Success(await this.atomicRepo.updateWorkforce(workforceId, { ...cmd, actor_id: undefined }, cmd.actor_id));
+      }
+
       return this.txManager.execute(async () => {
         const updatedWorkforce = await this.workforceRepo.updateWorkforce(workforceId, {
           trade_id: cmd.trade_id ?? existing.trade_id,
@@ -206,8 +218,8 @@ export class WorkforceService implements IWorkforceService {
           entity_name: 'WORKFORCE',
           entity_id: updatedWorkforce.workforce_id,
           event_type: AuditEventType.Update,
-          performed_by: 'system',
-          user_role: 'system',
+          performed_by: cmd.actor_id,
+          user_role: 'authenticated',
           field_name: null,
           old_value: JSON.stringify(existing),
           new_value: JSON.stringify(updatedWorkforce),

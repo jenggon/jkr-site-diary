@@ -10,6 +10,11 @@ vi.mock('@/app/api/_shared/identity', () => ({
     if (!auth || auth === 'invalid') return null;
     return 'verified-actor-123';
   }),
+  extractVerifiedIdentity: vi.fn(async (req) => {
+    const auth = req.headers?.get?.('authorization');
+    if (!auth || auth === 'invalid') return null;
+    return { actorId: 'verified-actor-123', accessToken: 'valid-token' };
+  }),
 }));
 
 const mockService = {
@@ -17,6 +22,10 @@ const mockService = {
   completeActivity: vi.fn(),
   getActivityHistory: vi.fn(),
 };
+
+vi.mock('@/composition/activityComposition', () => ({
+  createOpenActivityService: vi.fn(() => mockService),
+}));
 
 vi.mock('@/app/api/_shared/container', () => ({
   LazyPlatformServiceContainer: vi.fn().mockImplementation(() => ({

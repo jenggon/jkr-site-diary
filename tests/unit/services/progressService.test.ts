@@ -13,6 +13,7 @@ describe('ProgressService', () => {
   let mockAuditRepo: any;
   let mockTxManager: any;
   let mockOpenActivityService: any;
+  let mockAtomicRepo: any;
   let mockClock: any;
   let mockLogger: any;
   let service: ProgressService;
@@ -40,6 +41,24 @@ describe('ProgressService', () => {
       })
     };
     mockOpenActivityService = { completeActivity: vi.fn() };
+    mockAtomicRepo = {
+      create: vi.fn((payload, actorId) => mockTxManager.execute(async () => {
+        const created = await mockProgressRepo.createProgress(payload);
+        await mockAuditRepo.createAudit({ event_type: 'Create', performed_by: actorId });
+        return Success(created);
+      }).then((result: any) => {
+        if (isFailure(result)) throw result.error;
+        return result.value;
+      })),
+      update: vi.fn((progressId, payload, actorId) => mockTxManager.execute(async () => {
+        const updated = await mockProgressRepo.updateProgress(progressId, payload);
+        await mockAuditRepo.createAudit({ event_type: 'Update', performed_by: actorId });
+        return Success(updated);
+      }).then((result: any) => {
+        if (isFailure(result)) throw result.error;
+        return result.value;
+      })),
+    };
     mockClock = { nowIso: vi.fn().mockReturnValue('2026-08-15T00:00:00Z') };
     mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -48,9 +67,7 @@ describe('ProgressService', () => {
       siteDiaryRepository: mockSiteDiaryRepo,
       revisionRepository: mockRevisionRepo,
       progressRepository: mockProgressRepo,
-      auditRepository: mockAuditRepo,
-      transactionManager: mockTxManager,
-      openActivityService: mockOpenActivityService,
+      atomicRepository: mockAtomicRepo,
       clock: mockClock,
       logger: mockLogger,
     });
@@ -66,7 +83,10 @@ describe('ProgressService', () => {
   };
 
   const setupValidMocks = () => {
-    mockActivityRepo.findById.mockResolvedValue(Success({ activity_id: 'act-1' }));
+    mockActivityRepo.findById.mockResolvedValue(Success({
+      activity_id: 'act-1',
+      status: 'In Progress',
+    }));
     mockRevisionRepo.findById.mockResolvedValue(Success({ revision_id: 'rev-1', status: 'Approved', isCurrent: true }));
     mockSiteDiaryRepo.getSiteDiaryById.mockResolvedValue({ site_diary_id: 'sd-1', activity_id: 'act-1' });
     mockProgressRepo.getProgressByActivity.mockResolvedValue([{ actual_quantity: 40, planned_quantity: 100 }]);
@@ -79,7 +99,7 @@ describe('ProgressService', () => {
     setupValidMocks();
     mockActivityRepo.findById.mockResolvedValue(Success(null));
 
-    const result = await service.createProgress(validCmd);
+    const result = await service.createProgress(validCmd, 'user-123');
     expect(isFailure(result)).toBe(true);
     if (isFailure(result)) {
       expect(result.error).toBeInstanceOf(ValidationError);
@@ -91,14 +111,14 @@ describe('ProgressService', () => {
     setupValidMocks();
     mockSiteDiaryRepo.getSiteDiaryById.mockResolvedValue(null);
 
-    let result = await service.createProgress(validCmd);
+    let result = await service.createProgress(validCmd, 'user-123');
     expect(isFailure(result)).toBe(true);
     if (isFailure(result)) {
       expect(result.error.message).toContain('Site Diary not found');
     }
 
     mockSiteDiaryRepo.getSiteDiaryById.mockResolvedValue({ site_diary_id: 'sd-1', activity_id: 'wrong-act' });
-    result = await service.createProgress(validCmd);
+    result = await service.createProgress(validCmd, 'user-123');
     expect(isFailure(result)).toBe(true);
     if (isFailure(result)) {
       expect(result.error.message).toContain('Context mismatch');
@@ -109,7 +129,7 @@ describe('ProgressService', () => {
     setupValidMocks();
     mockRevisionRepo.findById.mockResolvedValue(Success({ revision_id: 'rev-1', status: 'Draft', isCurrent: false }));
 
-    const result = await service.createProgress(validCmd);
+    const result = await service.createProgress(validCmd, 'user-123');
     expect(isFailure(result)).toBe(true);
     if (isFailure(result)) {
       expect(result.error).toBeInstanceOf(ValidationError);
@@ -121,7 +141,7 @@ describe('ProgressService', () => {
     setupValidMocks();
     mockProgressRepo.getProgressByActivity.mockResolvedValue([{ actual_quantity: 95, planned_quantity: 100 }]);
 
-    const result = await service.createProgress({ ...validCmd, actual_quantity: 10 });
+    const result = await service.createProgress({ ...validCmd, actual_quantity: 10 }, 'user-123');
     expect(isFailure(result)).toBe(true);
     if (isFailure(result)) {
       expect(result.error).toBeInstanceOf(ValidationError);
@@ -132,7 +152,7 @@ describe('ProgressService', () => {
   it('7. createProgress executes through TransactionManager', async () => {
     setupValidMocks();
 
-    const result = await service.createProgress(validCmd);
+    const result = await service.createProgress(validCmd, 'user-123');
     expect(isSuccess(result)).toBe(true);
     expect(mockTxManager.execute).toHaveBeenCalled();
     expect(mockProgressRepo.createProgress).toHaveBeenCalled();
@@ -144,7 +164,7 @@ describe('ProgressService', () => {
       progress_id: 'prog-123', activity_id: 'act-1', site_diary_id: 'sd-1', revision_id: 'rev-1', actual_quantity: 40 
     });
 
-    const result = await service.updateProgress('prog-123', { actual_quantity: 50 });
+    const result = await service.updateProgress('prog-123', { actual_quantity: 50 }, 'user-123');
     expect(isSuccess(result)).toBe(true);
     expect(mockTxManager.execute).toHaveBeenCalled();
     expect(mockProgressRepo.updateProgress).toHaveBeenCalled();
@@ -161,13 +181,13 @@ describe('ProgressService', () => {
     }));
   });
 
-  it('10. 100% APPROVED cumulative progress invokes OpenActivityService.completeActivity()', async () => {
+  it('10. 100% APPROVED cumulative progress validates completion and delegates atomic persistence', async () => {
     setupValidMocks();
     mockProgressRepo.createProgress.mockResolvedValue({ progress_id: 'prog-123', progress_percentage: 100 });
 
-    const result = await service.createProgress({ ...validCmd, measurement_status: ProgressMeasurementStatus.Approved });
+    const result = await service.createProgress({ ...validCmd, measurement_status: ProgressMeasurementStatus.Approved, progress_percentage: 100 }, 'user-123');
     expect(isSuccess(result)).toBe(true);
-    expect(mockOpenActivityService.completeActivity).toHaveBeenCalledWith('act-1', 'SYSTEM');
+    expect(mockAtomicRepo.create).toHaveBeenCalledWith(expect.any(Object), 'user-123');
   });
 
   it('11. Failure inside the atomic operation propagates error', async () => {

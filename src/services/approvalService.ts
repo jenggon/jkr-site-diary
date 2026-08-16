@@ -5,8 +5,7 @@ import { IApprovalService, CreateApprovalCommand, UpdateApprovalCommand } from '
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { ISiteDiaryRepositoryAdapter } from '@/services/siteDiaryService';
-import { ITransactionManager } from '@/transactions/ITransactionManager';
-import { AuditEventType } from '@/types/audit';
+import { IApprovalAtomicRepository } from '@/repositories/atomic/IApprovalAtomicRepository';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
 
@@ -16,8 +15,7 @@ export interface IApprovalServiceDependencies {
   readonly siteDiaryRepository: ISiteDiaryRepositoryAdapter;
   readonly progressRepository: typeof import('@/repositories/progressRepository').progressRepository;
   readonly approvalRepository: typeof import('@/repositories/approvalRepository').approvalRepository;
-  readonly auditRepository: typeof import('@/repositories/auditRepository').auditRepository;
-  readonly transactionManager: ITransactionManager;
+  readonly atomicRepository: IApprovalAtomicRepository;
   readonly clock: IClock;
   readonly logger: Logger;
 }
@@ -28,8 +26,7 @@ export class ApprovalService implements IApprovalService {
   private readonly siteDiaryRepo: ISiteDiaryRepositoryAdapter;
   private readonly progressRepo: typeof import('@/repositories/progressRepository').progressRepository;
   private readonly approvalRepo: typeof import('@/repositories/approvalRepository').approvalRepository;
-  private readonly auditRepo: typeof import('@/repositories/auditRepository').auditRepository;
-  private readonly txManager: ITransactionManager;
+  private readonly atomicRepo: IApprovalAtomicRepository;
   private readonly clock: IClock;
   private readonly logger: Logger;
 
@@ -39,8 +36,7 @@ export class ApprovalService implements IApprovalService {
     this.siteDiaryRepo = deps.siteDiaryRepository;
     this.progressRepo = deps.progressRepository;
     this.approvalRepo = deps.approvalRepository;
-    this.auditRepo = deps.auditRepository;
-    this.txManager = deps.transactionManager;
+    this.atomicRepo = deps.atomicRepository;
     this.clock = deps.clock;
     this.logger = deps.logger;
   }
@@ -127,8 +123,7 @@ export class ApprovalService implements IApprovalService {
       const now = this.clock.nowIso();
       const requestedAt = cmd.requested_at || now;
 
-      return this.txManager.execute(async () => {
-        const createdApproval = await this.approvalRepo.createApproval({
+      const createdApproval = await this.atomicRepo.create({
           programme_id: cmd.programme_id,
           revision_id: cmd.revision_id,
           activity_id: cmd.activity_id,
@@ -143,28 +138,9 @@ export class ApprovalService implements IApprovalService {
           requested_at: requestedAt,
           created_at: now,
           updated_at: null,
-        });
-
-        await this.auditRepo.createAudit({
-          programme_id: createdApproval.programme_id,
-          revision_id: createdApproval.revision_id,
-          entity_name: 'APPROVAL',
-          entity_id: createdApproval.approval_id,
-          event_type: AuditEventType.Create,
-          performed_by: cmd.requested_by || 'system',
-          user_role: 'submitter',
-          field_name: 'approval_status',
-          old_value: null,
-          new_value: ApprovalStatus.Pending,
-          change_reason: cmd.approval_comment || 'Approval Request Created',
-          ip_address: null,
-          device_information: null,
-          application_version: null,
-        });
-
-        this.logger.info(`Approval record created: ${createdApproval.approval_id}`);
-        return Success(createdApproval);
-      });
+        }, cmd.requested_by);
+      this.logger.info(`Approval record created: ${createdApproval.approval_id}`);
+      return Success(createdApproval);
     } catch (error) {
       const err = error as Error;
       this.logger.error(`Failed to create approval: ${err.message}`);
@@ -265,45 +241,17 @@ export class ApprovalService implements IApprovalService {
       const now = this.clock.nowIso();
       const approvalDate = cmd.approval_status === ApprovalStatus.Approved ? (cmd.approval_date || now) : existing.approval_date;
 
-      // Determine AuditEventType
-      let auditEventType: AuditEventType;
-      if (cmd.approval_status === ApprovalStatus.Approved) {
-        auditEventType = AuditEventType.Approve;
-      } else if (cmd.approval_status === ApprovalStatus.Rejected) {
-        auditEventType = AuditEventType.Reject;
-      } else {
-        auditEventType = AuditEventType.Update;
+      if (!cmd.approved_by) {
+        return Failure(new ValidationError('Authenticated approval actor is required'));
       }
-
-      return this.txManager.execute(async () => {
-        const updatedApproval = await this.approvalRepo.updateApproval(approvalId, {
+      const updatedApproval = await this.atomicRepo.update(approvalId, {
           approval_status: cmd.approval_status,
-          approved_by: cmd.approved_by !== undefined ? cmd.approved_by : existing.approved_by,
           approval_date: approvalDate,
           approval_comment: cmd.approval_comment !== undefined ? cmd.approval_comment : existing.approval_comment,
           updated_at: now,
-        });
-
-        await this.auditRepo.createAudit({
-          programme_id: updatedApproval.programme_id,
-          revision_id: updatedApproval.revision_id,
-          entity_name: 'APPROVAL',
-          entity_id: updatedApproval.approval_id,
-          event_type: auditEventType,
-          performed_by: cmd.approved_by || 'system',
-          user_role: 'approver',
-          field_name: 'approval_status',
-          old_value: existing.approval_status,
-          new_value: updatedApproval.approval_status,
-          change_reason: cmd.approval_comment || `Approval status updated to ${cmd.approval_status}`,
-          ip_address: null,
-          device_information: null,
-          application_version: null,
-        });
-
-        this.logger.info(`Approval record updated: ${approvalId} to ${cmd.approval_status}`);
-        return Success(updatedApproval);
-      });
+        }, cmd.approved_by);
+      this.logger.info(`Approval record updated: ${approvalId} to ${cmd.approval_status}`);
+      return Success(updatedApproval);
     } catch (error) {
       const err = error as Error;
       this.logger.error(`Failed to update approval: ${err.message}`);

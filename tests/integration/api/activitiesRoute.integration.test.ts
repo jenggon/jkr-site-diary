@@ -3,10 +3,10 @@ import { PATCH as updateActivity } from '@/app/api/activities/[activityId]/route
 import { Success } from '@/lib/result';
 
 vi.mock('@/app/api/_shared/identity', () => ({
-  extractIdentity: vi.fn(async (req) => {
+  extractVerifiedIdentity: vi.fn(async (req) => {
     const auth = req.headers?.get?.('authorization');
     if (!auth || auth === 'invalid') return null;
-    return 'verified-actor-123';
+    return { actorId: 'verified-actor-123', accessToken: 'valid-token' };
   }),
 }));
 
@@ -14,6 +14,10 @@ const mockService = {
   updateActivity: vi.fn(),
   getActivityHistory: vi.fn(),
 };
+
+vi.mock('@/composition/activityComposition', () => ({
+  createOpenActivityService: vi.fn(() => mockService),
+}));
 
 vi.mock('@/app/api/_shared/container', () => ({
   LazyPlatformServiceContainer: vi.fn().mockImplementation(() => ({

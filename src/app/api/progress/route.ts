@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createProgressService } from '@/composition/progressComposition';
 import { isFailure } from '@/lib/result';
 import { ValidationError } from '@/lib/errors';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 
 /**
  * POST /api/progress
@@ -9,6 +10,8 @@ import { ValidationError } from '@/lib/errors';
  */
 export async function POST(request: Request) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await request.json();
 
     if (!body || typeof body !== 'object') {
@@ -62,9 +65,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const actorId = request.headers.get('x-user-id') || 'SYSTEM';
-    const progressService = createProgressService();
-    const result = await progressService.createProgress(body, actorId);
+    const progressService = createProgressService(identity.accessToken);
+    const result = await progressService.createProgress(body, identity.actorId);
 
     if (isFailure(result)) {
       const status = result.error instanceof ValidationError ? 400 : 500;

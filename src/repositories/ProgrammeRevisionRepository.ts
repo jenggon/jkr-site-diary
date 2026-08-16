@@ -9,6 +9,10 @@ import { IProgrammeRowMapper } from './mappers/IProgrammeRowMapper';
 import { ProgrammeRowMapper } from './mappers/ProgrammeRowMapper';
 import { ProgrammeRevisionRow } from './types/programmeRow';
 
+interface ProgrammeCurrentRevisionRow {
+  readonly current_revision_id: string | null;
+}
+
 export class ProgrammeRevisionRepository implements IProgrammeRevisionRepository {
   private readonly adapter: IDatabaseAdapter;
   private readonly mapper: IProgrammeRowMapper;
@@ -28,30 +32,48 @@ export class ProgrammeRevisionRepository implements IProgrammeRevisionRepository
     if (isFailure(result)) {
       return Failure(result.error);
     }
-    return Success(result.value ? this.mapper.toRevisionDomain(result.value) : null);
+    if (!result.value) {
+      return Success(null);
+    }
+    const currentRevisionId = await this.findCurrentRevisionId(result.value.programme_id);
+    if (isFailure(currentRevisionId)) {
+      return Failure(currentRevisionId.error);
+    }
+    return Success(this.mapper.toRevisionDomain(result.value, currentRevisionId.value));
   }
 
   public async findByProgrammeId(programmeId: string): Promise<Result<ProgrammeRevision[], BaseAppError>> {
     const result = await this.adapter.selectMany<ProgrammeRevisionRow>(
       'programme_revision',
       { programme_id: programmeId },
-      { orderBy: 'revision_number', ascending: true }
+      { orderBy: 'revision_no', ascending: true }
     );
     if (isFailure(result)) {
       return Failure(result.error);
     }
-    return Success(result.value.map((row) => this.mapper.toRevisionDomain(row)));
+    const currentRevisionId = await this.findCurrentRevisionId(programmeId);
+    if (isFailure(currentRevisionId)) {
+      return Failure(currentRevisionId.error);
+    }
+    return Success(result.value.map((row) => this.mapper.toRevisionDomain(row, currentRevisionId.value)));
   }
 
   public async findActiveRevision(programmeId: string): Promise<Result<ProgrammeRevision | null, BaseAppError>> {
+    const currentRevisionId = await this.findCurrentRevisionId(programmeId);
+    if (isFailure(currentRevisionId)) {
+      return Failure(currentRevisionId.error);
+    }
+    if (!currentRevisionId.value) {
+      return Success(null);
+    }
     const result = await this.adapter.selectOne<ProgrammeRevisionRow>('programme_revision', {
       programme_id: programmeId,
-      is_current: true,
+      revision_id: currentRevisionId.value,
     });
     if (isFailure(result)) {
       return Failure(result.error);
     }
-    return Success(result.value ? this.mapper.toRevisionDomain(result.value) : null);
+    return Success(result.value ? this.mapper.toRevisionDomain(result.value, currentRevisionId.value) : null);
   }
 
   public async create(revision: ProgrammeRevision): Promise<Result<ProgrammeRevision, BaseAppError>> {
@@ -63,7 +85,11 @@ export class ProgrammeRevisionRepository implements IProgrammeRevisionRepository
     if (isFailure(result)) {
       return Failure(result.error);
     }
-    return Success(this.mapper.toRevisionDomain(result.value));
+    const currentRevisionId = await this.findCurrentRevisionId(result.value.programme_id);
+    if (isFailure(currentRevisionId)) {
+      return Failure(currentRevisionId.error);
+    }
+    return Success(this.mapper.toRevisionDomain(result.value, currentRevisionId.value));
   }
 
   public async updateStatus(
@@ -73,15 +99,13 @@ export class ProgrammeRevisionRepository implements IProgrammeRevisionRepository
   ): Promise<Result<ProgrammeRevision, BaseAppError>> {
     const updates: Record<string, unknown> = {
       status,
-      updated_at: nowIso(),
-      updated_by: actorId,
     };
     if (status === 'Approved') {
       updates.approved_at = nowIso();
       updates.approved_by = actorId;
-      updates.is_current = true;
-    } else if (status === 'Superseded') {
-      updates.is_current = false;
+    } else if (status === 'Archived') {
+      updates.archived_at = nowIso();
+      updates.archived_by = actorId;
     }
 
     const result = await this.adapter.update<ProgrammeRevisionRow>(
@@ -92,6 +116,22 @@ export class ProgrammeRevisionRepository implements IProgrammeRevisionRepository
     if (isFailure(result)) {
       return Failure(result.error);
     }
-    return Success(this.mapper.toRevisionDomain(result.value));
+    const currentRevisionId = await this.findCurrentRevisionId(result.value.programme_id);
+    if (isFailure(currentRevisionId)) {
+      return Failure(currentRevisionId.error);
+    }
+    return Success(this.mapper.toRevisionDomain(result.value, currentRevisionId.value));
+  }
+
+  private async findCurrentRevisionId(
+    programmeId: string
+  ): Promise<Result<string | null, BaseAppError>> {
+    const result = await this.adapter.selectOne<ProgrammeCurrentRevisionRow>('programme', {
+      programme_id: programmeId,
+    });
+    if (isFailure(result)) {
+      return Failure(result.error);
+    }
+    return Success(result.value?.current_revision_id ?? null);
   }
 }

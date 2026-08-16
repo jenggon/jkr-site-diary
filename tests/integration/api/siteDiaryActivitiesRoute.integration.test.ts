@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST as createActivity } from '@/app/api/site-diary/[diaryId]/activities/route';
+import { POST as createActivity } from '@/app/api/site-diary/[siteDiaryId]/activities/route';
 import { Success } from '@/lib/result';
 
 vi.mock('@/app/api/_shared/identity', () => ({
-  extractIdentity: vi.fn(async (req) => {
+  extractVerifiedIdentity: vi.fn(async (req) => {
     const auth = req.headers?.get?.('authorization');
     if (!auth || auth === 'invalid') return null;
-    return 'verified-actor-456';
+    return { actorId: 'verified-actor-456', accessToken: 'valid-token' };
   }),
 }));
 
@@ -14,13 +14,17 @@ const mockService = {
   createActivity: vi.fn(),
 };
 
+vi.mock('@/composition/activityComposition', () => ({
+  createOpenActivityService: vi.fn(() => mockService),
+}));
+
 vi.mock('@/app/api/_shared/container', () => ({
   LazyPlatformServiceContainer: vi.fn().mockImplementation(() => ({
     openActivity: () => mockService,
   })),
 }));
 
-describe('POST /api/site-diary/[diaryId]/activities', () => {
+describe('POST /api/site-diary/[siteDiaryId]/activities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -40,14 +44,14 @@ describe('POST /api/site-diary/[diaryId]/activities', () => {
 
   it('returns 401 if token is missing', async () => {
     const req = createMockRequest({ subtask: 'test' });
-    const ctx = { params: Promise.resolve({ diaryId: 'diary-1' }) };
+    const ctx = { params: Promise.resolve({ siteDiaryId: 'diary-1' }) };
     const res = await createActivity(req, ctx);
     expect(res.status).toBe(401);
   });
 
   it('returns 401 if token is invalid', async () => {
     const req = createMockRequest({ subtask: 'test' }, 'invalid');
-    const ctx = { params: Promise.resolve({ diaryId: 'diary-1' }) };
+    const ctx = { params: Promise.resolve({ siteDiaryId: 'diary-1' }) };
     const res = await createActivity(req, ctx);
     expect(res.status).toBe(401);
   });
@@ -61,7 +65,7 @@ describe('POST /api/site-diary/[diaryId]/activities', () => {
       created_by: 'spoofed-actor-999',
     };
     const req = createMockRequest(body, 'valid-token');
-    const ctx = { params: Promise.resolve({ diaryId: 'diary-1' }) };
+    const ctx = { params: Promise.resolve({ siteDiaryId: 'diary-1' }) };
     
     mockService.createActivity.mockResolvedValue(Success({ activity_id: 'act-1' }));
 

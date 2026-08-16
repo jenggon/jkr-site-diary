@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { taskService } from '@/services/taskService';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 
 type RouteParams = {
   params: Promise<{ taskId: string }>;
@@ -44,6 +47,8 @@ export async function GET(request: Request, context: RouteParams) {
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { taskId } = await context.params;
 
     if (!taskId || typeof taskId !== 'string') {
@@ -62,7 +67,9 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const updatedTask = await taskService.updateTask(taskId, body);
+    const updatedTask = await new ResidualAtomicRepository(
+      getSupabaseAuthenticatedClient(identity.accessToken)
+    ).updateTask(taskId, body, identity.actorId);
 
     return NextResponse.json({ data: updatedTask }, { status: 200 });
   } catch (error: any) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
 
@@ -18,8 +18,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
 
 
-    const service = createProgrammeService();
+    const service = createProgrammeService({ accessToken: identity.accessToken });
     const result = await service.createProgramme({
       programmeCode: programme_code,
       programmeName: programme_name,
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       contractStartDate: body.contract_start_date,
       contractCompletionDate: body.contract_completion_date,
       defectLiabilityEnd: body.defect_liability_end,
-      createdBy: actorId,
+      createdBy: identity.actorId,
     });
 
     if (isSuccess(result)) {
