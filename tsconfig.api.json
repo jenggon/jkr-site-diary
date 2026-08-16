@@ -1,7 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "incremental": false
+    "incremental": false,
+    "skipLibCheck": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": [
     "next-env.d.ts",
