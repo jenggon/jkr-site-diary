@@ -3,13 +3,9 @@
 import React, { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useDailyEntryContext } from './DailyEntryShell';
 import OperationalSourceSelector, { SelectedOperationalSource } from './OperationalSourceSelector';
+import WorkforceEntry, { ManpowerRow, COMMON_TRADES_CATALOG } from './WorkforceEntry';
 
-export interface ManpowerRow {
-  trade_name: string;
-  bumi_count: number;
-  non_bumi_count: number;
-  foreign_count: number;
-}
+export type { ManpowerRow };
 
 export interface PrintContextData {
   location: string;
@@ -28,17 +24,7 @@ export interface DailyEntryFormProps {
   className?: string;
 }
 
-const DEFAULT_TRADES = [
-  'General Worker',
-  'Carpenter',
-  'Bar Bender',
-  'Concretor',
-  'Bricklayer',
-  'Plumber',
-  'Electrician',
-  'Excavator Operator',
-  'Site Supervisor',
-];
+const DEFAULT_TRADES = COMMON_TRADES_CATALOG.slice(0, 9);
 
 export interface SubmitDailyEntryParams {
   programmeId: string;
@@ -277,7 +263,6 @@ export default function DailyEntryForm({
       foreign_count: 0,
     }))
   );
-  const [newTradeName, setNewTradeName] = useState<string>('');
 
   // Edit Mode state
   const [editingSiteDiaryId, setEditingSiteDiaryId] = useState<string | null>(initialSiteDiaryId);
@@ -325,44 +310,6 @@ export default function DailyEntryForm({
       loadExistingDiary(initialSiteDiaryId);
     }
   }, [initialSiteDiaryId, loadExistingDiary]);
-
-  // Handle manpower count changes
-  const handleManpowerChange = (index: number, field: 'bumi_count' | 'non_bumi_count' | 'foreign_count', value: number) => {
-    setManpower((prev) => {
-      const updated = [...prev];
-      const row = updated[index];
-      if (row) {
-        updated[index] = { ...row, [field]: Math.max(0, value) };
-      }
-      return updated;
-    });
-  };
-
-  // Add custom trade
-  const handleAddTrade = () => {
-    const trimmed = newTradeName.trim();
-    if (!trimmed) return;
-    if (manpower.some((m) => m.trade_name.toLowerCase() === trimmed.toLowerCase())) {
-      setNewTradeName('');
-      return;
-    }
-    setManpower((prev) => [
-      ...prev,
-      { trade_name: trimmed, bumi_count: 0, non_bumi_count: 0, foreign_count: 0 },
-    ]);
-    setNewTradeName('');
-  };
-
-  // Remove trade row
-  const handleRemoveTrade = (index: number) => {
-    setManpower((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  // Calculate total manpower
-  const totalWorkers = manpower.reduce(
-    (acc, cur) => acc + (cur.bumi_count || 0) + (cur.non_bumi_count || 0) + (cur.foreign_count || 0),
-    0
-  );
 
   // Native Form Submission Handler
   const handleSubmit = async (e: FormEvent) => {
@@ -575,101 +522,12 @@ export default function DailyEntryForm({
         </div>
       </section>
 
-      {/* 4. Tenaga Kerja (Workforce) */}
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <h3 className="text-sm sm:text-base font-bold text-zinc-100 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            Tenaga Kerja di Tapak (Workforce)
-          </h3>
-          <span className="text-xs font-bold text-amber-400 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-800/50">
-            Jumlah: {totalWorkers} Orang
-          </span>
-        </div>
-
-        <div className="space-y-2 text-xs">
-          <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {manpower.map((row, idx) => (
-              <div
-                key={row.trade_name}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60"
-              >
-                <span className="font-semibold text-zinc-200 sm:w-1/3 truncate" title={row.trade_name}>
-                  {row.trade_name}
-                </span>
-
-                <div className="grid grid-cols-3 gap-2 flex-1">
-                  <div>
-                    <label className="block text-[10px] text-zinc-500">Bumi</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={row.bumi_count}
-                      onChange={(e) => handleManpowerChange(idx, 'bumi_count', parseInt(e.target.value, 10) || 0)}
-                      disabled={isSubmitting}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-center text-zinc-200 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-zinc-500">Bukan Bumi</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={row.non_bumi_count}
-                      onChange={(e) => handleManpowerChange(idx, 'non_bumi_count', parseInt(e.target.value, 10) || 0)}
-                      disabled={isSubmitting}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-center text-zinc-200 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-zinc-500">Asing</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={row.foreign_count}
-                      onChange={(e) => handleManpowerChange(idx, 'foreign_count', parseInt(e.target.value, 10) || 0)}
-                      disabled={isSubmitting}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-center text-zinc-200 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTrade(idx)}
-                  disabled={isSubmitting}
-                  className="text-zinc-500 hover:text-red-400 p-1 self-end sm:self-center"
-                  title="Padam tred ini"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Add custom trade input */}
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="text"
-              value={newTradeName}
-              onChange={(e) => setNewTradeName(e.target.value)}
-              placeholder="Tambah tred tenaga kerja baharu..."
-              disabled={isSubmitting}
-              className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
-            />
-            <button
-              type="button"
-              onClick={handleAddTrade}
-              disabled={isSubmitting || !newTradeName.trim()}
-              className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700 transition-colors disabled:opacity-50"
-            >
-              + Tambah Tred
-            </button>
-          </div>
-        </div>
-      </section>
+      {/* 4. Tenaga Kerja (Workforce Entry Component) */}
+      <WorkforceEntry
+        manpower={manpower}
+        onChange={setManpower}
+        disabled={isSubmitting}
+      />
 
       {/* 5. Catatan Kemajuan Kerja (Notes) */}
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
