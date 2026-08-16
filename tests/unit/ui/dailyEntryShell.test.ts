@@ -52,15 +52,13 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).toContain('Child Component');
   });
 
-  it('preserves child rendering for F1GoldenPathBridge and LegacySiteDiaryPage in site-diary/page.tsx', () => {
+  it('preserves child rendering for native DailyEntryForm in site-diary/page.tsx', () => {
     const pageContent = read('src/app/site-diary/page.tsx');
 
     expect(pageContent).toContain("import DailyEntryShell from './DailyEntryShell'");
-    expect(pageContent).toContain("import F1GoldenPathBridge from './F1GoldenPathBridge'");
-    expect(pageContent).toContain("import LegacySiteDiaryPage from './LegacySiteDiaryPage'");
+    expect(pageContent).toContain("import DailyEntryForm from './DailyEntryForm'");
     expect(pageContent).toContain('<DailyEntryShell>');
-    expect(pageContent).toContain('<F1GoldenPathBridge>');
-    expect(pageContent).toContain('<LegacySiteDiaryPage />');
+    expect(pageContent).toContain('<DailyEntryForm />');
   });
 
   it('uses canonical GET /api/programme discovery and never calls project-summary without explicit programmeId', () => {

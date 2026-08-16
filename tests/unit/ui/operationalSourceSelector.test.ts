@@ -140,11 +140,11 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
     expect(source).toContain('Cuba Semula');
   });
 
-  it('preserves coexistence with F1 bridge and legacy entry flow without duplicate mutations', () => {
-    const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
+  it('preserves integration inside DailyEntryForm without duplicate mutations', () => {
+    const formSource = read('src/app/site-diary/DailyEntryForm.tsx');
 
-    // Verified embedded in DailyEntryShell alongside children
-    expect(shellSource).toContain('<OperationalSourceSelector />');
-    expect(shellSource).toContain('{children}');
+    // Verified embedded in DailyEntryForm
+    expect(formSource).toContain('<OperationalSourceSelector');
+    expect(formSource).toContain('onSelectSource={setSelectedSource}');
   });
 });
