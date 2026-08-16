@@ -2,12 +2,15 @@ import { Result } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
 import { OpenActivityDto } from '@/types/openActivity';
 import { ActivityLogEntry } from '@/repositories/IActivityLogRepository';
+import { ActivitySourceType } from '@/types/activity';
 
 export interface CreateActivityCommand {
-  readonly siteDiaryId?: string; // Still accepted for routing or context, but ignored in Activity DB
+  readonly siteDiaryId?: string;
   readonly programmeId: string;
   readonly revisionId: string;
-  readonly taskId: string;
+  readonly sourceType?: ActivitySourceType;
+  readonly taskId?: string | undefined;
+  readonly voItemId?: string | undefined;
   readonly activityName: string;
   readonly createdBy: string;
 }
@@ -26,8 +29,5 @@ export interface IOpenActivityService {
   completeActivity(activityId: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>>;
   suspendActivity(activityId: string, reason: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>>;
   cancelActivity(activityId: string, reason: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>>;
-  
-  // NOTE: getActivitiesForDiary is REMOVED because Activity does not own Site Diary.
-  // Callers must use SiteDiaryService to fetch SiteDiaries by ID or Date.
   getActivityHistory(activityId: string): Promise<Result<ActivityLogEntry[], BaseAppError>>;
 }
