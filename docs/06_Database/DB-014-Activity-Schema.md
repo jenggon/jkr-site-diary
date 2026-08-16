@@ -1,28 +1,25 @@
 # DB-014
 # Activity Schema
 
-**Project:** JKR Site Diary Platform
-**Version:** 1.0.0
+**Project:** JKR Site Diary Platform  
+**Version:** 1.1.0
 
 Status
 
-Locked
+Locked — amended under F1 Product Owner authorization on 2026-08-16.
 
 ---
 
 # Purpose
 
-Activity represents the operational execution of a published Task.
+Activity represents operational execution recorded by site operations.
 
-Activities are created by site operations.
+An Activity is bound to exactly one operational source:
 
-Activities record execution.
+- an MSP Task; or
+- a VO Item.
 
-Activities never modify planning data.
-
-Task defines WHAT should be done.
-
-Activity records WHAT actually happened.
+Activity records WHAT actually happened. It never modifies planning data and its historical source identity is immutable.
 
 ---
 
@@ -64,19 +61,69 @@ FK
 
 Required.
 
+Programme and Programme Revision ownership remain mandatory regardless of Activity source.
+
+---
+
+# Operational Source
+
+source_type
+
+ENUM
+
+Allowed values:
+
+- MSP
+- VO
+
+Required.
+
+Immutable after Activity creation.
+
 ---
 
 task_id
 
 UUID
 
-FK
+FK to Task Schema.
 
-Required.
+Nullable globally; REQUIRED when source_type = MSP.
 
-References
+Must be NULL when source_type = VO.
 
-Task Schema
+---
+
+vo_item_id
+
+UUID
+
+FK to VO Item / VO Register operational item.
+
+Nullable globally; REQUIRED when source_type = VO.
+
+Must be NULL when source_type = MSP.
+
+---
+
+# Exclusive Source Constraint
+
+Exactly one source reference shall exist:
+
+```text
+(task_id IS NOT NULL) XOR (vo_item_id IS NOT NULL)
+```
+
+Equivalent rules:
+
+```text
+source_type = MSP => task_id IS NOT NULL AND vo_item_id IS NULL
+source_type = VO  => task_id IS NULL AND vo_item_id IS NOT NULL
+```
+
+An Activity shall never reference both sources and shall never exist without a source.
+
+Historical source identity is immutable. A VO-sourced Activity remains VO-sourced even if that scope is later incorporated into a subsequent authorised MSP / Programme Revision.
 
 ---
 
@@ -90,9 +137,7 @@ Generated once.
 
 Never changes.
 
-Carry Forward preserves this UID.
-
-Resume preserves this UID.
+Carry Forward and Resume preserve this UID while the Activity remains valid under the active operational revision.
 
 ---
 
@@ -102,9 +147,9 @@ ahi
 
 VARCHAR(100)
 
-MSP Outline Number.
+For MSP source: MSP Outline Number / search context.
 
-Displayed by SearchPicker.
+For VO source: optional operational grouping/context; must not impersonate an MSP UID or Task identity.
 
 ---
 
@@ -122,9 +167,11 @@ subtask
 
 VARCHAR(100)
 
-MSP Work Package.
+Required operational display/work item name.
 
-Required.
+For MSP source this represents the selected actual subtask/work package.
+
+For VO source this represents the registered VO line item/sub-item used for Site Diary entry.
 
 ---
 
@@ -186,15 +233,13 @@ Completed
 
 State transitions
 
+```text
 New
-
-↓
-
+ ↓
 In Progress
-
-↓
-
+ ↓
 Completed
+```
 
 Completed is terminal.
 
@@ -264,25 +309,33 @@ Activity
 
 1 → Many Audit Records
 
+Activity
+
+Exactly 1 operational source → Task OR VO Item
+
 ---
 
 # Business Rules
 
-Activity belongs to exactly one Task.
-
 Activity belongs to exactly one Programme Revision.
 
-Task cannot be changed after Activity creation.
+Activity belongs to exactly one operational source: MSP Task OR VO Item, never both.
+
+Source identity cannot be changed after Activity creation.
+
+Task cannot be changed after MSP-sourced Activity creation.
+
+VO Item cannot be changed after VO-sourced Activity creation.
 
 Resume shall reuse the same Activity.
-
-Carry Forward preserves Activity identity.
 
 Completed Activities become read-only.
 
 Completed Activities cannot be resumed.
 
-Operational execution never modifies Task.
+Operational execution never modifies Task or rewrites VO history.
+
+Authorisation of a new Programme Revision starts a new operational cycle. Historical Activities remain archived under their original Revision and source identity; no silent cross-revision migration occurs.
 
 ---
 
@@ -296,9 +349,17 @@ revision_id
 
 NOT NULL
 
-task_id
+source_type
 
 NOT NULL
+
+task_id
+
+NULLABLE subject to exclusive source CHECK
+
+vo_item_id
+
+NULLABLE subject to exclusive source CHECK
 
 activity_uid
 
@@ -322,6 +383,18 @@ NOT NULL
 
 ---
 
+# Required CHECK Constraint
+
+```sql
+CHECK (
+  (source_type = 'MSP' AND task_id IS NOT NULL AND vo_item_id IS NULL)
+  OR
+  (source_type = 'VO' AND task_id IS NULL AND vo_item_id IS NOT NULL)
+)
+```
+
+---
+
 # Indexes
 
 PK
@@ -339,6 +412,14 @@ programme_id
 revision_id
 
 status
+
+Index
+
+task_id
+
+Index
+
+vo_item_id
 
 Composite
 
@@ -388,7 +469,7 @@ Archive only
 
 ---
 
-# UI Mapping (page.tsx)
+# UI Mapping
 
 activity_date
 
@@ -398,13 +479,25 @@ actual_start_date
 
 → Actual Start Date
 
+source_type
+
+→ MSP / VO source mode
+
+task_id
+
+→ MSP Task Picker result when source_type = MSP
+
+vo_item_id
+
+→ VO Item Picker result when source_type = VO
+
 ahi
 
-→ Building / AHI Picker
+→ MSP/context display where applicable
 
 subtask
 
-→ Work Package Picker
+→ Actual work item / VO line item
 
 weather
 
@@ -424,27 +517,9 @@ submitted_by
 
 ---
 
-# Future Extensions
-
-GPS Location
-
-Photo Attachments
-
-Equipment Used
-
-Delay Reason
-
-Risk Category
-
-Productivity Metrics
-
-AI Recommendation
-
-Digital Signature
-
----
-
 # Related Documents
+
+DM-005 Activity
 
 AE-001 Activity Engine
 
@@ -467,3 +542,13 @@ AE-009 State Machine
 DB-013 Task Schema
 
 DB-015 Site Diary Schema
+
+BR-016 APK / Variation Order
+
+---
+
+# Amendment Authority
+
+This amendment replaces the legacy assumption that `task_id` is mandatory for every Activity. The locked rule is:
+
+> Activity has exactly one operational source. It shall reference either one MSP Task or one VO Item, never both. Programme and Programme Revision ownership remain mandatory regardless of source. Historical source identity is immutable.

@@ -1,6 +1,6 @@
 import { A26ReadRepository } from '@/repositories/A26ReadRepository';
 import { IA26ReadRepository } from '@/repositories/IA26ReadRepository';
-import { ActivityStatus, ActivityWeather } from '@/types/activity';
+import { ActivityStatus, ActivityWeather, ActivitySourceType } from '@/types/activity';
 import { Task } from '@/types/task';
 
 export const DEFAULT_PROGRAMME_ID = '0651e125-3ef4-47c4-a3fa-8aec49bdf979';
@@ -16,11 +16,18 @@ export interface ProjectSummaryProjection {
 export interface DailyReportProjection {
   readonly id: string; readonly site_diary_id: string; readonly project_id: string;
   readonly programme_id: string; readonly revision_id: string; readonly activity_id: string;
-  readonly activityId: string;
-  readonly weather: string | null; readonly actual_start_date: string | null; readonly ahi: string;
+  readonly activityId: string; readonly source_type: 'MSP' | 'VO';
+  readonly task_id: string | null; readonly wbs: string; readonly task_name: string;
+  readonly is_critical: boolean;
+  readonly weather: string | null; readonly weather_condition: string | null;
+  readonly rain_start_time: string | null; readonly rain_end_time: string | null;
+  readonly actual_start_date: string | null; readonly ahi: string;
   readonly ahi_name: string; readonly ahi_display_name: string; readonly subtask: string;
   readonly subtask_name: string; readonly subtask_display_name: string; readonly work_status: string;
-  readonly activity_date: string; readonly manpower: unknown[]; readonly notes: string;
+  readonly activity_date: string; readonly location: string;
+  readonly work_start_time: string | null; readonly work_end_time: string | null;
+  readonly contractor_scope: 'CONTRACTOR' | 'NSC';
+  readonly manpower: unknown[]; readonly notes: string;
   readonly created_at: string; readonly submitted_by: string; readonly updated_at: string | null;
 }
 
@@ -78,35 +85,50 @@ export class A26QueryService {
 
     const programmeIds = [...new Set(diaries.map((d) => d.programme_id))];
     const programmeMap = new Map<string, string>();
-    await Promise.all(
-      programmeIds.map(async (progId) => {
-        const programme = await this.repository.findProgramme(progId);
-        if (programme?.currentRevisionId) {
-          programmeMap.set(progId, programme.currentRevisionId);
-        }
-      })
-    );
+    const taskMaps = new Map<string, Map<string, Task>>();
+    await Promise.all(programmeIds.map(async (progId) => {
+      const programme = await this.repository.findProgramme(progId);
+      if (!programme?.currentRevisionId) return;
+      programmeMap.set(progId, programme.currentRevisionId);
+      const tasks = await this.repository.findTasksByRevision(programme.currentRevisionId);
+      taskMaps.set(programme.currentRevisionId, new Map(tasks.map((task) => [task.task_id, task])));
+    }));
 
     const activities = await this.repository.findActivitiesByIds([...new Set(diaries.map((d) => d.activity_id))]);
     const activityMap = new Map(activities.map((activity) => [activity.activity_id, activity]));
+
     return diaries.flatMap((diary) => {
       const currentRevisionId = programmeMap.get(diary.programme_id);
       if (!currentRevisionId || diary.revision_id !== currentRevisionId) return [];
       const activity = activityMap.get(diary.activity_id);
       if (!activity || activity.revision_id !== currentRevisionId) return [];
+      const task = activity.task_id ? taskMaps.get(currentRevisionId)?.get(activity.task_id) : undefined;
       const ahi = activity.ahi ?? '';
       const ahiName = activity.ahi_display_name ?? ahi;
       const subtaskName = activity.subtask_display_name ?? activity.subtask;
-      return [{ id: diary.site_diary_id, site_diary_id: diary.site_diary_id,
+      const printContext = diary.print_context ?? null;
+      const sourceType = activity.source_type === ActivitySourceType.VO ? 'VO' : 'MSP';
+      const wbs = sourceType === 'VO' ? 'VO' : (task ? taskWbs(task) ?? '' : '');
+      const taskName = task?.task_name ?? subtaskName;
+
+      return [{
+        id: diary.site_diary_id, site_diary_id: diary.site_diary_id,
         project_id: diary.programme_id, programme_id: diary.programme_id,
-        revision_id: diary.revision_id, activity_id: diary.activity_id,
-        activityId: diary.activity_id,
-        weather: legacyWeather(diary.weather), actual_start_date: activity.actual_start_date,
+        revision_id: diary.revision_id, activity_id: diary.activity_id, activityId: diary.activity_id,
+        source_type: sourceType, task_id: activity.task_id ?? null, wbs, task_name: taskName,
+        is_critical: task?.is_critical ?? false,
+        weather: legacyWeather(diary.weather), weather_condition: printContext?.weather_condition ?? null,
+        rain_start_time: printContext?.rain_start_time ?? null, rain_end_time: printContext?.rain_end_time ?? null,
+        actual_start_date: activity.actual_start_date,
         ahi, ahi_name: ahiName, ahi_display_name: ahiName, subtask: activity.subtask,
         subtask_name: subtaskName, subtask_display_name: subtaskName,
         work_status: legacyStatus(diary.status), activity_date: diary.activity_date,
+        location: printContext?.location ?? '', work_start_time: printContext?.work_start_time ?? null,
+        work_end_time: printContext?.work_end_time ?? null,
+        contractor_scope: printContext?.contractor_scope ?? 'CONTRACTOR',
         manpower: diary.manpower ?? [], notes: diary.notes, created_at: diary.submitted_at,
-        submitted_by: diary.submitted_by, updated_at: diary.updated_at }];
+        submitted_by: diary.submitted_by, updated_at: diary.updated_at,
+      }];
     });
   }
 }

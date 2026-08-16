@@ -55,11 +55,23 @@ export class ResidualAtomicRepository {
   }
 
   createSiteDiary(payload: Record<string, unknown>, actorId: string): Promise<SiteDiary> {
-    return this.rpc('a27_create_site_diary_atomic', { p_payload: payload, p_actor_id: actorId, p_site_diary_id: generateUuid(), p_log_id: generateUuid(), p_audit_id: generateUuid() });
+    return this.rpc('f1_create_site_diary_full_atomic', {
+      p_payload: payload,
+      p_actor_id: actorId,
+      p_site_diary_id: generateUuid(),
+      p_log_id: generateUuid(),
+      p_audit_id: generateUuid(),
+    });
   }
 
   updateSiteDiary(siteDiaryId: string, payload: Record<string, unknown>, actorId: string): Promise<SiteDiary> {
-    return this.rpc('a27_update_site_diary_atomic', { p_site_diary_id: siteDiaryId, p_payload: payload, p_actor_id: actorId, p_log_id: generateUuid(), p_audit_id: generateUuid() });
+    return this.rpc('f1_update_site_diary_full_atomic', {
+      p_site_diary_id: siteDiaryId,
+      p_payload: payload,
+      p_actor_id: actorId,
+      p_log_id: generateUuid(),
+      p_audit_id: generateUuid(),
+    });
   }
 
   archiveProgramme(programmeId: string, actorId: string): Promise<Programme> {

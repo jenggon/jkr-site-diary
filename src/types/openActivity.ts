@@ -1,29 +1,23 @@
-import { Activity, ActivityStatus } from './activity';
+import { Activity, ActivitySourceType, ActivityStatus } from './activity';
 
-// Re-export the canonical ActivityStatus so consumers don't break if they import it from here.
 export { ActivityStatus };
 
-/**
- * OpenActivity acts as a domain concept alias for the canonical DB-014 Activity.
- * It is NOT a separate persistence entity.
- */
 export type OpenActivity = Activity;
 
-/**
- * OpenActivityDto is the API projection aggregate.
- * It strictly projects the canonical physical state without claiming fake administrative states.
- */
 export interface OpenActivityDto {
   readonly activityId: string;
   readonly programmeId: string;
   readonly revisionId?: string | undefined;
+  /** Persistence requires this; optional here preserves pre-F1 test/projection fixtures. */
+  readonly sourceType?: ActivitySourceType | undefined;
   readonly taskId?: string | undefined;
+  readonly voItemId?: string | undefined;
   readonly ahi: string | null;
   readonly ahiDisplayName: string | null;
   readonly subtask: string;
   readonly subtaskDisplayName: string | null;
   readonly status: ActivityStatus;
-  readonly isLocked: boolean; // Derived projection
+  readonly isLocked: boolean;
   readonly createdAt: string;
   readonly createdBy: string;
   readonly updatedAt?: string | undefined;
