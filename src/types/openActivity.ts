@@ -8,7 +8,8 @@ export interface OpenActivityDto {
   readonly activityId: string;
   readonly programmeId: string;
   readonly revisionId?: string | undefined;
-  readonly sourceType: ActivitySourceType;
+  /** Persistence requires this; optional here preserves pre-F1 test/projection fixtures. */
+  readonly sourceType?: ActivitySourceType | undefined;
   readonly taskId?: string | undefined;
   readonly voItemId?: string | undefined;
   readonly ahi: string | null;
