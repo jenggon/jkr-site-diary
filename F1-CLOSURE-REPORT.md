@@ -39,7 +39,7 @@ F1 remained subject to the unified gate:
 
 `frozen lockfile -> typecheck -> API-inclusive typecheck -> lint -> tests -> build`.
 
-Final feature-head CI run **#131** passed at `54a957438966e809b66a5aeb0f82218a2c3fefd2`.
+Latest feature-head CI run **#132** passed at `d6f7cd98dd113c401341491e3d35b7946641a46f`.
 
 ## Deferred to Later Phases / UAT
 
