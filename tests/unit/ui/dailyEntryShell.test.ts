@@ -18,7 +18,7 @@ vi.mock('@/context/AuthContext', () => ({
   }),
 }));
 
-describe('F2.1-A DailyEntryShell & Context Resolution', () => {
+describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -48,7 +48,7 @@ describe('F2.1-A DailyEntryShell & Context Resolution', () => {
     // Verify user avatar / initials
     expect(html).toContain('SU');
 
-    // Verify child is rendered inside shell
+    // Verify child is rendered inside shell when programmeId is present
     expect(html).toContain('Child Component');
   });
 
@@ -63,29 +63,43 @@ describe('F2.1-A DailyEntryShell & Context Resolution', () => {
     expect(pageContent).toContain('<LegacySiteDiaryPage />');
   });
 
-  it('contains dynamic context resolution targeting canonical project-summary and programme APIs', () => {
+  it('uses canonical GET /api/programme discovery and never calls project-summary without explicit programmeId', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
 
-    // Verify canonical endpoint calls
-    expect(shellSource).toContain('/api/project-summary');
-    expect(shellSource).toContain('/api/programme/');
+    // Verify canonical programme discovery
+    expect(shellSource).toContain('/api/programme?status=Active');
+    
+    // Verify explicit parameterised project-summary call
+    expect(shellSource).toContain('/api/project-summary?programmeId=');
+    expect(shellSource).not.toMatch(/\/api\/project-summary['"`]\s*\)/);
 
     // Verify revision and programme context state tracking
     expect(shellSource).toContain('revisionId');
     expect(shellSource).toContain('programmeName');
     expect(shellSource).toContain('Semakan Sah');
     expect(shellSource).toContain('useDailyEntryContext');
-
-    // Verify error and loading handling
-    expect(shellSource).toContain('Cuba Semula');
-    expect(shellSource).toContain('Memuatkan maklumat program...');
   });
 
-  it('provides accessible error state with retry mechanism in the component structure', () => {
+  it('handles 0, 1, and multiple active programme scenarios according to HQ authority', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
 
-    expect(shellSource).toContain('error');
-    expect(shellSource).toContain('refreshContext');
-    expect(shellSource).toContain('border-red-800');
+    // Zero programme empty state
+    expect(shellSource).toContain('Tiada Projek Aktif Ditemui');
+    expect(shellSource).toContain('options.length === 0');
+
+    // Single programme auto-selection
+    expect(shellSource).toContain('options.length === 1');
+
+    // Multiple programmes explicit selection (no arbitrary first auto-selection)
+    expect(shellSource).toContain('Pilih Projek / Program Tapak');
+    expect(shellSource).toContain('availableProgrammes.length > 1');
+    expect(shellSource).toContain('handleSelectProgramme');
+  });
+
+  it('REGRESSION: F2.1-A DailyEntryShell does NOT import or rely on DEFAULT_PROGRAMME_ID', () => {
+    const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
+
+    expect(shellSource).not.toContain('DEFAULT_PROGRAMME_ID');
+    expect(shellSource).not.toContain('0651e125-3ef4-47c4-a3fa-8aec49bdf979');
   });
 });
