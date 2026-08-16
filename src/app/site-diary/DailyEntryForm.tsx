@@ -362,6 +362,20 @@ export default function DailyEntryForm({
     }
   }, []);
 
+  // Clear stale transient source and states if Programme changes while not in edit mode
+  const prevProgrammeIdRef = useRef<string | null>(programmeId);
+  useEffect(() => {
+    if (prevProgrammeIdRef.current !== null && prevProgrammeIdRef.current !== programmeId) {
+      if (!editingSiteDiaryId) {
+        setSelectedSource(null);
+        setFormError(null);
+        setFormSuccess(null);
+        setSavedDiaryId(null);
+      }
+    }
+    prevProgrammeIdRef.current = programmeId;
+  }, [programmeId, editingSiteDiaryId]);
+
   useEffect(() => {
     if (initialSiteDiaryId) {
       setEditingSiteDiaryId(initialSiteDiaryId);
