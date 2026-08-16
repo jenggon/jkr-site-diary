@@ -1,12 +1,12 @@
 'use client';
 
-import F1GoldenPathBridge from './F1GoldenPathBridge';
-import LegacySiteDiaryPage from './LegacySiteDiaryPage';
+import DailyEntryShell from './DailyEntryShell';
+import DailyEntryForm from './DailyEntryForm';
 
 export default function SiteDiaryPage() {
   return (
-    <F1GoldenPathBridge>
-      <LegacySiteDiaryPage />
-    </F1GoldenPathBridge>
+    <DailyEntryShell>
+      <DailyEntryForm />
+    </DailyEntryShell>
   );
 }
