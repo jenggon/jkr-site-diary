@@ -3,7 +3,7 @@ import { BaseAppError, UnknownError, InfrastructureError } from '@/lib/errors';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
 import { generateUuid } from '@/lib/uuid';
-import { Activity, ActivityStatus } from '@/types/activity';
+import { Activity, ActivitySourceType, ActivityStatus } from '@/types/activity';
 import { OpenActivityDto } from '@/types/openActivity';
 import { ActivityNotFoundError, ActivityValidationError, ActivityRevisionSupersededError, InvalidActivityStateError } from '@/errors/activityErrors';
 import { validateActivityStateTransition } from '@/statemachines/siteDiaryStateMachine';
@@ -50,31 +50,30 @@ export class OpenActivityService implements IOpenActivityService {
     this.clock = deps.clock;
     this.logger = deps.logger;
     this.eventPublisher = deps.eventPublisher;
-    if (deps.revisionRepository !== undefined) {
-      this.revisionRepo = deps.revisionRepository;
-    }
-    if (deps.taskRepository !== undefined) {
-      this.taskRepo = deps.taskRepository;
-    }
+    if (deps.revisionRepository !== undefined) this.revisionRepo = deps.revisionRepository;
+    if (deps.taskRepository !== undefined) this.taskRepo = deps.taskRepository;
     this.atomicRepo = deps.atomicRepository;
   }
 
   private mapToDto(activity: Activity): OpenActivityDto {
+    const sourceType = activity.source_type ?? ActivitySourceType.MSP;
     return {
       activityId: activity.activity_id,
       programmeId: activity.programme_id,
       revisionId: activity.revision_id,
-      taskId: activity.task_id,
+      sourceType,
+      taskId: activity.task_id ?? undefined,
+      voItemId: activity.vo_item_id ?? undefined,
       ahi: activity.ahi,
       ahiDisplayName: activity.ahi_display_name,
       subtask: activity.subtask,
       subtaskDisplayName: activity.subtask_display_name,
       status: activity.status,
-      isLocked: false, // Derived projection
+      isLocked: false,
       createdAt: activity.created_at,
       createdBy: activity.submitted_by,
       updatedAt: activity.updated_at ?? undefined,
-      updatedBy: activity.updated_at ? activity.submitted_by : undefined, // Simplification for projection
+      updatedBy: activity.updated_at ? activity.submitted_by : undefined,
     };
   }
 
@@ -86,23 +85,16 @@ export class OpenActivityService implements IOpenActivityService {
     }
   }
 
-  private async assertRevisionOperational(
-    activity: Activity
-  ): Promise<Result<null, BaseAppError> | null> {
-    if (!this.revisionRepo) return null;
-    if (!activity.revision_id) return null;
-    
+  private async assertRevisionOperational(activity: Activity): Promise<Result<null, BaseAppError> | null> {
+    if (!this.revisionRepo || !activity.revision_id) return null;
     const revRes = await this.revisionRepo.findById(activity.revision_id);
     if (isFailure(revRes)) return revRes as unknown as Result<null, BaseAppError>;
-    
     const revision = revRes.value;
     if (!revision || revision.status !== 'Approved' || !revision.isCurrent) {
       const status = revision ? revision.status : 'missing';
-      return Failure(
-        new ActivityRevisionSupersededError(
-          `Activity revision '${activity.revision_id}' is no longer operationally current (status: ${status}). Mutation rejected.`
-        )
-      );
+      return Failure(new ActivityRevisionSupersededError(
+        `Activity revision '${activity.revision_id}' is no longer operationally current (status: ${status}). Mutation rejected.`
+      ));
     }
     return null;
   }
@@ -130,17 +122,30 @@ export class OpenActivityService implements IOpenActivityService {
       }
     }
 
-    if (!cmd.taskId || cmd.taskId.trim() === '') {
-      return Failure(new ActivityValidationError('taskId is required'));
-    }
+    const sourceType = cmd.sourceType ?? ActivitySourceType.MSP;
+    const taskId = cmd.taskId?.trim() || undefined;
+    const voItemId = cmd.voItemId?.trim() || undefined;
 
-    if (this.taskRepo) {
-      const task = await this.taskRepo.getTaskById(cmd.taskId);
-      if (!task) return Failure(new ActivityValidationError(`Task not found: ${cmd.taskId}`));
+    if (sourceType === ActivitySourceType.MSP) {
+      if (!taskId || voItemId) {
+        return Failure(new ActivityValidationError('MSP Activity requires taskId and forbids voItemId'));
+      }
+      if (!this.taskRepo) {
+        return Failure(new ActivityValidationError('taskRepository is required in composition for MSP Activity provisioning'));
+      }
+      const task = await this.taskRepo.getTaskById(taskId);
+      if (!task) return Failure(new ActivityValidationError(`Task not found: ${taskId}`));
       if (task.revision_id !== cmd.revisionId) return Failure(new ActivityValidationError('task/revision mismatch'));
       if (task.programme_id !== cmd.programmeId) return Failure(new ActivityValidationError('programme/task mismatch'));
+    } else if (sourceType === ActivitySourceType.VO) {
+      if (!voItemId || taskId) {
+        return Failure(new ActivityValidationError('VO Activity requires voItemId and forbids taskId'));
+      }
+      if (!this.atomicRepo) {
+        return Failure(new ActivityValidationError('VO Activity provisioning requires canonical atomic persistence'));
+      }
     } else {
-      return Failure(new ActivityValidationError('taskRepository is required in composition for Activity provisioning'));
+      return Failure(new ActivityValidationError('Unsupported Activity source type'));
     }
 
     const now = this.clock.nowIso();
@@ -151,7 +156,9 @@ export class OpenActivityService implements IOpenActivityService {
         activity_id: activityId,
         programme_id: cmd.programmeId,
         revision_id: cmd.revisionId,
-        task_id: cmd.taskId,
+        source_type: sourceType,
+        task_id: taskId ?? null,
+        vo_item_id: voItemId ?? null,
         activity_uid: `ACT-${activityId.substring(0, 8)}`,
         ahi: null,
         ahi_display_name: null,
@@ -186,10 +193,8 @@ export class OpenActivityService implements IOpenActivityService {
       const txResult = await this.txManager.execute(async () => {
         const createRes = await this.activityRepo.create(newActivity);
         if (isFailure(createRes)) return createRes;
-
         const logRes = await this.logRepo.appendLog(logEntry);
         if (isFailure(logRes)) return logRes;
-
         return Success(createRes.value);
       });
 
@@ -246,10 +251,8 @@ export class OpenActivityService implements IOpenActivityService {
       const txResult = await this.txManager.execute(async () => {
         const updateRes = await this.activityRepo.update(updatedActivity);
         if (isFailure(updateRes)) return updateRes;
-
         const logRes = await this.logRepo.appendLog(logEntry);
         if (isFailure(logRes)) return logRes;
-
         return Success(updateRes.value);
       });
 
@@ -270,11 +273,10 @@ export class OpenActivityService implements IOpenActivityService {
 
     try {
       if (!this.activityRepo.findOpenActivitiesByProgramme) {
-         return Failure(new InfrastructureError('ActivityRepository does not support findOpenActivitiesByProgramme'));
+        return Failure(new InfrastructureError('ActivityRepository does not support findOpenActivitiesByProgramme'));
       }
       const res = await this.activityRepo.findOpenActivitiesByProgramme(programmeId);
       if (isFailure(res)) return Failure(res.error);
-
       return Success(res.value.map(activity => this.mapToDto(activity)));
     } catch (err: unknown) {
       return Failure(new UnknownError(err instanceof Error ? err.message : 'Failed to get open activities', { cause: err }));
@@ -299,12 +301,7 @@ export class OpenActivityService implements IOpenActivityService {
       validateActivityStateTransition(fromStatus, targetStatus);
 
       const now = this.clock.nowIso();
-      const updatedActivity: Activity = {
-        ...existingRes.value,
-        status: targetStatus,
-        updated_at: now,
-      };
-
+      const updatedActivity: Activity = { ...existingRes.value, status: targetStatus, updated_at: now };
       const logEntry: ActivityLogEntry = {
         logId: generateUuid(),
         activityId,
@@ -317,10 +314,8 @@ export class OpenActivityService implements IOpenActivityService {
       const txResult = await this.txManager.execute(async () => {
         const updateRes = await this.activityRepo.update(updatedActivity);
         if (isFailure(updateRes)) return updateRes;
-
         const logRes = await this.logRepo.appendLog(logEntry);
         if (isFailure(logRes)) return logRes;
-
         return Success(updateRes.value);
       });
 
@@ -345,7 +340,9 @@ export class OpenActivityService implements IOpenActivityService {
         const updated = await this.atomicRepo.transitionActivity(activityId, 'start', actorId);
         await this.publishEventSafely(new ActivityStatusChangedEvent(activityId, existingRes.value.status, ActivityStatus.InProgress, actorId));
         return Success(this.mapToDto(updated));
-      } catch (err) { return Failure(new UnknownError(err instanceof Error ? err.message : 'Status transition failed', { cause: err })); }
+      } catch (err) {
+        return Failure(new UnknownError(err instanceof Error ? err.message : 'Status transition failed', { cause: err }));
+      }
     }
     return this.transitionStatusWithLog(activityId, ActivityStatus.InProgress, actorId);
   }
@@ -356,8 +353,11 @@ export class OpenActivityService implements IOpenActivityService {
 
   public async completeActivity(activityId: string, actorId: string): Promise<Result<OpenActivityDto, BaseAppError>> {
     if (this.atomicRepo) {
-      try { return Success(this.mapToDto(await this.atomicRepo.transitionActivity(activityId, 'complete', actorId))); }
-      catch (err) { return Failure(new UnknownError(err instanceof Error ? err.message : 'Status transition failed', { cause: err })); }
+      try {
+        return Success(this.mapToDto(await this.atomicRepo.transitionActivity(activityId, 'complete', actorId)));
+      } catch (err) {
+        return Failure(new UnknownError(err instanceof Error ? err.message : 'Status transition failed', { cause: err }));
+      }
     }
     return this.transitionStatusWithLog(activityId, ActivityStatus.Completed, actorId);
   }
