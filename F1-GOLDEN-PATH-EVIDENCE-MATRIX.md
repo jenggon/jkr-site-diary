@@ -10,7 +10,7 @@ This matrix records repository-backed proof against the F1 Golden Path scenario 
 | 1 | Programme + active revision context | `ProgrammeService`, Programme Revision API/integration tests, Site Diary service requires Approved + current revision | PROVEN / strengthening | retain existing rules; include in final closure evidence |
 | 2 | Task identity bound to active MSP revision | Task projections derive from current Programme revision; Activity provisioning validates task/revision/programme linkage before persistence | PROVEN | retain; no semantic change |
 | 3 | New Activity traceability | Activity service/repository persists programme/revision/task identity and append-only history | PROVEN | retain; no semantic change |
-| 4 | Same-day start and finish | A27 DB-INVARIANT Activity start sets `actual_start_date=current_date`; immediate complete sets `completed_date=current_date`; transition remains New -> In Progress -> Completed | PROVEN AT DB BOUNDARY | retain; include same-day scenario in final product/UAT evidence |
+| 4 | Same-day start and finish | A27 DB-INVARIANT Activity start sets `actual_start_date=current_date`; immediate complete sets `completed_date=current_date`; transition remains New -> In Progress -> Completed | PROVEN AT DB BOUNDARY / UI GAP | current first-entry UI order can attempt direct New -> Completed; repair noted in F1-D03 |
 | 5 | Multi-day Continue Yesterday | `SiteDiaryService.continueYesterday()` rejects Completed activities, rejects non-current/superseded revision, prevents duplicate activity/date Diary, resets weather/notes and carries allowed context; carry-forward API exists | PROVEN / strengthening | retain and include in final golden-path scenario evidence |
 | 6 | Workforce capture | Workforce API exists; A27 authenticated DB-INVARIANT wrapper validates Site Diary/Programme/Revision/Activity/Trade linkage, derives totals and writes Audit atomically | PROVEN AT DB/API BOUNDARY | product UI integration remains under proof; manual Trade creation defect noted below |
 | 7 | Progress capture | A27 Step 4 real DB verification proves authenticated Progress POST, actor binding, cumulative bounds, completion derivation, rollback and Audit/Activity-log atomicity | PROVEN AT DB/API BOUNDARY | product UI integration remains under proof |
@@ -32,11 +32,25 @@ This matrix records repository-backed proof against the F1 Golden Path scenario 
 
 ### F1-D02 — Manual Trade creation path
 
-**Finding:** The UI directly inserts a new manual Trade into `trade_library`, but A27 intentionally revokes authenticated direct table mutation. The existing Trade Library POST service also returns a synthetic record rather than persisting it. The locked product requirement says a user-created Trade is recorded in Trade Master.
+**Finding:** The UI directly inserts a new manual Trade into `trade_library`, but A27 intentionally revokes authenticated direct table mutation. The pre-F1 Trade Library service also returned a synthetic record rather than persisting it. The locked product requirement says a user-created Trade is recorded in Trade Master.
 
-**Status:** CONFIRMED GOLDEN-PATH DEFECT — remediation required without weakening A27 mutation boundaries.
+**Remediation implemented so far:** F1 adds exact `f1_create_trade_atomic(text,text)` DB wrapper with `auth.uid()` actor binding and reasserted direct-mutation revocation. `POST /api/trade-library` now uses the verified bearer client and the exact RPC; a focused API test proves token/RPC behavior.
 
-**Required treatment:** Replace the direct browser table mutation with a verified API/DB-INVARIANT creation path. Do not restore broad authenticated INSERT grants to `trade_library`.
+**Remaining:** replace the Site Diary screen's legacy direct `supabase.from('trade_library').insert(...)` call with the canonical POST API.
+
+**Status:** PARTIALLY REMEDIATED — pending UI cutover + CI.
+
+### F1-D03 — First-entry lifecycle / Known Start Date
+
+**Finding:** The current Site Diary screen creates the Site Diary record before applying Activity lifecycle transitions. For a newly created Activity marked `Siap`, it then calls Complete directly while the Activity is still `New`; the sealed DB invariant only allows `New -> In Progress -> Completed`, so same-day completion can fail. For a newly initialized `Sedang Laksana`/`Siap` activity, the screen requires `actualStartDate` but never sends that value to the canonical Activity start path. The DB start wrapper currently derives `actual_start_date=current_date`, so the locked Known Start Date requirement is not fulfilled by the real UI path.
+
+**Locked semantics to preserve:**
+- first execution records Actual Start once;
+- Ongoing/Completed Today first initialization may use the user-supplied Known Start Date;
+- Initialization Date itself is not automatically Actual Start;
+- same-day start + finish is legal and must traverse the valid lifecycle without duplicate questions or illegal state jumps.
+
+**Status:** CONFIRMED GOLDEN-PATH DEFECT — implementation remediation required; no new Product Owner decision needed.
 
 ## Confirmed Revision-Cycle Rule
 
@@ -50,13 +64,14 @@ Operational behaviour follows the later sealed architecture:
 
 ## Current F1 Priority Order
 
-1. CI-prove F1-D01 bearer propagation.
-2. Repair F1-D02 manual Trade creation without weakening A27.
-3. Confirm canonical Workforce/Progress/Approval UI integration.
-4. Confirm VO implementation status against locked specification.
-5. Confirm printable output implementation status.
-6. Repair only genuine implementation gaps needed for the locked golden path.
-7. Run unified verification and CI before PR/merge.
+1. CI-prove F1-D01 bearer propagation and current bounded changes.
+2. Complete F1-D02 UI cutover without weakening A27.
+3. Repair F1-D03 first-entry lifecycle and Known Start Date semantics.
+4. Confirm canonical Workforce/Progress/Approval UI integration.
+5. Confirm VO implementation status against locked specification.
+6. Confirm printable output implementation status.
+7. Repair only genuine implementation gaps needed for the locked golden path.
+8. Run unified verification and CI before PR/merge.
 
 ## Wall Policy
 
