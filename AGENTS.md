@@ -113,3 +113,34 @@ site_diary_logs
 Never reverse this relationship.
 
 Architecture is LOCKED (Subordinate to REM-007 and DB-014/DB-015 Specifications).
+
+---
+
+# CI-HARDEN-001 — MANDATORY ENGINEERING GATE
+
+The repository uses a mandatory preflight contract for implementation agents.
+
+Before any implementation change is considered commit-ready, push-ready, PR-ready, or merge-ready, run:
+
+```bash
+pnpm run verify
+```
+
+`pnpm run verify` must pass completely. A failing preflight means the implementation is NOT complete and must not be pushed or presented as ready for merge.
+
+The verification contract includes:
+
+1. frozen lockfile consistency;
+2. standard TypeScript validation;
+3. API-inclusive TypeScript validation;
+4. lint;
+5. full automated test suite;
+6. production build.
+
+If `package.json` dependencies or devDependencies change, `pnpm-lock.yaml` must be regenerated/synchronised and committed in the same change. Never bypass this rule with `--no-frozen-lockfile` in CI.
+
+Implementation work must use a feature/fix/chore branch and a Pull Request into `develop`. Required CI checks must be green before merge. Direct implementation pushes to `develop` are prohibited for agents.
+
+`develop` is the always-green forward-development baseline. `main` receives only accepted green release states.
+
+This CI governance rule does not authorise architecture, business-rule, Site Diary output, or domain-semantics changes.
