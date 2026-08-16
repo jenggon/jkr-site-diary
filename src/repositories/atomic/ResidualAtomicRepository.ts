@@ -55,10 +55,6 @@ export class ResidualAtomicRepository {
   }
 
   createSiteDiary(payload: Record<string, unknown>, actorId: string): Promise<SiteDiary> {
-    return this.rpc('a27_create_site_diary_atomic', { p_payload: payload, p_actor_id: actorId, p_site_diary_id: generateUuid(), p_log_id: generateUuid(), p_audit_id: generateUuid() });
-  }
-
-  createSiteDiaryWithWorkforce(payload: Record<string, unknown>, actorId: string): Promise<SiteDiary> {
     return this.rpc('f1_create_site_diary_with_workforce_atomic', {
       p_payload: payload,
       p_actor_id: actorId,
