@@ -39,8 +39,7 @@ F1 remained subject to the unified gate:
 
 `frozen lockfile -> typecheck -> API-inclusive typecheck -> lint -> tests -> build`.
 
-- Closure-contract gate: run #127 — SUCCESS at `3aed58fbbf8863a6e11854724078d9e1ee0b5363`.
-- Final feature-branch gate: run #129 — SUCCESS at `34fca1bf3c72a54eb6f24bd821224f4615322ad7`.
+Final feature-head CI run **#131** passed at `54a957438966e809b66a5aeb0f82218a2c3fefd2`.
 
 ## Deferred to Later Phases / UAT
 
