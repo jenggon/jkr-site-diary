@@ -1,7 +1,7 @@
 # F1 — Golden Path Evidence Matrix
 
 ## Status
-CLOSURE CANDIDATE — ALL MANDATORY SCENARIO FAMILIES PROVEN
+CLOSED CANDIDATE — ALL MANDATORY SCENARIO FAMILIES PROVEN; FEATURE CI GREEN
 
 F1 proves the governed product path from authorised Programme/MSP context through daily Site Diary operation and locked printable output. It does not reopen A01–A27 architecture. The only architecture amendment made during F1 is ADR-F1-001, explicitly authorised by the Product Owner: an Activity has exactly one immutable operational source, MSP Task XOR VO Item, while Programme and Programme Revision ownership remain mandatory.
 
@@ -37,7 +37,7 @@ The F1 closure contract test protects the final cross-cutting invariants:
 3. Continue Yesterday current-revision and duplicate-safe behavior;
 4. full atomic Site Diary + Workforce + printable-context mutation path.
 
-CI-HARDEN-001 run **#127** passed at commit `3aed58fbbf8863a6e11854724078d9e1ee0b5363` after the closure proof was aligned with the final full atomic wrappers.
+CI-HARDEN-001 final feature-head run **#130** passed at commit `da2ed1490ee79aeb2cc8b50ef16c62e37a75c4ff`.
 
 ## Revision-Cycle Rule — Sealed
 
@@ -53,4 +53,4 @@ F1 establishes engineering/product-path proof. Real field judgement over usabili
 
 ## F1 Exit Assessment
 
-All twelve mandatory scenario families are PROVEN at their required F1 boundary. No unresolved F1 Product Owner decision wall remains. Final branch verification and post-merge `develop` CI are the remaining mechanical gates before F1 is stamped CLOSED.
+All twelve mandatory scenario families are PROVEN at their required F1 boundary. No unresolved F1 Product Owner decision wall remains. The only remaining mechanical gate is merge to `develop` followed by post-merge CI GREEN.
