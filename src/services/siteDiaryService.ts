@@ -21,7 +21,6 @@ import { ISiteDiaryService, CreateSiteDiaryCommand, UpdateSiteDiaryCommand } fro
 import { ActivityStatus, Activity } from '@/types/activity';
 import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 
-
 export interface ISiteDiaryRepositoryAdapter {
   createSiteDiary(data: Omit<SiteDiary, 'site_diary_id' | 'submitted_at'> & { site_diary_id?: string; submitted_at?: string }): Promise<SiteDiary>;
   getSiteDiaryById(siteDiaryId: string): Promise<SiteDiary | null>;
@@ -63,7 +62,6 @@ export class SiteDiaryService implements ISiteDiaryService {
 
   public async createSiteDiary(cmd: CreateSiteDiaryCommand): Promise<Result<SiteDiary, BaseAppError>> {
     try {
-      // 1. Command Validation
       if (!cmd.programmeId || cmd.programmeId.trim() === '') {
         return Failure(new SiteDiaryValidationError('programmeId is required'));
       }
@@ -83,11 +81,8 @@ export class SiteDiaryService implements ISiteDiaryService {
         return Failure(new SiteDiaryValidationError('submittedBy is required'));
       }
 
-      // 2. Programme Context Validation
       const progResult = await this.programmeRepo.findById(cmd.programmeId);
-      if (isFailure(progResult)) {
-        return Failure(progResult.error);
-      }
+      if (isFailure(progResult)) return Failure(progResult.error);
       if (!progResult.value) {
         return Failure(new ProgrammeNotFoundError(`Programme not found: ${cmd.programmeId}`));
       }
@@ -98,11 +93,8 @@ export class SiteDiaryService implements ISiteDiaryService {
         return Failure(new ProgrammeLockedError(`Programme is locked: ${cmd.programmeId}`));
       }
 
-      // 3. Activity Context Validation
       const actResult = await this.activityRepo.findById(cmd.activityId);
-      if (isFailure(actResult)) {
-        return Failure(actResult.error);
-      }
+      if (isFailure(actResult)) return Failure(actResult.error);
       const activity = actResult.value;
       if (!activity) {
         return Failure(new SiteDiaryValidationError(`Activity not found: ${cmd.activityId}`));
@@ -111,11 +103,8 @@ export class SiteDiaryService implements ISiteDiaryService {
         return Failure(new SiteDiaryValidationError(`Activity mismatch: Activity belongs to revision ${activity.revision_id} but command specifies ${cmd.revisionId}`));
       }
 
-      // 4. Programme Revision Safety Validation (D1 Revision Safety Rule)
       const revResult = await this.revisionRepo.findById(cmd.revisionId);
-      if (isFailure(revResult)) {
-        return Failure(revResult.error);
-      }
+      if (isFailure(revResult)) return Failure(revResult.error);
       const revision = revResult.value;
       if (!revision) {
         return Failure(new SiteDiaryValidationError(`Programme Revision not found: ${cmd.revisionId}`));
@@ -123,8 +112,6 @@ export class SiteDiaryService implements ISiteDiaryService {
       if (revision.programmeId !== cmd.programmeId) {
         return Failure(new SiteDiaryValidationError(`programme/revision mismatch: revision ${cmd.revisionId} does not belong to programme ${cmd.programmeId}`));
       }
-
-      // 5. Reject Draft, UnderReview, Superseded, Archived Revisions
       if (revision.status !== 'Approved' || !revision.isCurrent) {
         this.logger.warn('Site Diary creation rejected due to revision state', {
           programmeId: cmd.programmeId,
@@ -139,10 +126,8 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
-      // 6. Create Site Diary Entity
       const now = this.clock.nowIso();
       const siteDiaryId = generateUuid();
-
       const createPayload = {
         site_diary_id: siteDiaryId,
         programme_id: cmd.programmeId,
@@ -151,8 +136,9 @@ export class SiteDiaryService implements ISiteDiaryService {
         activity_date: cmd.activityDate,
         weather: cmd.weather ?? null,
         notes: cmd.notes.trim(),
-        status: activity.status, // Derive status purely from the current parent Activity state
+        status: activity.status,
         manpower: cmd.manpower ?? null,
+        print_context: cmd.printContext ?? null,
         submitted_by: cmd.submittedBy,
         submitted_at: now,
         updated_at: null,
@@ -166,7 +152,6 @@ export class SiteDiaryService implements ISiteDiaryService {
         programmeId: cmd.programmeId,
         revisionId: cmd.revisionId,
       });
-
       return Success(created);
     } catch (err: unknown) {
       this.logger.error('Unexpected error creating Site Diary', { error: err });
@@ -177,8 +162,7 @@ export class SiteDiaryService implements ISiteDiaryService {
 
   public async getSiteDiaryById(siteDiaryId: string): Promise<Result<SiteDiary | null, BaseAppError>> {
     try {
-      const entry = await this.siteDiaryRepo.getSiteDiaryById(siteDiaryId);
-      return Success(entry);
+      return Success(await this.siteDiaryRepo.getSiteDiaryById(siteDiaryId));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to get Site Diary';
       return Failure(new UnknownError(msg, { cause: err }));
@@ -187,8 +171,7 @@ export class SiteDiaryService implements ISiteDiaryService {
 
   public async getSiteDiariesByActivity(activityId: string): Promise<Result<SiteDiary[], BaseAppError>> {
     try {
-      const entries = await this.siteDiaryRepo.getSiteDiariesByActivity(activityId);
-      return Success(entries);
+      return Success(await this.siteDiaryRepo.getSiteDiariesByActivity(activityId));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to get Site Diaries for activity';
       return Failure(new UnknownError(msg, { cause: err }));
@@ -197,8 +180,7 @@ export class SiteDiaryService implements ISiteDiaryService {
 
   public async getSiteDiariesByRevision(revisionId: string): Promise<Result<SiteDiary[], BaseAppError>> {
     try {
-      const entries = await this.siteDiaryRepo.getSiteDiariesByRevision(revisionId);
-      return Success(entries);
+      return Success(await this.siteDiaryRepo.getSiteDiariesByRevision(revisionId));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to get Site Diaries for revision';
       return Failure(new UnknownError(msg, { cause: err }));
@@ -216,11 +198,8 @@ export class SiteDiaryService implements ISiteDiaryService {
         return Failure(new SiteDiaryNotFoundError(`Site Diary not found: ${cmd.siteDiaryId}`));
       }
 
-      // Check revision status of existing entry
       const revResult = await this.revisionRepo.findById(existing.revision_id);
-      if (isFailure(revResult)) {
-        return Failure(revResult.error);
-      }
+      if (isFailure(revResult)) return Failure(revResult.error);
       const revision = revResult.value;
       if (!revision || revision.status !== 'Approved' || !revision.isCurrent) {
         return Failure(
@@ -230,14 +209,11 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
-      const now = this.clock.nowIso();
-      const updates: Partial<SiteDiary> = {
-        updated_at: now,
-      };
-
+      const updates: Partial<SiteDiary> = { updated_at: this.clock.nowIso() };
       if (cmd.weather !== undefined) updates.weather = cmd.weather;
       if (cmd.notes !== undefined) updates.notes = cmd.notes;
       if (cmd.manpower !== undefined) updates.manpower = cmd.manpower;
+      if (cmd.printContext !== undefined) updates.print_context = cmd.printContext;
 
       const updated = this.atomicRepo
         ? await this.atomicRepo.updateSiteDiary(cmd.siteDiaryId, updates as Record<string, unknown>, cmd.updatedBy)
@@ -252,40 +228,26 @@ export class SiteDiaryService implements ISiteDiaryService {
   public async continueYesterday(activityId: string, targetDate: string, actorId: string): Promise<Result<SiteDiary, BaseAppError>> {
     try {
       const activityResult = await this.activityRepo.findById(activityId);
-      if (isFailure(activityResult)) {
-        return Failure(activityResult.error);
-      }
+      if (isFailure(activityResult)) return Failure(activityResult.error);
       const activity = activityResult.value;
       if (!activity) {
         return Failure(new SiteDiaryValidationError(`Activity not found: ${activityId}`));
       }
-
       if (activity.status === ActivityStatus.Completed) {
         return Failure(new SiteDiaryValidationError('Cannot carry forward a Completed activity'));
       }
 
-
-
       const revResult = await this.revisionRepo.findById(activity.revision_id);
-      if (isFailure(revResult)) {
-        return Failure(revResult.error);
-      }
+      if (isFailure(revResult)) return Failure(revResult.error);
       const revision = revResult.value;
       if (!revision || revision.status !== 'Approved' || !revision.isCurrent) {
-        return Failure(
-          new SiteDiaryRevisionNotApprovedError(
-            `Cannot carry forward activity under superseded/missing revision.`
-          )
-        );
+        return Failure(new SiteDiaryRevisionNotApprovedError('Cannot carry forward activity under superseded/missing revision.'));
       }
 
       const existingDiary = await this.siteDiaryRepo.getSiteDiaryByActivityAndDate(activityId, targetDate);
-      if (existingDiary) {
-        return Success(existingDiary);
-      }
+      if (existingDiary) return Success(existingDiary);
 
       const latestDiary = await this.siteDiaryRepo.getLatestSiteDiaryByActivity(activityId);
-
       const siteDiaryId = generateUuid();
       const carryPayload = {
         site_diary_id: siteDiaryId,
@@ -297,6 +259,14 @@ export class SiteDiaryService implements ISiteDiaryService {
         notes: '',
         status: activity.status,
         manpower: latestDiary?.manpower ?? null,
+        print_context: {
+          ...(latestDiary?.print_context ?? {}),
+          work_start_time: null,
+          work_end_time: null,
+          rain_start_time: null,
+          rain_end_time: null,
+          weather_condition: null,
+        },
         submitted_by: actorId,
         submitted_at: this.clock.nowIso(),
         updated_at: null,
@@ -305,7 +275,6 @@ export class SiteDiaryService implements ISiteDiaryService {
       const created = this.atomicRepo
         ? await this.atomicRepo.createSiteDiary(carryPayload, actorId)
         : await this.siteDiaryRepo.createSiteDiary(carryPayload);
-
       return Success(created);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to carry forward activity';
@@ -322,19 +291,15 @@ export class SiteDiaryService implements ISiteDiaryService {
 
       const activitiesResult = await this.activityRepo.findByRevisionId(activeRev.revisionId);
       if (isFailure(activitiesResult)) return Failure(activitiesResult.error);
-      
       const activeActivities = activitiesResult.value.filter((a: Activity) => a.status !== ActivityStatus.Completed);
-      
+
       const results: SiteDiary[] = [];
       for (const activity of activeActivities) {
         const result = await this.continueYesterday(activity.activity_id, targetDate, actorId);
         if (isSuccess(result)) {
           results.push(result.value);
-        } else if (result.error instanceof SiteDiaryRevisionNotApprovedError) {
-          // Cross-revision forbidden, ignore
-        } else {
-           // Other error - we might want to log it
-           this.logger.warn(`Failed to carry forward activity ${activity.activity_id}`, { error: result.error });
+        } else if (!(result.error instanceof SiteDiaryRevisionNotApprovedError)) {
+          this.logger.warn(`Failed to carry forward activity ${activity.activity_id}`, { error: result.error });
         }
       }
       return Success(results);
