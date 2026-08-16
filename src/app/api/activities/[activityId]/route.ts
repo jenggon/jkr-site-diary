@@ -7,7 +7,7 @@ import { mapActivityToResponseDto } from '@/app/api/_shared/activity.mapper';
 import { UpdateActivityRequestDto } from '@/app/api/_shared/activity.dto';
 import { isSuccess } from '@/lib/result';
 import { ActivityNotFoundError } from '@/errors/activityErrors';
-import { Activity } from '@/types/activity';
+import { Activity, ActivitySourceType } from '@/types/activity';
 import { OpenActivityDto } from '@/types/openActivity';
 
 export async function GET(
@@ -25,12 +25,14 @@ export async function GET(
       }
       const latestLog = historyRes.value[historyRes.value.length - 1]!;
       const act = latestLog.snapshotData as unknown as Activity;
-      
+
       const dto: OpenActivityDto = {
         activityId: act.activity_id,
         programmeId: act.programme_id,
         revisionId: act.revision_id,
-        taskId: act.task_id,
+        sourceType: act.source_type ?? ActivitySourceType.MSP,
+        taskId: act.task_id ?? undefined,
+        voItemId: act.vo_item_id ?? undefined,
         ahi: act.ahi ?? null,
         ahiDisplayName: act.ahi_display_name ?? null,
         subtask: act.subtask,
@@ -65,7 +67,7 @@ export async function PATCH(
     const service = createOpenActivityService(identity.accessToken);
     const result = await service.updateActivity({
       activityId,
-      activityName: body.subtask, // Mapped to subtask internally
+      activityName: body.subtask,
       updatedBy: identity.actorId,
     });
 
