@@ -26,25 +26,19 @@ export enum ActivitySourceType {
 }
 
 /**
- * Activity Domain Model
+ * Activity Domain Model.
  *
- * Represents operational execution recorded in the Site Diary.
- * Every Activity has exactly one immutable source: MSP Task OR VO Item.
+ * DB-014 v1.1 requires source_type in persistence. The optional marker here is
+ * deliberately backward-compatible with pre-F1 in-memory fixtures; service and
+ * persistence boundaries normalize an omitted source_type to MSP.
  */
 export interface Activity {
   activity_id: string;
   programme_id: string;
   revision_id: string;
-
-  /** Exclusive operational source type. */
-  source_type: ActivitySourceType;
-
-  /** Required only when source_type === MSP. */
+  source_type?: ActivitySourceType;
   task_id: string | null;
-
-  /** Required only when source_type === VO. */
-  vo_item_id: string | null;
-
+  vo_item_id?: string | null;
   activity_uid: string;
   ahi: string | null;
   ahi_display_name: string | null;
