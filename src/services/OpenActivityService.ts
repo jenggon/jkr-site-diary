@@ -6,7 +6,7 @@ import { generateUuid } from '@/lib/uuid';
 import { Activity, ActivitySourceType, ActivityStatus } from '@/types/activity';
 import { OpenActivityDto } from '@/types/openActivity';
 import { ActivityNotFoundError, ActivityValidationError, ActivityRevisionSupersededError, InvalidActivityStateError } from '@/errors/activityErrors';
-import { validateActivityStateTransition } from '@//statemachines/siteDiaryStateMachine';
+import { validateActivityStateTransition } from '@/statemachines/siteDiaryStateMachine';
 import { validateActivityName } from '@/validation/activityValidation';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivityLogRepository';
