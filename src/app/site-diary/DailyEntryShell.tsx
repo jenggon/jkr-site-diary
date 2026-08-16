@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import OperationalSourceSelector from './OperationalSourceSelector';
 
 export interface ProgrammeOption {
   readonly id: string;
@@ -392,8 +393,13 @@ export default function DailyEntryShell({
             </div>
           )}
 
-          {/* Render Children (F1 Golden Path Bridge + Legacy Form) when programme is selected */}
-          {programmeId && children}
+          {/* Render OperationalSourceSelector & Children (F1 Golden Path Bridge + Legacy Form) when programme is selected */}
+          {programmeId && (
+            <div className="space-y-4">
+              <OperationalSourceSelector />
+              {children}
+            </div>
+          )}
         </main>
       </div>
     </DailyEntryContext.Provider>
