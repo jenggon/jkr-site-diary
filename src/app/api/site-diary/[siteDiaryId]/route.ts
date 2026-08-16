@@ -8,6 +8,17 @@ type RouteParams = {
   params: Promise<{ siteDiaryId: string }>;
 };
 
+const timeValue = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid HH:MM time').nullable();
+const printContextSchema = z.object({
+  location: z.string().max(240).default(''),
+  work_start_time: timeValue.optional().default(null),
+  work_end_time: timeValue.optional().default(null),
+  weather_condition: z.enum(['ELOK', 'HUJAN', 'MENDUNG', 'RIBUT']).nullable().optional().default(null),
+  rain_start_time: timeValue.optional().default(null),
+  rain_end_time: timeValue.optional().default(null),
+  contractor_scope: z.enum(['CONTRACTOR', 'NSC']).default('CONTRACTOR'),
+}).optional();
+
 const updateSiteDiarySchema = z.object({
   weather: z.enum(['Sunny', 'Cloudy', 'Rainy', 'HeavyRain']).nullable().optional(),
   notes: z.string().optional(),
@@ -16,78 +27,42 @@ const updateSiteDiarySchema = z.object({
     bumi_count: z.number().int().min(0),
     non_bumi_count: z.number().int().min(0),
     foreign_count: z.number().int().min(0)
-  })).nullable().optional()
+  })).nullable().optional(),
+  print_context: printContextSchema,
 });
 
-/**
- * GET /api/site-diary/[siteDiaryId]
- * Retrieves a Site Diary record by ID.
- */
 export async function GET(request: Request, context: RouteParams) {
   try {
     const identity = await extractVerifiedIdentity(request);
-    if (!identity) {
-      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
-    }
-
+    if (!identity) return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     const { siteDiaryId } = await context.params;
-
     if (!siteDiaryId || typeof siteDiaryId !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing or invalid route parameter: siteDiaryId' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing or invalid route parameter: siteDiaryId' }, { status: 400 });
     }
 
-    const siteDiaryService = createSiteDiaryService(identity.accessToken);
-    const result = await siteDiaryService.getSiteDiaryById(siteDiaryId);
-
+    const result = await createSiteDiaryService(identity.accessToken).getSiteDiaryById(siteDiaryId);
     if (isSuccess(result)) {
-      if (!result.value) {
-        return NextResponse.json(
-          { error: 'Site diary record not found' },
-          { status: 404 }
-        );
-      }
+      if (!result.value) return NextResponse.json({ error: 'Site diary record not found' }, { status: 404 });
       return NextResponse.json({ data: result.value }, { status: 200 });
     }
-
     return NextResponse.json({ error: result.error.message }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve site diary' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error?.message || 'Failed to retrieve site diary' }, { status: 500 });
   }
 }
 
-/**
- * PATCH /api/site-diary/[siteDiaryId]
- * Updates an existing Site Diary record.
- */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
     const identity = await extractVerifiedIdentity(request);
-    if (!identity) {
-      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
-    }
-
+    if (!identity) return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     const { siteDiaryId } = await context.params;
-
     if (!siteDiaryId || typeof siteDiaryId !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing or invalid route parameter: siteDiaryId' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing or invalid route parameter: siteDiaryId' }, { status: 400 });
     }
 
     const body = await request.json().catch(() => null);
-
     if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { error: 'Invalid payload: Request body must be a valid JSON object' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid payload: Request body must be a valid JSON object' }, { status: 400 });
     }
 
     const parseResult = updateSiteDiarySchema.safeParse(body);
@@ -96,24 +71,18 @@ export async function PATCH(request: Request, context: RouteParams) {
       return NextResponse.json({ error: `Validation failed: ${errorMsg}` }, { status: 400 });
     }
 
-    const siteDiaryService = createSiteDiaryService(identity.accessToken);
-    const result = await siteDiaryService.updateSiteDiary({
+    const result = await createSiteDiaryService(identity.accessToken).updateSiteDiary({
       siteDiaryId,
       weather: parseResult.data.weather as any,
       notes: parseResult.data.notes,
       manpower: parseResult.data.manpower,
-      updatedBy: identity.actorId
+      printContext: parseResult.data.print_context as any,
+      updatedBy: identity.actorId,
     });
 
-    if (isSuccess(result)) {
-      return NextResponse.json({ data: result.value }, { status: 200 });
-    }
-
+    if (isSuccess(result)) return NextResponse.json({ data: result.value }, { status: 200 });
     return NextResponse.json({ error: result.error.message }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to update site diary' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error?.message || 'Failed to update site diary' }, { status: 500 });
   }
 }
