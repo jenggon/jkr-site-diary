@@ -260,7 +260,8 @@ export class SiteDiaryService implements ISiteDiaryService {
         status: activity.status,
         manpower: latestDiary?.manpower ?? null,
         print_context: {
-          ...(latestDiary?.print_context ?? {}),
+          location: latestDiary?.print_context?.location ?? '',
+          contractor_scope: latestDiary?.print_context?.contractor_scope ?? 'CONTRACTOR',
           work_start_time: null,
           work_end_time: null,
           rain_start_time: null,
