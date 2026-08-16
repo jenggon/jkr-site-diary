@@ -30,8 +30,7 @@ describe('F1 Golden Path closure contract', () => {
     expect(renderer).toContain('window.print()');
     expect(renderer).toContain('@media print');
 
-    // Continuation pages are deliberately derived without first-page-only blocks.
-    const continuation = renderer.slice(renderer.indexOf("continuationCount"));
+    const continuation = renderer.slice(renderer.indexOf('continuationCount'));
     expect(continuation).toContain('continuation-page');
     expect(continuation).toContain('ActivityTable');
     expect(continuation).toContain('WorkforceBlock');
@@ -57,14 +56,17 @@ describe('F1 Golden Path closure contract', () => {
     expect(service).toContain('if (existingDiary) return Success(existingDiary)');
   });
 
-  it('keeps Site Diary create/update coupled to canonical Workforce transactions', () => {
+  it('keeps Site Diary create/update coupled to canonical Workforce and printable-context transactions', () => {
     const repository = read('src/repositories/atomic/ResidualAtomicRepository.ts');
     const createMigration = read('supabase/migrations/20260816162000_f1_site_diary_workforce_atomic.sql');
     const updateMigration = read('supabase/migrations/20260816164000_f1_site_diary_workforce_update_atomic.sql');
+    const printMigration = read('supabase/migrations/20260816170000_f1_site_diary_print_context.sql');
 
-    expect(repository).toContain('f1_create_site_diary_with_workforce_atomic');
-    expect(repository).toContain('f1_update_site_diary_with_workforce_atomic');
+    expect(repository).toContain('f1_create_site_diary_full_atomic');
+    expect(repository).toContain('f1_update_site_diary_full_atomic');
     expect(createMigration).toContain('a27_mutate_workforce_core');
     expect(updateMigration).toContain('a27_mutate_workforce_core');
+    expect(printMigration).toContain('f1_create_site_diary_full_atomic');
+    expect(printMigration).toContain('f1_update_site_diary_full_atomic');
   });
 });
