@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { workforceService } from '@/composition/workforceComposition';
+import { workforceService, createWorkforceService } from '@/composition/workforceComposition';
 import { isFailure } from '@/lib/result';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 
 type RouteParams = {
   params: Promise<{ workforceId: string }>;
@@ -52,6 +53,8 @@ export async function GET(request: Request, context: RouteParams) {
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { workforceId } = await context.params;
 
     if (!workforceId || typeof workforceId !== 'string') {
@@ -70,7 +73,7 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const result = await workforceService.updateWorkforce(workforceId, body);
+    const result = await createWorkforceService(identity.accessToken).updateWorkforce(workforceId, { ...body, actor_id: identity.actorId });
 
     if (isFailure(result)) {
       return NextResponse.json(

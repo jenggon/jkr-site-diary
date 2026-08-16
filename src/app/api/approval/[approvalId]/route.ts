@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { approvalService } from '@/composition/approvalComposition';
+import { approvalService, createApprovalService } from '@/composition/approvalComposition';
 import { isFailure } from '@/lib/result';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 
 type RouteParams = {
   params: Promise<{ approvalId: string }>;
@@ -53,6 +54,8 @@ export async function GET(request: Request, context: RouteParams) {
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { approvalId } = await context.params;
 
     if (!approvalId || typeof approvalId !== 'string') {
@@ -71,7 +74,10 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const result = await approvalService.updateApproval(approvalId, body);
+    const result = await createApprovalService(identity.accessToken).updateApproval(approvalId, {
+      ...body,
+      approved_by: identity.actorId,
+    });
 
     if (isFailure(result)) {
       return NextResponse.json(

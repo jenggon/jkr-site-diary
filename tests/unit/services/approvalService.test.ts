@@ -14,6 +14,7 @@ describe('ApprovalService', () => {
   let mockApprovalRepo: any;
   let mockAuditRepo: any;
   let mockTxManager: any;
+  let mockAtomicRepo: any;
   let mockClock: any;
   let mockLogger: any;
   let service: ApprovalService;
@@ -42,6 +43,46 @@ describe('ApprovalService', () => {
         }
       }),
     };
+    mockAtomicRepo = {
+      create: vi.fn((payload, actorId) => mockTxManager.execute(async () => {
+        const created = await mockApprovalRepo.createApproval(payload);
+        await mockAuditRepo.createAudit({
+          programme_id: created.programme_id,
+          revision_id: created.revision_id,
+          entity_name: 'APPROVAL',
+          entity_id: created.approval_id,
+          event_type: AuditEventType.Create,
+          new_value: ApprovalStatus.Pending,
+          performed_by: actorId,
+        });
+        return Success(created);
+      }).then((result: any) => {
+        if (isFailure(result)) throw result.error;
+        return result.value;
+      })),
+      update: vi.fn((approvalId, payload, actorId) => mockTxManager.execute(async () => {
+        const existing = await mockApprovalRepo.getApprovalById(approvalId);
+        const updated = await mockApprovalRepo.updateApproval(approvalId, {
+          ...payload,
+          approved_by: actorId,
+        });
+        await mockAuditRepo.createAudit({
+          programme_id: updated.programme_id,
+          revision_id: updated.revision_id,
+          entity_name: 'APPROVAL',
+          entity_id: updated.approval_id,
+          event_type: payload.approval_status === ApprovalStatus.Approved ? AuditEventType.Approve :
+            payload.approval_status === ApprovalStatus.Rejected ? AuditEventType.Reject : AuditEventType.Update,
+          old_value: existing.approval_status,
+          new_value: payload.approval_status,
+          performed_by: actorId,
+        });
+        return Success(updated);
+      }).then((result: any) => {
+        if (isFailure(result)) throw result.error;
+        return result.value;
+      })),
+    };
     mockClock = { nowIso: vi.fn().mockReturnValue('2026-08-15T12:00:00Z') };
     mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -51,8 +92,7 @@ describe('ApprovalService', () => {
       siteDiaryRepository: mockSiteDiaryRepo,
       progressRepository: mockProgressRepo,
       approvalRepository: mockApprovalRepo,
-      auditRepository: mockAuditRepo,
-      transactionManager: mockTxManager,
+      atomicRepository: mockAtomicRepo,
       clock: mockClock,
       logger: mockLogger,
     });
@@ -339,6 +379,7 @@ describe('ApprovalService', () => {
 
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Returned,
+        approved_by: 'usr-so-1',
         approval_comment: 'Please clarify trade headcounts',
       });
 
@@ -377,6 +418,7 @@ describe('ApprovalService', () => {
 
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Cancelled,
+        approved_by: 'usr-so-1',
         approval_comment: 'Withdrawn by submitter',
       });
 
@@ -556,6 +598,7 @@ describe('ApprovalService', () => {
 
         const result = await service.updateApproval('appr-1', {
           approval_status: ApprovalStatus.Returned,
+          approved_by: 'usr-so-1',
           approval_comment: 'Still requires clarification on trade headcount',
         });
 
@@ -586,6 +629,7 @@ describe('ApprovalService', () => {
 
         const result = await service.updateApproval('appr-1', {
           approval_status: ApprovalStatus.Cancelled,
+          approved_by: 'usr-so-1',
           approval_comment: 'Retracted by submitter following return',
         });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 
 type RouteParams = {
   params: Promise<{ programmeId: string }>;
@@ -12,6 +13,8 @@ type RouteParams = {
  */
 export async function POST(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { programmeId } = await context.params;
 
     if (!programmeId || typeof programmeId !== 'string') {
@@ -21,26 +24,8 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    const body = await request.json();
-
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { error: 'Invalid payload: Request body must be a valid JSON object' },
-        { status: 400 }
-      );
-    }
-
-    const { archivedBy } = body;
-
-    if (!archivedBy || typeof archivedBy !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing required field: archivedBy' },
-        { status: 400 }
-      );
-    }
-
-    const service = createProgrammeService();
-    const result = await service.archiveProgramme(programmeId, archivedBy);
+    const service = createProgrammeService({ accessToken: identity.accessToken });
+    const result = await service.archiveProgramme(programmeId, identity.actorId);
 
     if (isSuccess(result)) {
       return NextResponse.json({ data: result.value }, { status: 200 });

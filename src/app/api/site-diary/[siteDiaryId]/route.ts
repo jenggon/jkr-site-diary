@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { z } from 'zod';
 import { isSuccess } from '@/lib/result';
 
@@ -25,8 +25,8 @@ const updateSiteDiarySchema = z.object({
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
@@ -39,7 +39,7 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const siteDiaryService = createSiteDiaryService();
+    const siteDiaryService = createSiteDiaryService(identity.accessToken);
     const result = await siteDiaryService.getSiteDiaryById(siteDiaryId);
 
     if (isSuccess(result)) {
@@ -67,8 +67,8 @@ export async function GET(request: Request, context: RouteParams) {
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
@@ -96,13 +96,13 @@ export async function PATCH(request: Request, context: RouteParams) {
       return NextResponse.json({ error: `Validation failed: ${errorMsg}` }, { status: 400 });
     }
 
-    const siteDiaryService = createSiteDiaryService();
+    const siteDiaryService = createSiteDiaryService(identity.accessToken);
     const result = await siteDiaryService.updateSiteDiary({
       siteDiaryId,
       weather: parseResult.data.weather as any,
       notes: parseResult.data.notes,
       manpower: parseResult.data.manpower,
-      updatedBy: actorId
+      updatedBy: identity.actorId
     });
 
     if (isSuccess(result)) {

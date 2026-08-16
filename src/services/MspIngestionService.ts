@@ -18,6 +18,7 @@ import { bulkCreateTasks as defaultBulkCreateTasks } from '@/repositories/taskRe
 import { MspXmlParser } from './MspXmlParser';
 import { MspTradeInferencer } from './MspTradeInferencer';
 import { IMspIngestionService, IngestMspXmlCommand, IngestMspXmlResult } from './IMspIngestionService';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 
 export interface IMspIngestionServiceDependencies {
   readonly programmeRepository?: IProgrammeRepository;
@@ -27,6 +28,7 @@ export interface IMspIngestionServiceDependencies {
   readonly clock?: { nowIso(): string };
   readonly logger?: Logger;
   readonly bulkCreateTasksFn?: (tasks: Task[]) => Promise<Task[]>;
+  readonly atomicRepository?: ResidualAtomicRepository;
 }
 
 export class MspIngestionService implements IMspIngestionService {
@@ -37,6 +39,7 @@ export class MspIngestionService implements IMspIngestionService {
   private readonly clock: { nowIso(): string };
   private readonly logger: Logger;
   private readonly bulkCreateTasksFn: (tasks: Task[]) => Promise<Task[]>;
+  private readonly atomicRepo: ResidualAtomicRepository | undefined;
 
   constructor(deps: IMspIngestionServiceDependencies = {}) {
     this.programmeRepo = deps.programmeRepository ?? new ProgrammeRepository();
@@ -46,6 +49,7 @@ export class MspIngestionService implements IMspIngestionService {
     this.clock = deps.clock ?? new SystemClock();
     this.logger = deps.logger ?? new Logger({ module: 'MspIngestionService' });
     this.bulkCreateTasksFn = deps.bulkCreateTasksFn ?? defaultBulkCreateTasks;
+    this.atomicRepo = deps.atomicRepository;
   }
 
   public async ingestMspXml(cmd: IngestMspXmlCommand): Promise<Result<IngestMspXmlResult, BaseAppError>> {
@@ -173,6 +177,19 @@ export class MspIngestionService implements IMspIngestionService {
 
       // 8. Atomic Database Transaction with Chunked Bulk Task Insertion (chunkSize = 300)
       let createdRevision: ProgrammeRevision | null = null;
+
+      if (this.atomicRepo) {
+        createdRevision = await this.atomicRepo.ingestMsp({
+          revision_id: revision.revisionId,
+          programme_id: revision.programmeId,
+          revision_no: revision.revisionNumber,
+          revision_name: revision.revisionTitle,
+          msp_file_name: revision.msp_file_name,
+          msp_file_hash: revision.msp_file_hash,
+          status: revision.status,
+        }, canonicalTasks, createdBy);
+        return Success({ revision: createdRevision, taskCount: canonicalTasks.length, fileHash });
+      }
 
       const txResult = await this.txManager.execute(async () => {
         const revResult = await this.revisionRepo.create(revision);

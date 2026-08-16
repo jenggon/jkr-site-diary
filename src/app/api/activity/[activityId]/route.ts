@@ -3,7 +3,7 @@ import { createOpenActivityService } from '@/composition/activityComposition';
 import { ActivityRepository } from '@/repositories/activityRepository';
 import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
 import { supabase } from '@/lib/supabase';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractIdentity, extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isFailure } from '@/lib/result';
 import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
 
@@ -17,8 +17,8 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
@@ -83,11 +83,11 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const openActivityService = createOpenActivityService();
+    const openActivityService = createOpenActivityService(identity.accessToken);
     const result = await openActivityService.updateActivity({
       activityId,
       activityName: body.subtask,
-      updatedBy: actorId
+      updatedBy: identity.actorId
     });
 
     if (isFailure(result)) {

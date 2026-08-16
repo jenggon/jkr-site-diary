@@ -5,9 +5,9 @@ import { CreateProgressCommand, UpdateProgressCommand, IProgressService } from '
 import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { ISiteDiaryRepositoryAdapter } from '@/services/siteDiaryService';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
-import { ITransactionManager } from '@/transactions/ITransactionManager';
-import { IOpenActivityService } from '@/services/IOpenActivityService';
-import { AuditEventType } from '@/types/audit';
+import { IProgressAtomicRepository } from '@/repositories/atomic/IProgressAtomicRepository';
+import { ActivityStatus } from '@/types/activity';
+import { validateActivityStateTransition } from '@/statemachines/siteDiaryStateMachine';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
 
@@ -16,9 +16,7 @@ export interface IProgressServiceDependencies {
   readonly siteDiaryRepository: ISiteDiaryRepositoryAdapter;
   readonly revisionRepository: IProgrammeRevisionRepository;
   readonly progressRepository: typeof import('@/repositories/progressRepository').progressRepository;
-  readonly auditRepository: typeof import('@/repositories/auditRepository').auditRepository;
-  readonly transactionManager: ITransactionManager;
-  readonly openActivityService: IOpenActivityService;
+  readonly atomicRepository: IProgressAtomicRepository;
   readonly clock: IClock;
   readonly logger: Logger;
 }
@@ -28,9 +26,7 @@ export class ProgressService implements IProgressService {
   private readonly siteDiaryRepo: ISiteDiaryRepositoryAdapter;
   private readonly revisionRepo: IProgrammeRevisionRepository;
   private readonly progressRepo: typeof import('@/repositories/progressRepository').progressRepository;
-  private readonly auditRepo: typeof import('@/repositories/auditRepository').auditRepository;
-  private readonly txManager: ITransactionManager;
-  private readonly openActivityService: IOpenActivityService;
+  private readonly atomicRepo: IProgressAtomicRepository;
   private readonly clock: IClock;
   private readonly logger: Logger;
 
@@ -39,9 +35,7 @@ export class ProgressService implements IProgressService {
     this.siteDiaryRepo = deps.siteDiaryRepository;
     this.revisionRepo = deps.revisionRepository;
     this.progressRepo = deps.progressRepository;
-    this.auditRepo = deps.auditRepository;
-    this.txManager = deps.transactionManager;
-    this.openActivityService = deps.openActivityService;
+    this.atomicRepo = deps.atomicRepository;
     this.clock = deps.clock;
     this.logger = deps.logger;
   }
@@ -103,7 +97,7 @@ export class ProgressService implements IProgressService {
     return Success(undefined);
   }
 
-  public async createProgress(cmd: CreateProgressCommand, actorId?: string): Promise<Result<Progress, BaseAppError>> {
+  public async createProgress(cmd: CreateProgressCommand, actorId: string): Promise<Result<Progress, BaseAppError>> {
     try {
       const validationRes = await this.validateContext({
         activity_id: cmd.activity_id,
@@ -119,40 +113,21 @@ export class ProgressService implements IProgressService {
       const now = this.clock.nowIso();
       const measurementStatus = cmd.measurement_status || ProgressMeasurementStatus.Draft;
 
-      return this.txManager.execute(async () => {
-        // 1. Create Progress record
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const payload: any = {
+      const completeActivity = measurementStatus === ProgressMeasurementStatus.Approved && cmd.progress_percentage === 100;
+      if (completeActivity) {
+        const activityRes = await this.activityRepo.findById(cmd.activity_id);
+        if (isFailure(activityRes)) return Failure(activityRes.error);
+        if (!activityRes.value) return Failure(new ValidationError(`Activity not found: ${cmd.activity_id}`));
+        validateActivityStateTransition(activityRes.value.status, ActivityStatus.Completed);
+      }
+      const created = await this.atomicRepo.create({
           ...cmd,
           measurement_status: measurementStatus,
           created_at: now,
           updated_at: null,
-        };
-        const created = await this.progressRepo.createProgress(payload);
-
-        // 2. Audit Log
-        if (actorId) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const auditPayload: any = {
-            programme_id: cmd.programme_id,
-            entity_name: 'Progress',
-            entity_id: created.progress_id,
-            event_type: AuditEventType.Create,
-            performed_by: actorId,
-            event_timestamp: now,
-          };
-          await this.auditRepo.createAudit(auditPayload);
-        }
-
-        // 3. Activity Transition if 100% Approved
-        if (measurementStatus === ProgressMeasurementStatus.Approved && created.progress_percentage === 100) {
-           const completeRes = await this.openActivityService.completeActivity(cmd.activity_id, actorId || 'SYSTEM');
-           if (isFailure(completeRes)) return Failure(completeRes.error as BaseAppError);
-        }
-
-        this.logger.info('Created Progress', { progressId: created.progress_id });
-        return Success(created);
-      });
+        }, actorId);
+      this.logger.info('Created Progress', { progressId: created.progress_id });
+      return Success(created);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       this.logger.error('Failed to create progress', { error: msg });
@@ -196,7 +171,7 @@ export class ProgressService implements IProgressService {
     }
   }
 
-  public async updateProgress(progressId: string, updates: UpdateProgressCommand, actorId?: string): Promise<Result<Progress, BaseAppError>> {
+  public async updateProgress(progressId: string, updates: UpdateProgressCommand, actorId: string): Promise<Result<Progress, BaseAppError>> {
     try {
       const existingRes = await this.getProgressById(progressId);
       if (isFailure(existingRes)) return Failure(existingRes.error as BaseAppError);
@@ -223,39 +198,21 @@ export class ProgressService implements IProgressService {
 
       const now = this.clock.nowIso();
 
-      return this.txManager.execute(async () => {
-        // 1. Update Progress
-        const updated = await this.progressRepo.updateProgress(progressId, {
+      const newStatus = updates.measurement_status || existing.measurement_status;
+      const newPercentage = updates.progress_percentage !== undefined ? updates.progress_percentage : existing.progress_percentage;
+      const completeActivity = newStatus === ProgressMeasurementStatus.Approved && newPercentage === 100;
+      if (completeActivity) {
+        const activityRes = await this.activityRepo.findById(existing.activity_id);
+        if (isFailure(activityRes)) return Failure(activityRes.error);
+        if (!activityRes.value) return Failure(new ValidationError(`Activity not found: ${existing.activity_id}`));
+        validateActivityStateTransition(activityRes.value.status, ActivityStatus.Completed);
+      }
+      const updated = await this.atomicRepo.update(progressId, {
           ...updates,
           updated_at: now,
-        });
-
-        // 2. Audit Log
-        if (actorId) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const auditPayload: any = {
-            programme_id: updated.programme_id,
-            entity_name: 'Progress',
-            entity_id: updated.progress_id,
-            event_type: AuditEventType.Update,
-            performed_by: actorId,
-            event_timestamp: now,
-          };
-          await this.auditRepo.createAudit(auditPayload);
-        }
-
-        // 3. Activity Transition if 100% Approved
-        const newStatus = updates.measurement_status || existing.measurement_status;
-        const newPercentage = updates.progress_percentage !== undefined ? updates.progress_percentage : existing.progress_percentage;
-        
-        if (newStatus === ProgressMeasurementStatus.Approved && newPercentage === 100) {
-           const completeRes = await this.openActivityService.completeActivity(updated.activity_id, actorId || 'SYSTEM');
-           if (isFailure(completeRes)) return Failure(completeRes.error as BaseAppError);
-        }
-
-        this.logger.info('Updated Progress', { progressId: updated.progress_id });
-        return Success(updated);
-      });
+        }, actorId);
+      this.logger.info('Updated Progress', { progressId: updated.progress_id });
+      return Success(updated);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       this.logger.error('Failed to update progress', { error: msg });

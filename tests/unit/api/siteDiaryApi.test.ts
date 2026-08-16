@@ -30,7 +30,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
 
   describe('POST /api/site-diary (Create)', () => {
     it('1. Rejects unauthenticated mutation', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue(null);
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue(null);
       const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify({}) });
       // @ts-ignore
       const res = await createSiteDiary(req);
@@ -38,7 +38,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     });
 
     it('3. Rejects invalid payload', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue('user-1');
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify({ notes: '' }) });
       // @ts-ignore
       const res = await createSiteDiary(req);
@@ -48,7 +48,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     });
 
     it('2. Accepts authenticated valid create and delegates to domain', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue('user-1');
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.createSiteDiary.mockResolvedValue(Success({ site_diary_id: 'sd-1' }));
       
       const payload = {
@@ -74,7 +74,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     });
 
     it('6/7. Maps domain revision/locked errors correctly', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue('user-1');
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.createSiteDiary.mockResolvedValue(Failure(new SiteDiaryRevisionNotApprovedError('Superseded')));
       
       const payload = {
@@ -95,7 +95,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
 
   describe('PATCH /api/site-diary/[siteDiaryId]', () => {
     it('1. Rejects unauthenticated mutation', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue(null);
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue(null);
       const req = new Request('http://localhost/api/site-diary/sd-1', { method: 'PATCH', body: JSON.stringify({}) });
       // @ts-ignore
       const res = await updateSiteDiary(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
@@ -103,7 +103,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     });
 
     it('8. Ignores client attempts to manipulate status (status not in schema)', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue('user-1');
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.updateSiteDiary.mockResolvedValue(Success({ site_diary_id: 'sd-1' }));
       
       const req = new Request('http://localhost/api/site-diary/sd-1', { 
@@ -120,7 +120,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
 
   describe('POST /api/site-diary/carry-forward', () => {
     it('11. Works for valid current Activity (specific activity)', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue('user-1');
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.continueYesterday.mockResolvedValue(Success({ site_diary_id: 'sd-2' }));
       
       const payload = { activityId: generateUuid(), targetDate: '2026-09-02' };
@@ -136,7 +136,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     });
 
     it('13. Works for bulk carry-forward (programme)', async () => {
-      vi.mocked(identityModule.extractIdentity).mockResolvedValue('user-1');
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.carryForwardActiveOperations.mockResolvedValue(Success([{ site_diary_id: 'sd-3' }]));
       
       const payload = { programmeId: generateUuid(), targetDate: '2026-09-02' };

@@ -31,6 +31,13 @@ export function getSupabaseServerClient(): SupabaseClient {
   return serverClientInstance;
 }
 
+export function getSupabaseAuthenticatedClient(accessToken: string): SupabaseClient {
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}
+
 export function getSupabaseServiceRoleClient(): SupabaseClient {
   if (typeof window !== 'undefined') {
     throw new InfrastructureError(

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { z } from 'zod';
 import { isValidUuid } from '@/lib/uuid';
 import { isValidIso8601 } from '@/lib/clock';
@@ -22,8 +22,8 @@ const createSiteDiarySchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Validation failed: ${errorMsg}` }, { status: 400 });
     }
 
-    const siteDiaryService = createSiteDiaryService();
+    const siteDiaryService = createSiteDiaryService(identity.accessToken);
     const result = await siteDiaryService.createSiteDiary({
       programmeId: parseResult.data.programme_id,
       revisionId: parseResult.data.revision_id,
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       weather: parseResult.data.weather as any,
       notes: parseResult.data.notes,
       manpower: parseResult.data.manpower as any,
-      submittedBy: actorId,
+      submittedBy: identity.actorId,
     });
 
     if (isSuccess(result)) {

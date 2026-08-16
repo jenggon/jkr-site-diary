@@ -5,6 +5,6 @@ import { ProgrammeRow, ProgrammeRevisionRow } from '../types/programmeRow';
 export interface IProgrammeRowMapper {
   toDomain(row: ProgrammeRow): Programme;
   toRow(entity: Programme): ProgrammeRow;
-  toRevisionDomain(row: ProgrammeRevisionRow): ProgrammeRevision;
+  toRevisionDomain(row: ProgrammeRevisionRow, currentRevisionId?: string | null): ProgrammeRevision;
   toRevisionRow(entity: ProgrammeRevision): ProgrammeRevisionRow;
 }

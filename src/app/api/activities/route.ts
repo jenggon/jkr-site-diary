@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createOpenActivityService } from '@/composition/activityComposition';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isFailure } from '@/lib/result';
 import { z } from 'zod';
 import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
@@ -14,8 +14,8 @@ const createActivitySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json(
         { error: 'Unauthorized: Missing or invalid identity' },
         { status: 401 }
@@ -37,13 +37,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Validation failed: ${errorMsg}` }, { status: 400 });
     }
 
-    const openActivityService = createOpenActivityService();
+    const openActivityService = createOpenActivityService(identity.accessToken);
     const result = await openActivityService.createActivity({
       programmeId: parseResult.data.programmeId,
       revisionId: parseResult.data.revisionId,
       taskId: parseResult.data.taskId,
       activityName: parseResult.data.activityName,
-      createdBy: actorId,
+      createdBy: identity.actorId,
     });
 
     if (isFailure(result)) {

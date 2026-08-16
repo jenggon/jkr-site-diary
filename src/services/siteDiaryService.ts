@@ -19,6 +19,7 @@ import { ActivityRepository } from '@/repositories/activityRepository';
 import { siteDiaryRepository as defaultSiteDiaryRepo } from '@/repositories/siteDiaryRepository';
 import { ISiteDiaryService, CreateSiteDiaryCommand, UpdateSiteDiaryCommand } from './ISiteDiaryService';
 import { ActivityStatus, Activity } from '@/types/activity';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 
 
 export interface ISiteDiaryRepositoryAdapter {
@@ -38,6 +39,7 @@ export interface ISiteDiaryServiceDependencies {
   readonly activityRepository?: IActivityRepository;
   readonly clock?: { nowIso(): string };
   readonly logger?: Logger;
+  readonly atomicRepository?: ResidualAtomicRepository;
 }
 
 export class SiteDiaryService implements ISiteDiaryService {
@@ -47,6 +49,7 @@ export class SiteDiaryService implements ISiteDiaryService {
   private readonly activityRepo: IActivityRepository;
   private readonly clock: { nowIso(): string };
   private readonly logger: Logger;
+  private readonly atomicRepo: ResidualAtomicRepository | undefined;
 
   constructor(deps: ISiteDiaryServiceDependencies = {}) {
     this.programmeRepo = deps.programmeRepository ?? new ProgrammeRepository();
@@ -55,6 +58,7 @@ export class SiteDiaryService implements ISiteDiaryService {
     this.activityRepo = deps.activityRepository ?? new ActivityRepository();
     this.clock = deps.clock ?? new SystemClock();
     this.logger = deps.logger ?? new Logger({ module: 'SiteDiaryService' });
+    this.atomicRepo = deps.atomicRepository;
   }
 
   public async createSiteDiary(cmd: CreateSiteDiaryCommand): Promise<Result<SiteDiary, BaseAppError>> {
@@ -139,7 +143,7 @@ export class SiteDiaryService implements ISiteDiaryService {
       const now = this.clock.nowIso();
       const siteDiaryId = generateUuid();
 
-      const created = await this.siteDiaryRepo.createSiteDiary({
+      const createPayload = {
         site_diary_id: siteDiaryId,
         programme_id: cmd.programmeId,
         revision_id: cmd.revisionId,
@@ -152,7 +156,10 @@ export class SiteDiaryService implements ISiteDiaryService {
         submitted_by: cmd.submittedBy,
         submitted_at: now,
         updated_at: null,
-      });
+      };
+      const created = this.atomicRepo
+        ? await this.atomicRepo.createSiteDiary(createPayload, cmd.submittedBy)
+        : await this.siteDiaryRepo.createSiteDiary(createPayload);
 
       this.logger.info('Created Site Diary entry successfully', {
         siteDiaryId: created.site_diary_id,
@@ -232,7 +239,9 @@ export class SiteDiaryService implements ISiteDiaryService {
       if (cmd.notes !== undefined) updates.notes = cmd.notes;
       if (cmd.manpower !== undefined) updates.manpower = cmd.manpower;
 
-      const updated = await this.siteDiaryRepo.updateSiteDiary(cmd.siteDiaryId, updates);
+      const updated = this.atomicRepo
+        ? await this.atomicRepo.updateSiteDiary(cmd.siteDiaryId, updates as Record<string, unknown>, cmd.updatedBy)
+        : await this.siteDiaryRepo.updateSiteDiary(cmd.siteDiaryId, updates);
       return Success(updated);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update Site Diary';
@@ -278,7 +287,7 @@ export class SiteDiaryService implements ISiteDiaryService {
       const latestDiary = await this.siteDiaryRepo.getLatestSiteDiaryByActivity(activityId);
 
       const siteDiaryId = generateUuid();
-      const created = await this.siteDiaryRepo.createSiteDiary({
+      const carryPayload = {
         site_diary_id: siteDiaryId,
         programme_id: activity.programme_id,
         revision_id: activity.revision_id,
@@ -291,7 +300,11 @@ export class SiteDiaryService implements ISiteDiaryService {
         submitted_by: actorId,
         submitted_at: this.clock.nowIso(),
         updated_at: null,
-      });
+        carry_forward: true,
+      };
+      const created = this.atomicRepo
+        ? await this.atomicRepo.createSiteDiary(carryPayload, actorId)
+        : await this.siteDiaryRepo.createSiteDiary(carryPayload);
 
       return Success(created);
     } catch (err: unknown) {

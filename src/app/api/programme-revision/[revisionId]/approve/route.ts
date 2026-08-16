@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isValidUuid } from '@/lib/uuid';
 
 type RouteParams = {
@@ -14,8 +14,8 @@ type RouteParams = {
  */
 export async function POST(request: Request, context: RouteParams) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
@@ -28,8 +28,8 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    const service = createProgrammeService();
-    const result = await service.approveRevision(revisionId, actorId);
+    const service = createProgrammeService({ accessToken: identity.accessToken });
+    const result = await service.approveRevision(revisionId, identity.actorId);
 
     if (isSuccess(result)) {
       return NextResponse.json({ data: result.value }, { status: 200 });

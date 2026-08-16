@@ -3,6 +3,7 @@ import { BaseAppError } from '@/lib/errors';
 import { Workforce } from '@/types/workforce';
 
 export interface CreateWorkforceCommand {
+  actor_id: string;
   programme_id: string;
   revision_id: string;
   activity_id: string;
@@ -14,6 +15,7 @@ export interface CreateWorkforceCommand {
 }
 
 export interface UpdateWorkforceCommand {
+  actor_id: string;
   trade_id?: string;
   bumiputera_count?: number;
   non_bumiputera_count?: number;

@@ -5,25 +5,28 @@ import { ActivityRepository } from '@/repositories/activityRepository';
 import { siteDiaryRepository } from '@/repositories/siteDiaryRepository';
 import { progressRepository } from '@/repositories/progressRepository';
 import { approvalRepository } from '@/repositories/approvalRepository';
-import { auditRepository } from '@/repositories/auditRepository';
-import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionManager';
+import { ApprovalAtomicRepository } from '@/repositories/atomic/ApprovalAtomicRepository';
+import { getSupabaseAuthenticatedClient, getSupabaseServerClient } from '@/lib/supabase';
 import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
 
 const revisionRepository = new ProgrammeRevisionRepository();
 const activityRepository = new ActivityRepository();
-const transactionManager = new DatabaseTransactionManager();
 const clock = new SystemClock();
 const logger = new Logger({ module: 'ApprovalEngine' });
 
-export const approvalService: IApprovalService = new ApprovalService({
-  revisionRepository,
-  activityRepository,
-  siteDiaryRepository,
-  progressRepository,
-  approvalRepository,
-  auditRepository,
-  transactionManager,
-  clock,
-  logger,
-});
+export function createApprovalService(accessToken?: string): IApprovalService {
+  const client = accessToken ? getSupabaseAuthenticatedClient(accessToken) : getSupabaseServerClient();
+  return new ApprovalService({
+    revisionRepository,
+    activityRepository,
+    siteDiaryRepository,
+    progressRepository,
+    approvalRepository,
+    atomicRepository: new ApprovalAtomicRepository(client),
+    clock,
+    logger,
+  });
+}
+
+export const approvalService: IApprovalService = createApprovalService();

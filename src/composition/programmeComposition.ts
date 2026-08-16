@@ -10,10 +10,13 @@ import { OpenActivityTerminationHandler } from '@/events/handlers/OpenActivityTe
 import { ActivityRepository } from '@/repositories/activityRepository';
 import { IDomainEventPublisher, IDomainEvent } from '@/events/IDomainEventPublisher';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
+import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
 
 export interface CreateProgrammeServiceOptions {
   readonly eventPublisher?: IDomainEventPublisher;
   readonly activityRepository?: IActivityRepository;
+  readonly accessToken?: string;
 }
 
 /**
@@ -46,5 +49,6 @@ export function createProgrammeService(options?: CreateProgrammeServiceOptions):
     clock,
     logger,
     eventPublisher: publisher,
+    ...(options?.accessToken ? { atomicRepository: new ResidualAtomicRepository(getSupabaseAuthenticatedClient(options.accessToken)) } : {}),
   });
 }

@@ -33,10 +33,10 @@ export interface UpdateProgressCommand {
 }
 
 export interface IProgressService {
-  createProgress(cmd: CreateProgressCommand, actorId?: string): Promise<Result<Progress, BaseAppError>>;
+  createProgress(cmd: CreateProgressCommand, actorId: string): Promise<Result<Progress, BaseAppError>>;
   getProgressById(progressId: string): Promise<Result<Progress | null, BaseAppError>>;
   getProgressByActivity(activityId: string): Promise<Result<Progress[], BaseAppError>>;
   getProgressBySiteDiary(siteDiaryId: string): Promise<Result<Progress[], BaseAppError>>;
   getProgressByMeasurementDate(measurementDate: string): Promise<Result<Progress[], BaseAppError>>;
-  updateProgress(progressId: string, updates: UpdateProgressCommand, actorId?: string): Promise<Result<Progress, BaseAppError>>;
+  updateProgress(progressId: string, updates: UpdateProgressCommand, actorId: string): Promise<Result<Progress, BaseAppError>>;
 }

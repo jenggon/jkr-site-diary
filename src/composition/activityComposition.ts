@@ -8,13 +8,15 @@ import { DatabaseTransactionManager } from '@/transactions/DatabaseTransactionMa
 import { SystemClock } from '@/lib/clock';
 import { logger } from '@/lib/logger';
 import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
+import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
+import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
 
 /**
  * Composition Root factory for Open Activities Engine services.
  * Instantiates OpenActivityService using explicit constructor dependency injection.
  * Creates zero global singleton instances.
  */
-export function createOpenActivityService(): IOpenActivityService {
+export function createOpenActivityService(accessToken?: string): IOpenActivityService {
   const activityRepo = new ActivityRepository();
   const logRepo = new ActivityLogRepository();
   const revisionRepo = new ProgrammeRevisionRepository();
@@ -33,5 +35,6 @@ export function createOpenActivityService(): IOpenActivityService {
     // revision lifecycle validity on every mutation path in production.
     revisionRepository: revisionRepo,
     taskRepository: taskRepository,
+    ...(accessToken ? { atomicRepository: new ResidualAtomicRepository(getSupabaseAuthenticatedClient(accessToken)) } : {}),
   });
 }

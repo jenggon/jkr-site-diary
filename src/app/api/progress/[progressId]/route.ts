@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createProgressService } from '@/composition/progressComposition';
 import { isFailure } from '@/lib/result';
 import { ValidationError, InfrastructureError } from '@/lib/errors';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 
 type RouteParams = {
   params: Promise<{ progressId: string }>;
@@ -51,6 +52,8 @@ export async function GET(request: Request, context: RouteParams) {
  */
 export async function PATCH(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { progressId } = await context.params;
 
     if (!progressId || typeof progressId !== 'string') {
@@ -69,11 +72,8 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    // Attempt to extract actor ID, for instance from headers
-    const actorId = request.headers.get('x-user-id') || 'SYSTEM';
-
-    const progressService = createProgressService();
-    const result = await progressService.updateProgress(progressId, body, actorId);
+    const progressService = createProgressService(identity.accessToken);
+    const result = await progressService.updateProgress(progressId, body, identity.actorId);
 
     if (isFailure(result)) {
       const status = result.error instanceof ValidationError ? 400 : 500;

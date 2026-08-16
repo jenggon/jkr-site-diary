@@ -53,6 +53,7 @@ describe('WorkforceService', () => {
   });
 
   const validCmd = {
+    actor_id: 'user-1',
     programme_id: 'prog-1',
     revision_id: 'rev-1',
     activity_id: 'act-1',
