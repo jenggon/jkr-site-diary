@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ActivityRepository } from '@/repositories/ActivityRepository';
+import { ActivityRepository } from '@/repositories/activityRepository';
 import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
 import { supabase } from '@/lib/supabase';
 import { extractIdentity } from '@/app/api/_shared/identity';
