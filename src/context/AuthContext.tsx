@@ -46,6 +46,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // F1 Golden Path: canonical API mutation/read routes verify the caller from
+  // an Authorization bearer token. Existing product UI uses same-origin
+  // `fetch('/api/...')` calls, so inject the current verified Supabase session
+  // token centrally instead of allowing individual screens to invent actor
+  // authority or duplicate authentication plumbing.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const accessToken = session?.access_token;
+    if (!accessToken) return;
+
+    const originalFetch = window.fetch.bind(window);
+
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const requestUrl =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+
+      const isAppApi =
+        requestUrl.startsWith('/api/') ||
+        requestUrl.startsWith(`${window.location.origin}/api/`);
+
+      if (!isAppApi) {
+        return originalFetch(input, init);
+      }
+
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined)
+      );
+
+      if (!headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${accessToken}`);
+      }
+
+      return originalFetch(input, {
+        ...init,
+        headers,
+      });
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [session?.access_token]);
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
