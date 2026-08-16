@@ -6,7 +6,7 @@ import { generateUuid } from '@/lib/uuid';
 import { Activity, ActivitySourceType, ActivityStatus } from '@/types/activity';
 import { OpenActivityDto } from '@/types/openActivity';
 import { ActivityNotFoundError, ActivityValidationError, ActivityRevisionSupersededError, InvalidActivityStateError } from '@/errors/activityErrors';
-import { validateActivityStateTransition } from '@/statemachines/siteDiaryStateMachine';
+import { validateActivityStateTransition } from '@//statemachines/siteDiaryStateMachine';
 import { validateActivityName } from '@/validation/activityValidation';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { IActivityLogRepository, ActivityLogEntry } from '@/repositories/IActivityLogRepository';
@@ -127,9 +127,8 @@ export class OpenActivityService implements IOpenActivityService {
     const voItemId = cmd.voItemId?.trim() || undefined;
 
     if (sourceType === ActivitySourceType.MSP) {
-      if (!taskId || voItemId) {
-        return Failure(new ActivityValidationError('MSP Activity requires taskId and forbids voItemId'));
-      }
+      if (!taskId) return Failure(new ActivityValidationError('taskId is required'));
+      if (voItemId) return Failure(new ActivityValidationError('MSP Activity forbids voItemId'));
       if (!this.taskRepo) {
         return Failure(new ActivityValidationError('taskRepository is required in composition for MSP Activity provisioning'));
       }
@@ -138,9 +137,8 @@ export class OpenActivityService implements IOpenActivityService {
       if (task.revision_id !== cmd.revisionId) return Failure(new ActivityValidationError('task/revision mismatch'));
       if (task.programme_id !== cmd.programmeId) return Failure(new ActivityValidationError('programme/task mismatch'));
     } else if (sourceType === ActivitySourceType.VO) {
-      if (!voItemId || taskId) {
-        return Failure(new ActivityValidationError('VO Activity requires voItemId and forbids taskId'));
-      }
+      if (!voItemId) return Failure(new ActivityValidationError('voItemId is required'));
+      if (taskId) return Failure(new ActivityValidationError('VO Activity forbids taskId'));
       if (!this.atomicRepo) {
         return Failure(new ActivityValidationError('VO Activity provisioning requires canonical atomic persistence'));
       }
