@@ -55,7 +55,7 @@ export class ResidualAtomicRepository {
   }
 
   createSiteDiary(payload: Record<string, unknown>, actorId: string): Promise<SiteDiary> {
-    return this.rpc('f1_create_site_diary_with_workforce_atomic', {
+    return this.rpc('f1_create_site_diary_full_atomic', {
       p_payload: payload,
       p_actor_id: actorId,
       p_site_diary_id: generateUuid(),
@@ -65,7 +65,7 @@ export class ResidualAtomicRepository {
   }
 
   updateSiteDiary(siteDiaryId: string, payload: Record<string, unknown>, actorId: string): Promise<SiteDiary> {
-    return this.rpc('f1_update_site_diary_with_workforce_atomic', {
+    return this.rpc('f1_update_site_diary_full_atomic', {
       p_site_diary_id: siteDiaryId,
       p_payload: payload,
       p_actor_id: actorId,
