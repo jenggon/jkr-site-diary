@@ -1,7 +1,7 @@
 # F1 — Golden Path Product Proof Closure Report
 
 ## Verdict
-F1 is functionally complete and ready for final branch/merge verification.
+F1 is functionally complete and has passed the final feature-branch CI gate.
 
 ## Objective Achieved
 F1 proved the governed daily operational path without reopening sealed architecture or redesigning the official output:
@@ -39,7 +39,8 @@ F1 remained subject to the unified gate:
 
 `frozen lockfile -> typecheck -> API-inclusive typecheck -> lint -> tests -> build`.
 
-Run #127 passed after the final closure-contract repair at `3aed58fbbf8863a6e11854724078d9e1ee0b5363`.
+- Closure-contract gate: run #127 — SUCCESS at `3aed58fbbf8863a6e11854724078d9e1ee0b5363`.
+- Final feature-branch gate: run #129 — SUCCESS at `34fca1bf3c72a54eb6f24bd821224f4615322ad7`.
 
 ## Deferred to Later Phases / UAT
 
@@ -51,11 +52,6 @@ Run #127 passed after the final closure-contract repair at `3aed58fbbf8863a6e118
 
 These are not unfinished F1 architecture work.
 
-## Final Mechanical Gates
+## Final Mechanical Gate
 
-1. final CI on the closure-document head must be green;
-2. PR #15 moves from Draft to Ready;
-3. merge into `develop`;
-4. post-merge `develop` CI must be green.
-
-Once all four gates pass, F1 is CLOSED and `develop` becomes the F1 baseline for F2.
+The feature branch is green and ready for merge. After merge, `develop` CI must also be green. Once that post-merge gate passes, F1 is CLOSED and `develop` becomes the F1 baseline for F2.
