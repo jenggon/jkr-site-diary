@@ -1,15 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const updateActivity = vi.fn();
-const createOpenActivityService = vi.fn(() => ({ updateActivity }));
-const extractVerifiedIdentity = vi.fn();
+const mocks = vi.hoisted(() => {
+  const updateActivity = vi.fn();
+  const createOpenActivityService = vi.fn(() => ({ updateActivity }));
+  const extractVerifiedIdentity = vi.fn();
+
+  return {
+    updateActivity,
+    createOpenActivityService,
+    extractVerifiedIdentity,
+  };
+});
 
 vi.mock('@/composition/activityComposition', () => ({
-  createOpenActivityService,
+  createOpenActivityService: mocks.createOpenActivityService,
 }));
 
 vi.mock('@/app/api/_shared/identity', () => ({
-  extractVerifiedIdentity,
+  extractVerifiedIdentity: mocks.extractVerifiedIdentity,
 }));
 
 vi.mock('@/repositories/activityRepository', () => ({
@@ -32,11 +40,11 @@ describe('PATCH /api/activity/[activityId]', () => {
   });
 
   it('uses the verified access token for the service and verified actor for the mutation', async () => {
-    extractVerifiedIdentity.mockResolvedValue({
+    mocks.extractVerifiedIdentity.mockResolvedValue({
       actorId: 'actor-123',
       accessToken: 'token-abc',
     });
-    updateActivity.mockResolvedValue({
+    mocks.updateActivity.mockResolvedValue({
       success: true,
       value: { activityId: 'activity-123' },
     });
@@ -55,8 +63,8 @@ describe('PATCH /api/activity/[activityId]', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(createOpenActivityService).toHaveBeenCalledWith('token-abc');
-    expect(updateActivity).toHaveBeenCalledWith({
+    expect(mocks.createOpenActivityService).toHaveBeenCalledWith('token-abc');
+    expect(mocks.updateActivity).toHaveBeenCalledWith({
       activityId: 'activity-123',
       activityName: 'Install reinforcement',
       updatedBy: 'actor-123',
@@ -64,7 +72,7 @@ describe('PATCH /api/activity/[activityId]', () => {
   });
 
   it('rejects the mutation when verified identity is unavailable', async () => {
-    extractVerifiedIdentity.mockResolvedValue(null);
+    mocks.extractVerifiedIdentity.mockResolvedValue(null);
 
     const request = new Request('http://localhost/api/activity/activity-123', {
       method: 'PATCH',
@@ -77,7 +85,7 @@ describe('PATCH /api/activity/[activityId]', () => {
     });
 
     expect(response.status).toBe(401);
-    expect(createOpenActivityService).not.toHaveBeenCalled();
-    expect(updateActivity).not.toHaveBeenCalled();
+    expect(mocks.createOpenActivityService).not.toHaveBeenCalled();
+    expect(mocks.updateActivity).not.toHaveBeenCalled();
   });
 });
