@@ -40,6 +40,205 @@ const DEFAULT_TRADES = [
   'Site Supervisor',
 ];
 
+export interface SubmitDailyEntryParams {
+  programmeId: string;
+  revisionId: string;
+  selectedSource: SelectedOperationalSource | null;
+  activityDate: string;
+  actualStartDate: string;
+  workStatus: 'Sedang Laksana' | 'Siap';
+  location: string;
+  workStartTime: string;
+  workEndTime: string;
+  weatherCondition: 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT';
+  rainStartTime: string;
+  rainEndTime: string;
+  contractorScope: 'CONTRACTOR' | 'NSC';
+  notes: string;
+  manpower: ManpowerRow[];
+  editingSiteDiaryId?: string | null;
+  editingActivityId?: string | null;
+  fetchFn?: typeof fetch;
+}
+
+export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<{ siteDiaryId: string; activityId: string }> {
+  const fetcher = params.fetchFn || (typeof window !== 'undefined' ? window.fetch.bind(window) : fetch);
+
+  // 1. Validation
+  if (!params.programmeId || !params.revisionId) {
+    throw new Error('Sila pastikan Program dan Semakan Projek sah dipilih.');
+  }
+
+  if (!params.editingActivityId && !params.selectedSource) {
+    throw new Error('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
+  }
+
+  if (!params.activityDate) {
+    throw new Error('Sila masukkan Tarikh Aktiviti Laporan Harian.');
+  }
+
+  if (!params.notes.trim()) {
+    throw new Error('Sila masukkan Catatan Kemajuan Kerja.');
+  }
+
+  let resolvedActivityId = params.editingActivityId ?? null;
+
+  // 2. Establish Activity if creating a new entry
+  if (!resolvedActivityId && params.selectedSource) {
+    const createActivityPayload: Record<string, unknown> = {
+      programmeId: params.programmeId,
+      revisionId: params.revisionId,
+      sourceType: params.selectedSource.sourceType,
+      activityName: params.selectedSource.title,
+    };
+
+    if (params.selectedSource.sourceType === 'MSP') {
+      createActivityPayload.taskId = params.selectedSource.id;
+    } else {
+      createActivityPayload.voItemId = params.selectedSource.id;
+    }
+
+    const actRes = await fetcher('/api/activities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(createActivityPayload),
+    });
+
+    if (!actRes.ok) {
+      const errJson = await actRes.json().catch(() => null);
+      throw new Error(errJson?.error || 'Gagal mendaftar aktiviti baharu');
+    }
+
+    const actJson = await actRes.json();
+    resolvedActivityId = actJson?.data?.activityId ?? null;
+  }
+
+  if (!resolvedActivityId) {
+    throw new Error('ID Aktiviti tidak dapat ditentukan.');
+  }
+
+  // 3. Lifecycle Transition Orchestration (only when creating a new diary entry)
+  if (!params.editingSiteDiaryId) {
+    if (params.workStatus === 'Siap') {
+      const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualStartDate: params.actualStartDate || params.activityDate,
+          completedDate: params.activityDate,
+        }),
+      });
+
+      if (!compRes.ok) {
+        const errJson = await compRes.json().catch(() => null);
+        throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
+      }
+    } else {
+      // In Progress (Sedang Laksana): transition via /start with known/actual start date
+      const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualStartDate: params.actualStartDate || params.activityDate,
+        }),
+      });
+
+      if (!startRes.ok) {
+        const errJson = await startRes.json().catch(() => null);
+        const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
+        throw new Error(errMsg);
+      }
+    }
+  }
+
+  // 4. Site Diary Persistence (Create or Edit)
+  const compiledPrintContext: PrintContextData = {
+    location: params.location.trim(),
+    work_start_time: params.workStartTime || null,
+    work_end_time: params.workEndTime || null,
+    weather_condition: params.weatherCondition,
+    rain_start_time: params.weatherCondition === 'HUJAN' ? params.rainStartTime || null : null,
+    rain_end_time: params.weatherCondition === 'HUJAN' ? params.rainEndTime || null : null,
+    contractor_scope: params.contractorScope,
+  };
+
+  const activeManpower = params.manpower.filter(
+    (m) => m.bumi_count > 0 || m.non_bumi_count > 0 || m.foreign_count > 0
+  );
+
+  const mappedWeather =
+    params.weatherCondition === 'HUJAN'
+      ? 'Rainy'
+      : params.weatherCondition === 'RIBUT'
+      ? 'HeavyRain'
+      : params.weatherCondition === 'MENDUNG'
+      ? 'Cloudy'
+      : 'Sunny';
+
+  let savedSiteDiaryId: string | null = params.editingSiteDiaryId ?? null;
+
+  if (params.editingSiteDiaryId) {
+    // EDIT MODE: PATCH existing record to preserve site_diary_id
+    const patchRes = await fetcher(`/api/site-diary/${encodeURIComponent(params.editingSiteDiaryId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notes: params.notes.trim(),
+        weather: mappedWeather,
+        manpower: activeManpower,
+        print_context: compiledPrintContext,
+      }),
+    });
+
+    if (!patchRes.ok) {
+      const errJson = await patchRes.json().catch(() => null);
+      throw new Error(errJson?.error || 'Gagal mengemaskini laporan Buku Harian Tapak');
+    }
+
+    const patchJson = await patchRes.json();
+    savedSiteDiaryId = patchJson?.data?.site_diary_id ?? params.editingSiteDiaryId;
+  } else {
+    // CREATE MODE: POST new Site Diary row
+    const postRes = await fetcher('/api/site-diary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        programme_id: params.programmeId,
+        revision_id: params.revisionId,
+        activity_id: resolvedActivityId,
+        activity_date: params.activityDate,
+        notes: params.notes.trim(),
+        weather: mappedWeather,
+        manpower: activeManpower,
+        print_context: compiledPrintContext,
+      }),
+    });
+
+    if (!postRes.ok) {
+      const errJson = await postRes.json().catch(() => null);
+      const errMessage = errJson?.error || 'Gagal menyimpan laporan Buku Harian Tapak';
+      // Duplicate handling detection
+      if (
+        errMessage.toLowerCase().includes('unique') ||
+        errMessage.toLowerCase().includes('already exists') ||
+        errMessage.toLowerCase().includes('duplicate')
+      ) {
+        throw new Error(`Laporan untuk aktiviti ini pada tarikh ${params.activityDate} telah wujud.`);
+      }
+      throw new Error(errMessage);
+    }
+
+    const postJson = await postRes.json();
+    savedSiteDiaryId = postJson?.data?.site_diary_id ?? postJson?.data?.siteDiaryId ?? null;
+  }
+
+  if (!savedSiteDiaryId) {
+    throw new Error('ID Laporan Buku Harian Tapak tidak dapat diperolehi.');
+  }
+
+  return { siteDiaryId: savedSiteDiaryId, activityId: resolvedActivityId };
+}
+
 export default function DailyEntryForm({
   initialSiteDiaryId = null,
   initialActivityId = null,
@@ -159,187 +358,48 @@ export default function DailyEntryForm({
     setManpower((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  // Build compiled print context payload
-  const buildPrintContext = (): PrintContextData => ({
-    location: location.trim(),
-    work_start_time: workStartTime || null,
-    work_end_time: workEndTime || null,
-    weather_condition: weatherCondition,
-    rain_start_time: weatherCondition === 'HUJAN' ? rainStartTime || null : null,
-    rain_end_time: weatherCondition === 'HUJAN' ? rainEndTime || null : null,
-    contractor_scope: contractorScope,
-  });
-
   // Calculate total manpower
   const totalWorkers = manpower.reduce(
     (acc, cur) => acc + (cur.bumi_count || 0) + (cur.non_bumi_count || 0) + (cur.foreign_count || 0),
     0
   );
 
-  // Native Form Submission Orchestration
+  // Native Form Submission Handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
-
-    // Validation
-    if (!programmeId || !revisionId) {
-      setFormError('Sila pastikan Program dan Semakan Projek sah dipilih.');
-      return;
-    }
-
-    if (!editingActivityId && !selectedSource) {
-      setFormError('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
-      return;
-    }
-
-    if (!activityDate) {
-      setFormError('Sila masukkan Tarikh Aktiviti Laporan Harian.');
-      return;
-    }
-
-    if (!notes.trim()) {
-      setFormError('Sila masukkan Catatan Kemajuan Kerja.');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      let resolvedActivityId = editingActivityId;
-
-      // 1. Establish Activity if creating a new entry
-      if (!resolvedActivityId && selectedSource) {
-        const createActivityPayload: Record<string, unknown> = {
-          programmeId,
-          revisionId,
-          sourceType: selectedSource.sourceType,
-          activityName: selectedSource.title,
-        };
-
-        if (selectedSource.sourceType === 'MSP') {
-          createActivityPayload.taskId = selectedSource.id;
-        } else {
-          createActivityPayload.voItemId = selectedSource.id;
-        }
-
-        const actRes = await fetch('/api/activities', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(createActivityPayload),
-        });
-
-        if (!actRes.ok) {
-          const errJson = await actRes.json().catch(() => null);
-          throw new Error(errJson?.error || 'Gagal mendaftar aktiviti baharu');
-        }
-
-        const actJson = await actRes.json();
-        resolvedActivityId = actJson?.data?.activityId ?? null;
-      }
-
-      if (!resolvedActivityId) {
-        throw new Error('ID Aktiviti tidak dapat ditentukan.');
-      }
-
-      // 2. Lifecycle Transition Orchestration
-      // If completed on same day or marked completed:
-      if (workStatus === 'Siap') {
-        const compRes = await fetch(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            actualStartDate: actualStartDate || activityDate,
-            completedDate: activityDate,
-          }),
-        });
-
-        if (!compRes.ok) {
-          const errJson = await compRes.json().catch(() => null);
-          throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
-        }
-      } else {
-        // In Progress (Sedang Laksana): transition via /start with known/actual start date
-        const startRes = await fetch(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            actualStartDate: actualStartDate || activityDate,
-          }),
-        });
-
-        if (!startRes.ok) {
-          // If already in progress, non-blocking or accept
-          const errJson = await startRes.json().catch(() => null);
-          if (errJson?.error && !errJson.error.includes('already')) {
-            // non-fatal if already started, but surface other errors
-          }
-        }
-      }
-
-      // 3. Site Diary Persistence (Create or Edit)
-      const compiledPrintContext = buildPrintContext();
-      const activeManpower = manpower.filter(
-        (m) => m.bumi_count > 0 || m.non_bumi_count > 0 || m.foreign_count > 0
-      );
-
-      let savedSiteDiaryId = editingSiteDiaryId;
+      const result = await submitDailyEntry({
+        programmeId: programmeId || '',
+        revisionId: revisionId || '',
+        selectedSource,
+        activityDate,
+        actualStartDate,
+        workStatus,
+        location,
+        workStartTime,
+        workEndTime,
+        weatherCondition,
+        rainStartTime,
+        rainEndTime,
+        contractorScope,
+        notes,
+        manpower,
+        editingSiteDiaryId,
+        editingActivityId,
+      });
 
       if (editingSiteDiaryId) {
-        // EDIT MODE: PATCH existing record to preserve site_diary_id
-        const patchRes = await fetch(`/api/site-diary/${encodeURIComponent(editingSiteDiaryId)}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notes: notes.trim(),
-            weather: weatherCondition === 'HUJAN' ? 'Rainy' : weatherCondition === 'RIBUT' ? 'HeavyRain' : weatherCondition === 'MENDUNG' ? 'Cloudy' : 'Sunny',
-            manpower: activeManpower,
-            print_context: compiledPrintContext,
-          }),
-        });
-
-        if (!patchRes.ok) {
-          const errJson = await patchRes.json().catch(() => null);
-          throw new Error(errJson?.error || 'Gagal mengemaskini laporan Buku Harian Tapak');
-        }
-
-        const patchJson = await patchRes.json();
-        savedSiteDiaryId = patchJson?.data?.site_diary_id ?? editingSiteDiaryId;
         setFormSuccess('Laporan Buku Harian Tapak berjaya dikemaskini.');
       } else {
-        // CREATE MODE: POST new Site Diary row
-        const postRes = await fetch('/api/site-diary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            programme_id: programmeId,
-            revision_id: revisionId,
-            activity_id: resolvedActivityId,
-            activity_date: activityDate,
-            notes: notes.trim(),
-            weather: weatherCondition === 'HUJAN' ? 'Rainy' : weatherCondition === 'RIBUT' ? 'HeavyRain' : weatherCondition === 'MENDUNG' ? 'Cloudy' : 'Sunny',
-            manpower: activeManpower,
-            print_context: compiledPrintContext,
-          }),
-        });
-
-        if (!postRes.ok) {
-          const errJson = await postRes.json().catch(() => null);
-          const errMessage = errJson?.error || 'Gagal menyimpan laporan Buku Harian Tapak';
-          // Duplicate handling detection
-          if (errMessage.toLowerCase().includes('unique') || errMessage.toLowerCase().includes('already exists') || errMessage.toLowerCase().includes('duplicate')) {
-            throw new Error(`Laporan untuk aktiviti ini pada tarikh ${activityDate} telah wujud.`);
-          }
-          throw new Error(errMessage);
-        }
-
-        const postJson = await postRes.json();
-        savedSiteDiaryId = postJson?.data?.site_diary_id ?? postJson?.data?.siteDiaryId ?? null;
         setFormSuccess('Laporan Buku Harian Tapak berjaya disimpan.');
       }
 
-      if (savedSiteDiaryId && onSuccess) {
-        onSuccess(savedSiteDiaryId);
+      if (onSuccess && result.siteDiaryId) {
+        onSuccess(result.siteDiaryId);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ralat semasa memproses laporan harian';
