@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, FormEvent } from 'react';
+import React, { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
 import { useDailyEntryContext } from './DailyEntryShell';
 import OperationalSourceSelector, { SelectedOperationalSource } from './OperationalSourceSelector';
 import WorkforceEntry, { ManpowerRow, COMMON_TRADES_CATALOG } from './WorkforceEntry';
+import DailyEntryFeedback from './DailyEntryFeedback';
 
 export type { ManpowerRow };
 
@@ -50,7 +51,7 @@ export interface SubmitDailyEntryParams {
 export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<{ siteDiaryId: string; activityId: string }> {
   const fetcher = params.fetchFn || (typeof window !== 'undefined' ? window.fetch.bind(window) : fetch);
 
-  // 1. Validation
+  // 1. Client-Side Field Validation
   if (!params.programmeId || !params.revisionId) {
     throw new Error('Sila pastikan Program dan Semakan Projek sah dipilih.');
   }
@@ -60,10 +61,18 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
   }
 
   if (!params.activityDate) {
-    throw new Error('Sila masukkan Tarikh Aktiviti Laporan Harian.');
+    throw new Error('Tarikh Laporan Harian adalah wajib.');
   }
 
-  if (!params.notes.trim()) {
+  if (!params.actualStartDate) {
+    throw new Error('Tarikh Mula Sebenar (Known Start Date) adalah wajib.');
+  }
+
+  if (!params.location || !params.location.trim()) {
+    throw new Error('Lokasi terperinci / Grid line adalah wajib.');
+  }
+
+  if (!params.notes || !params.notes.trim()) {
     throw new Error('Sila masukkan Catatan Kemajuan Kerja.');
   }
 
@@ -90,6 +99,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
       body: JSON.stringify(createActivityPayload),
     });
 
+    if (actRes.status === 401) {
+      throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+    }
+
     if (!actRes.ok) {
       const errJson = await actRes.json().catch(() => null);
       throw new Error(errJson?.error || 'Gagal mendaftar aktiviti baharu');
@@ -115,6 +128,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
         }),
       });
 
+      if (compRes.status === 401) {
+        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+      }
+
       if (!compRes.ok) {
         const errJson = await compRes.json().catch(() => null);
         throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
@@ -128,6 +145,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
           actualStartDate: params.actualStartDate || params.activityDate,
         }),
       });
+
+      if (startRes.status === 401) {
+        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+      }
 
       if (!startRes.ok) {
         const errJson = await startRes.json().catch(() => null);
@@ -176,6 +197,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
       }),
     });
 
+    if (patchRes.status === 401) {
+      throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+    }
+
     if (!patchRes.ok) {
       const errJson = await patchRes.json().catch(() => null);
       throw new Error(errJson?.error || 'Gagal mengemaskini laporan Buku Harian Tapak');
@@ -199,6 +224,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
         print_context: compiledPrintContext,
       }),
     });
+
+    if (postRes.status === 401) {
+      throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+    }
 
     if (!postRes.ok) {
       const errJson = await postRes.json().catch(() => null);
@@ -272,6 +301,35 @@ export default function DailyEntryForm({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [savedDiaryId, setSavedDiaryId] = useState<string | null>(null);
+  const isSubmittingRef = useRef<boolean>(false);
+
+  // Reset helper for starting a new entry
+  const handleResetForNewEntry = useCallback(() => {
+    setSelectedSource(null);
+    setActivityDate(todayIso);
+    setActualStartDate(todayIso);
+    setWorkStatus('Sedang Laksana');
+    setLocation('');
+    setWorkStartTime('08:00');
+    setWorkEndTime('17:00');
+    setWeatherCondition('ELOK');
+    setRainStartTime('');
+    setRainEndTime('');
+    setContractorScope('CONTRACTOR');
+    setNotes('');
+    setManpower(
+      DEFAULT_TRADES.map((trade) => ({
+        trade_name: trade,
+        bumi_count: 0,
+        non_bumi_count: 0,
+        foreign_count: 0,
+      }))
+    );
+    setSavedDiaryId(null);
+    setFormError(null);
+    setFormSuccess(null);
+  }, [todayIso]);
 
   // If editing an existing Site Diary, load its data
   const loadExistingDiary = useCallback(async (diaryId: string) => {
@@ -314,6 +372,8 @@ export default function DailyEntryForm({
   // Native Form Submission Handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setFormError(null);
     setFormSuccess(null);
     setIsSubmitting(true);
@@ -339,10 +399,12 @@ export default function DailyEntryForm({
         editingActivityId,
       });
 
+      setSavedDiaryId(result.siteDiaryId);
+
       if (editingSiteDiaryId) {
-        setFormSuccess('Laporan Buku Harian Tapak berjaya dikemaskini.');
+        setFormSuccess('Buku Harian Tapak berjaya dikemaskini.');
       } else {
-        setFormSuccess('Laporan Buku Harian Tapak berjaya disimpan.');
+        setFormSuccess('Buku Harian Tapak berjaya disimpan.');
       }
 
       if (onSuccess && result.siteDiaryId) {
@@ -353,6 +415,7 @@ export default function DailyEntryForm({
       setFormError(msg);
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -546,35 +609,26 @@ export default function DailyEntryForm({
         />
       </section>
 
-      {/* Error & Success Banners */}
-      {formError && (
-        <div className="rounded-xl border border-red-800/80 bg-red-950/60 p-3.5 text-xs text-red-200 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          <span>{formError}</span>
-        </div>
-      )}
-
-      {formSuccess && (
-        <div className="rounded-xl border border-emerald-800/80 bg-emerald-950/60 p-3.5 text-xs text-emerald-200 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-emerald-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-          <span>{formSuccess}</span>
-        </div>
-      )}
+      {/* Feedback & Status Surfaces (Accessible role=alert / role=status) */}
+      <DailyEntryFeedback
+        error={formError}
+        success={formSuccess}
+        savedSiteDiaryId={savedDiaryId}
+        isEditMode={Boolean(editingSiteDiaryId)}
+        onResetForNewEntry={handleResetForNewEntry}
+      />
 
       {/* Submit Button */}
       <div className="pt-2">
         <button
           type="submit"
           disabled={isSubmitting}
+          aria-disabled={isSubmitting}
           className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg hover:shadow-blue-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>
-              <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+              <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true"></span>
               <span>Menyimpan Laporan...</span>
             </>
           ) : (
