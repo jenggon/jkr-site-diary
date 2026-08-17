@@ -438,57 +438,92 @@ export default function DailyEntryForm({
   const [savedDiaryId, setSavedDiaryId] = useState<string | null>(null);
   const isSubmittingRef = useRef<boolean>(false);
 
-  // Reset helper for starting a new entry
-  const handleResetForNewEntry = useCallback(() => {
-    setSelectedSource(null);
-    setActivityDate(todayIso);
-    setActualStartDate(todayIso);
-    setWorkStatus('Sedang Laksana');
-    setLocation('');
-    setWorkStartTime('08:00');
-    setWorkEndTime('17:00');
-    setWeatherCondition('ELOK');
-    setRainStartTime('');
-    setRainEndTime('');
-    setContractorScope('CONTRACTOR');
-    setNotes('');
-    setEditingActivityId(null);
-    setExistingActivityInfo(null);
-    setFormError(null);
-    setFormSuccess(null);
-    setSavedDiaryId(null);
-    setManpower(
-      DEFAULT_TRADES.map((trade) => ({
-        trade_name: trade,
-        bumi_count: 0,
-        non_bumi_count: 0,
-        foreign_count: 0,
-      }))
-    );
-    setSavedDiaryId(null);
-    setFormError(null);
-    setFormSuccess(null);
-    setEditingSiteDiaryId(null);
-    setEditingActivityId(null);
-    setExistingActivityInfo(null);
-  }, [todayIso]);
-
   const editDiaryGenerationRef = useRef<number>(0);
   const editDiaryAbortRef = useRef<AbortController | null>(null);
+  const continuationPrefillGenerationRef = useRef<number>(0);
+  const continuationPrefillAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
       if (editDiaryAbortRef.current) {
         editDiaryAbortRef.current.abort();
+        editDiaryAbortRef.current = null;
       }
       editDiaryGenerationRef.current += 1;
+
+      if (continuationPrefillAbortRef.current) {
+        continuationPrefillAbortRef.current.abort();
+        continuationPrefillAbortRef.current = null;
+      }
+      continuationPrefillGenerationRef.current += 1;
     };
   }, []);
+
+  /**
+   * Centralized continuation / form invalidation authority.
+   * Cancels any pending in-flight async prefill operations, increments the generation token,
+   * resets continuation & form state, and optionally navigates the UI tab.
+   */
+  const invalidateContinuationContext = useCallback(
+    (targetTab?: 'OPEN_ACTIVITIES' | 'NEW_ACTIVITY') => {
+      // 1. Abort pending continuation prefill requests & increment generation
+      if (continuationPrefillAbortRef.current) {
+        continuationPrefillAbortRef.current.abort();
+        continuationPrefillAbortRef.current = null;
+      }
+      continuationPrefillGenerationRef.current += 1;
+
+      // 2. Abort pending edit diary requests & increment generation
+      if (editDiaryAbortRef.current) {
+        editDiaryAbortRef.current.abort();
+        editDiaryAbortRef.current = null;
+      }
+      editDiaryGenerationRef.current += 1;
+
+      // 3. Clear editingActivityId, banner info & editingSiteDiaryId
+      setEditingActivityId(null);
+      setExistingActivityInfo(null);
+      setEditingSiteDiaryId(null);
+
+      // 4. Clear operational source & form inputs
+      setSelectedSource(null);
+      setActivityDate(todayIso);
+      setActualStartDate(todayIso);
+      setWorkStatus('Sedang Laksana');
+      setLocation('');
+      setWorkStartTime('08:00');
+      setWorkEndTime('17:00');
+      setWeatherCondition('ELOK');
+      setRainStartTime('');
+      setRainEndTime('');
+      setContractorScope('CONTRACTOR');
+      setNotes('');
+      setFormError(null);
+      setFormSuccess(null);
+      setSavedDiaryId(null);
+      setManpower(
+        DEFAULT_TRADES.map((trade) => ({
+          trade_name: trade,
+          bumi_count: 0,
+          non_bumi_count: 0,
+          foreign_count: 0,
+        }))
+      );
+
+      // 5. Navigate to target tab if specified
+      if (targetTab) {
+        setActiveTab(targetTab);
+      }
+    },
+    [todayIso]
+  );
+
 
   // If editing an existing Site Diary, load its data
   const loadExistingDiary = useCallback(async (diaryId: string) => {
     if (editDiaryAbortRef.current) {
       editDiaryAbortRef.current.abort();
+      editDiaryAbortRef.current = null;
     }
     const abortController = new AbortController();
     editDiaryAbortRef.current = abortController;
@@ -496,7 +531,7 @@ export default function DailyEntryForm({
 
     try {
       const res = await fetch(`/api/site-diary/${encodeURIComponent(diaryId)}`, {
-        signal: abortController.signal
+        signal: abortController.signal,
       });
       if (!res.ok) return;
       const json = await res.json();
@@ -529,22 +564,11 @@ export default function DailyEntryForm({
     }
   }, []);
 
-  const continuationPrefillGenerationRef = useRef<number>(0);
-  const continuationPrefillAbortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (continuationPrefillAbortRef.current) {
-        continuationPrefillAbortRef.current.abort();
-      }
-      continuationPrefillGenerationRef.current += 1;
-    };
-  }, []);
-
   // If continuing an existing Activity, load its details and prefill ONLY safe continuation fields
   const loadExistingActivityAndPrefill = useCallback(async (actId: string, targetDate: string) => {
     if (continuationPrefillAbortRef.current) {
       continuationPrefillAbortRef.current.abort();
+      continuationPrefillAbortRef.current = null;
     }
     const abortController = new AbortController();
     continuationPrefillAbortRef.current = abortController;
@@ -561,7 +585,7 @@ export default function DailyEntryForm({
 
       // 2. Fetch Authoritative Activity details
       const actRes = await fetch(`/api/activity/${encodeURIComponent(actId)}`, {
-        signal: abortController.signal
+        signal: abortController.signal,
       });
       if (actRes.ok) {
         const actJson = await actRes.json();
@@ -585,7 +609,7 @@ export default function DailyEntryForm({
 
       // 3. Fetch Previous Diaries for Continuation Prefill
       const diariesRes = await fetch(`/api/site-diary/activity/${encodeURIComponent(actId)}`, {
-        signal: abortController.signal
+        signal: abortController.signal,
       });
       if (diariesRes.ok) {
         const diariesJson = await diariesRes.json();
@@ -626,31 +650,26 @@ export default function DailyEntryForm({
   const prevProgrammeIdRef = useRef<string | null>(programmeId);
   useEffect(() => {
     if (prevProgrammeIdRef.current !== null && prevProgrammeIdRef.current !== programmeId) {
-      if (continuationPrefillAbortRef.current) {
-        continuationPrefillAbortRef.current.abort();
-      }
-      continuationPrefillGenerationRef.current += 1;
-
-      setEditingActivityId(null);
-      setExistingActivityInfo(null);
-      setSelectedSource(null);
-      setFormError(null);
-      setFormSuccess(null);
-      setSavedDiaryId(null);
-      setActiveTab('OPEN_ACTIVITIES');
+      invalidateContinuationContext('OPEN_ACTIVITIES');
     }
     prevProgrammeIdRef.current = programmeId;
-  }, [programmeId]);
+  }, [programmeId, invalidateContinuationContext]);
 
+  // Decoupled initialSiteDiaryId effect (eliminates redundant reload on activityDate change)
   useEffect(() => {
     if (initialSiteDiaryId) {
       setEditingSiteDiaryId(initialSiteDiaryId);
       loadExistingDiary(initialSiteDiaryId);
-    } else if (initialActivityId) {
+    }
+  }, [initialSiteDiaryId, loadExistingDiary]);
+
+  // Decoupled initialActivityId effect
+  useEffect(() => {
+    if (initialActivityId) {
       setEditingActivityId(initialActivityId);
       loadExistingActivityAndPrefill(initialActivityId, activityDate);
     }
-  }, [initialSiteDiaryId, initialActivityId, activityDate, loadExistingDiary, loadExistingActivityAndPrefill]);
+  }, [initialActivityId, loadExistingActivityAndPrefill]);
 
   // Native Form Submission Handler
   const handleSubmit = async (e: FormEvent) => {
@@ -774,8 +793,7 @@ export default function DailyEntryForm({
               loadExistingActivityAndPrefill(actId, activityDate);
             }}
             onCreateNewActivity={() => {
-              handleResetForNewEntry();
-              setActiveTab('NEW_ACTIVITY');
+              invalidateContinuationContext('NEW_ACTIVITY');
             }}
           />
         </div>
@@ -810,10 +828,7 @@ export default function DailyEntryForm({
                   <button
                     type="button"
                     onClick={() => {
-                      setEditingActivityId(null);
-                      setExistingActivityInfo(null);
-                      handleResetForNewEntry();
-                      setActiveTab('OPEN_ACTIVITIES');
+                      invalidateContinuationContext('OPEN_ACTIVITIES');
                     }}
                     data-testid="back-to-open-activities-btn"
                     aria-label="Kembali ke Senarai Aktiviti Terbuka"
@@ -1074,16 +1089,10 @@ export default function DailyEntryForm({
             savedSiteDiaryId={savedDiaryId}
             isEditMode={Boolean(editingSiteDiaryId)}
             onBackToOpenActivities={() => {
-              handleResetForNewEntry();
-              setEditingActivityId(null);
-              setExistingActivityInfo(null);
-              setActiveTab('OPEN_ACTIVITIES');
+              invalidateContinuationContext('OPEN_ACTIVITIES');
             }}
             onResetForNewEntry={() => {
-              handleResetForNewEntry();
-              setEditingActivityId(null);
-              setExistingActivityInfo(null);
-              setActiveTab('NEW_ACTIVITY');
+              invalidateContinuationContext('NEW_ACTIVITY');
             }}
           />
 
