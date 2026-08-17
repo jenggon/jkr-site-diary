@@ -11,6 +11,8 @@ import { ActivityStatus, ActivitySourceType } from '@/types/activity';
 // Enable React 19 act environment
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
+const todayIso = new Date().toISOString().split('T')[0] ?? '';
+
 let currentProgrammeContext = {
   programmeId: 'prog-selangor-001',
   revisionId: 'rev-auth-v2',
@@ -49,7 +51,7 @@ function createDeferred<T = any>() {
   return { promise, resolve, reject };
 }
 
-describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', () => {
+describe('F2.2-B03R3 — Real Component Race & Invalidation Lifecycle Suite', () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -242,9 +244,9 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
   });
 
   // ----------------------------------------------------------------------------------
-  // TEST 3 — Activity A → B stale prefill
+  // TEST 3 — Activity A → B stale prefill (Comprehensive Manpower + Identity Proof)
   // ----------------------------------------------------------------------------------
-  it('TEST 3 — Activity A -> B stale prefill: selecting B while A is loading leaves all B values authoritative when A resolves', async () => {
+  it('TEST 3 — Activity A -> B stale prefill: proves distinct B manpower, location, scope, and identity survive late A resolution', async () => {
     const defActA = createDeferred<any>();
     const defDiaryA = createDeferred<any>();
     const defActB = createDeferred<any>();
@@ -283,7 +285,7 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
       return Promise.resolve(new Response(JSON.stringify({ data: {} }), { status: 200 }));
     }) as any;
 
-    // 1. Mount DailyEntryForm (starts on Open Activities tab by default)
+    // 1. Mount DailyEntryForm
     await act(async () => {
       root.render(React.createElement(DailyEntryForm, {}));
     });
@@ -296,13 +298,12 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
       (continueButtons[0] as HTMLButtonElement).click();
     });
 
-    // 3. Now select Activity B while Activity A prefill is still in-flight
-    // (Render form with initialActivityId='act-uuid-B' or trigger selection)
+    // 3. Select Activity B while Activity A prefill is still in-flight
     await act(async () => {
       root.render(React.createElement(DailyEntryForm, { initialActivityId: 'act-uuid-B' }));
     });
 
-    // 4. Resolve B completely
+    // 4. Resolve B completely with clearly distinct authoritative values
     await act(async () => {
       defActB.resolve({
         data: {
@@ -317,7 +318,8 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
           {
             activity_date: '2026-08-15',
             manpower: [
-              { trade_name: 'Barbender (Tukang Besi)', bumi_count: 5, non_bumi_count: 2, foreign_count: 0 },
+              { trade_name: 'General Worker (Pekerja Am)', bumi_count: 7, non_bumi_count: 4, foreign_count: 2 },
+              { trade_name: 'Bar Bender (Pembengkok Besi)', bumi_count: 5, non_bumi_count: 3, foreign_count: 1 },
             ],
             print_context: {
               location: 'Blok B, Aras 3, Grid 5-8',
@@ -328,7 +330,7 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
       });
     });
 
-    // Assert: B fields are populated in the DOM
+    // Assert: B banner and print context fields are populated
     expect(container.innerHTML).toContain('Aktiviti B - Kerja Konkrit Aras 3');
     const locationInput = container.querySelector('input[placeholder*="Grid"]') as HTMLInputElement;
     expect(locationInput?.value).toBe('Blok B, Aras 3, Grid 5-8');
@@ -336,7 +338,24 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
     const scopeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
     expect(scopeSelect?.value).toBe('NSC');
 
-    // 5. Resolve Activity A last
+    // Assert: B manpower is rendered with authoritative counts (Pekerja Am: 7, 4, 2; Bar Bender: 5, 3, 1)
+    const genWorkerBumi = container.querySelector('input[aria-label="Bilangan Bumiputera untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    const genWorkerNonBumi = container.querySelector('input[aria-label="Bilangan Bukan Bumiputera untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    const genWorkerForeign = container.querySelector('input[aria-label="Bilangan Bukan Warganegara untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+
+    expect(genWorkerBumi?.value).toBe('7');
+    expect(genWorkerNonBumi?.value).toBe('4');
+    expect(genWorkerForeign?.value).toBe('2');
+
+    const barBenderBumi = container.querySelector('input[aria-label="Bilangan Bumiputera untuk Bar Bender (Pembengkok Besi)"]') as HTMLInputElement;
+    const barBenderNonBumi = container.querySelector('input[aria-label="Bilangan Bukan Bumiputera untuk Bar Bender (Pembengkok Besi)"]') as HTMLInputElement;
+    const barBenderForeign = container.querySelector('input[aria-label="Bilangan Bukan Warganegara untuk Bar Bender (Pembengkok Besi)"]') as HTMLInputElement;
+
+    expect(barBenderBumi?.value).toBe('5');
+    expect(barBenderNonBumi?.value).toBe('3');
+    expect(barBenderForeign?.value).toBe('1');
+
+    // 5. Resolve Activity A LAST with completely distinct stale values
     await act(async () => {
       defActA.resolve({
         data: {
@@ -351,10 +370,11 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
           {
             activity_date: '2026-08-14',
             manpower: [
-              { trade_name: 'Concretor (Tukang Konkrit)', bumi_count: 10, non_bumi_count: 10, foreign_count: 10 },
+              { trade_name: 'General Worker (Pekerja Am)', bumi_count: 91, non_bumi_count: 82, foreign_count: 73 },
+              { trade_name: 'Concretor (Tukang Konkrit)', bumi_count: 50, non_bumi_count: 40, foreign_count: 30 },
             ],
             print_context: {
-              location: 'STALE LOCATION A',
+              location: 'STALE LOCATION A (999)',
               contractor_scope: 'CONTRACTOR',
             },
           },
@@ -362,17 +382,31 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
       });
     });
 
-    // Assert: All B values remain unchanged, A never overwrites
+    // Assert: Every B value remains strictly unchanged; zero A values leak into state
     expect(container.innerHTML).toContain('Aktiviti B - Kerja Konkrit Aras 3');
     expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (STALE)');
     expect(locationInput.value).toBe('Blok B, Aras 3, Grid 5-8');
     expect(scopeSelect.value).toBe('NSC');
+
+    // Assert: Manpower remains strictly B (7/4/2 and 5/3/1) and does NOT contain A's 91/82/73 or 50/40/30
+    expect(genWorkerBumi.value).toBe('7');
+    expect(genWorkerNonBumi.value).toBe('4');
+    expect(genWorkerForeign.value).toBe('2');
+    expect(barBenderBumi.value).toBe('5');
+    expect(barBenderNonBumi.value).toBe('3');
+    expect(barBenderForeign.value).toBe('1');
+
+    // Assert: Stale A's Concretor trade was never added, and stale A counts (91/82/73) are absent
+    expect(container.querySelector('input[aria-label="Bilangan Bumiputera untuk Concretor (Tukang Konkrit)"]')).toBeNull();
+    expect(container.querySelector('input[value="91"]')).toBeNull();
+    expect(container.querySelector('input[value="82"]')).toBeNull();
+    expect(container.querySelector('input[value="73"]')).toBeNull();
   });
 
   // ----------------------------------------------------------------------------------
-  // TEST 4 — Back invalidation
+  // TEST 4 — Back invalidation (Full-State Clean New Entry Proof)
   // ----------------------------------------------------------------------------------
-  it('TEST 4 — Back invalidation: clicking "Kembali ke Aktiviti Terbuka" invalidates prefill; late A resolution does not repopulate', async () => {
+  it('TEST 4 — Back invalidation: proves all continuation fields are invalidated and re-entering New Activity starts with canonical defaults', async () => {
     const defActA = createDeferred<any>();
     const defDiaryA = createDeferred<any>();
 
@@ -425,12 +459,12 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
     expect(container.querySelector('[data-testid="continuation-banner"]')).toBeNull();
     expect(container.querySelector('#panel-open-activities')).toBeTruthy();
 
-    // 4. Resolve A late
+    // 4. Resolve A late with comprehensive data
     await act(async () => {
       defActA.resolve({
         data: {
-          subtask: 'Aktiviti A - Cerucuk RC',
-          source_type: 'MSP',
+          subtask: 'Aktiviti A - Cerucuk RC (STALE LATE)',
+          source_type: 'VO',
           status: 'In Progress',
           actual_start_date: '2026-08-01',
         },
@@ -440,36 +474,91 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
           {
             activity_date: '2026-08-14',
             manpower: [
-              { trade_name: 'Concretor (Tukang Konkrit)', bumi_count: 8, non_bumi_count: 0, foreign_count: 0 },
+              { trade_name: 'General Worker (Pekerja Am)', bumi_count: 88, non_bumi_count: 77, foreign_count: 66 },
             ],
             print_context: {
-              location: 'Grid Line A-Z',
+              location: 'STALE GRID 99-100',
               contractor_scope: 'NSC',
+              work_start_time: '07:30',
+              work_end_time: '18:30',
+              weather_condition: 'HUJAN',
+              rain_start_time: '14:00',
+              rain_end_time: '16:00',
             },
+            notes: 'Stale progress notes from activity A',
           },
         ],
       });
     });
 
-    // Assert: Continuation remains exited, banner is not restored, no stale state
+    // Assert: Continuation remains exited, banner is not restored
     expect(container.querySelector('[data-testid="continuation-banner"]')).toBeNull();
-    expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC');
+    expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (STALE LATE)');
 
-    // 5. User switches to + Laporan Baharu tab
+    // 5. User switches to "+ Laporan Baharu" tab
     const newTabBtn = container.querySelector('[data-testid="tab-new-activity"]') as HTMLButtonElement;
     await act(async () => {
       newTabBtn.click();
     });
 
-    // Assert: Form starts clean (empty location, default trades 0, no leaked A fields)
+    // 6. Comprehensive assertions across ALL form fields for canonical NEW_ACTIVITY defaults:
+    // A. No continuation banner or identity
+    expect(container.querySelector('[data-testid="continuation-banner"]')).toBeNull();
+    expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (STALE LATE)');
+
+    // B. Operational source selector is present (not locked/bypassed)
+    expect(container.querySelector('[data-testid="operational-source-selector"]') || container.innerHTML.includes('Sumber Aktiviti')).toBeTruthy();
+
+    // C. Tarikh Laporan Harian & Tarikh Mula Sebenar start with todayIso
+    const dateInputs = container.querySelectorAll('input[type="date"]');
+    expect((dateInputs[0] as HTMLInputElement)?.value).toBe(todayIso);
+    expect((dateInputs[1] as HTMLInputElement)?.value).toBe(todayIso);
+
+    // D. Work status defaults to 'Sedang Laksana'
+    const statusSelect = container.querySelectorAll('select')[0] as HTMLSelectElement;
+    expect(statusSelect?.value).toBe('Sedang Laksana');
+
+    // E. Location is blank
     const locationInput = container.querySelector('input[placeholder*="Grid"]') as HTMLInputElement;
     expect(locationInput?.value).toBe('');
+
+    // F. Contractor scope defaults to 'CONTRACTOR' (not stale 'NSC')
+    const scopeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
+    expect(scopeSelect?.value).toBe('CONTRACTOR');
+
+    // G. Weather condition defaults to 'ELOK' (not stale 'HUJAN')
+    const weatherSelect = container.querySelectorAll('select')[2] as HTMLSelectElement;
+    expect(weatherSelect?.value).toBe('ELOK');
+
+    // H. Work start & end time default to 08:00 and 17:00 (not stale 07:30 / 18:30)
+    const timeInputs = container.querySelectorAll('input[type="time"]');
+    expect((timeInputs[0] as HTMLInputElement)?.value).toBe('08:00');
+    expect((timeInputs[1] as HTMLInputElement)?.value).toBe('17:00');
+
+    // I. Rain times are not rendered (since weather is ELOK, not HUJAN)
+    expect(container.innerHTML).not.toContain('Masa Mula Hujan');
+
+    // J. Manpower counts are all 0 (no leaked 88/77/66)
+    const genWorkerBumi = container.querySelector('input[aria-label="Bilangan Bumiputera untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    const genWorkerNonBumi = container.querySelector('input[aria-label="Bilangan Bukan Bumiputera untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    const genWorkerForeign = container.querySelector('input[aria-label="Bilangan Bukan Warganegara untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    expect(genWorkerBumi?.value).toBe('0');
+    expect(genWorkerNonBumi?.value).toBe('0');
+    expect(genWorkerForeign?.value).toBe('0');
+
+    // K. Notes are blank
+    const notesTextarea = container.querySelector('textarea') as HTMLTextAreaElement;
+    expect(notesTextarea?.value).toBe('');
+
+    // L. No stale error/success/saved banner
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.querySelector('[data-testid="success-banner"]')).toBeNull();
   });
 
   // ----------------------------------------------------------------------------------
-  // TEST 5 — Programme invalidation
+  // TEST 5 — Programme invalidation (Full-State Exposing Proof Under Programme B)
   // ----------------------------------------------------------------------------------
-  it('TEST 5 — Programme invalidation: switching programme while Activity A is loading invalidates prefill and clears identity', async () => {
+  it('TEST 5 — Programme invalidation: proves switching programme invalidates prefill and entering New Activity under Programme B has clean defaults', async () => {
     const defActA = createDeferred<any>();
     const defDiaryA = createDeferred<any>();
 
@@ -525,14 +614,15 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
       root.render(React.createElement(DailyEntryForm, {}));
     });
 
-    // Assert: Continuation mode is immediately exited on programme change
+    // Assert: Continuation mode is immediately exited on programme change, Programme Kedah list active
     expect(container.querySelector('[data-testid="continuation-banner"]')).toBeNull();
+    expect(container.innerHTML).toContain('Aktiviti Program B (Kerja Kumbahan)');
 
-    // 4. Resolve old Activity A late
+    // 4. Resolve old Activity A late with rich data
     await act(async () => {
       defActA.resolve({
         data: {
-          subtask: 'Aktiviti A - Cerucuk RC (OLD PROG)',
+          subtask: 'Aktiviti A - Cerucuk RC (OLD PROG SELANGOR)',
           source_type: 'MSP',
           status: 'In Progress',
           actual_start_date: '2026-08-01',
@@ -543,20 +633,71 @@ describe('F2.2-B03R2 — Real Component Race & Invalidation Lifecycle Suite', ()
           {
             activity_date: '2026-08-14',
             manpower: [
-              { trade_name: 'Concretor (Tukang Konkrit)', bumi_count: 5, non_bumi_count: 0, foreign_count: 0 },
+              { trade_name: 'General Worker (Pekerja Am)', bumi_count: 55, non_bumi_count: 44, foreign_count: 33 },
             ],
             print_context: {
-              location: 'OLD SELANGOR LOCATION',
-              contractor_scope: 'CONTRACTOR',
+              location: 'OLD SELANGOR LOCATION (GRID 1-4)',
+              contractor_scope: 'NSC',
+              weather_condition: 'RIBUT',
+              work_start_time: '06:00',
+              work_end_time: '20:00',
             },
+            notes: 'Old Selangor progress notes',
           },
         ],
       });
     });
 
-    // Assert: Activity A identity remains cleared, Programme Kedah remains authoritative, no stale fields repopulated
+    // Assert: Activity A identity remains cleared, Programme Kedah remains authoritative
     expect(container.querySelector('[data-testid="continuation-banner"]')).toBeNull();
-    expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (OLD PROG)');
+    expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (OLD PROG SELANGOR)');
     expect(container.innerHTML).toContain('Aktiviti Program B (Kerja Kumbahan)');
+
+    // 5. Expose form by switching to "+ Laporan Baharu" under Programme Kedah
+    const newTabBtn = container.querySelector('[data-testid="tab-new-activity"]') as HTMLButtonElement;
+    await act(async () => {
+      newTabBtn.click();
+    });
+
+    // 6. Comprehensive assertions on exposed form state:
+    // A. No Activity A identity or banner
+    expect(container.querySelector('[data-testid="continuation-banner"]')).toBeNull();
+    expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (OLD PROG SELANGOR)');
+
+    // B. Location is blank (not 'OLD SELANGOR LOCATION')
+    const locationInput = container.querySelector('input[placeholder*="Grid"]') as HTMLInputElement;
+    expect(locationInput?.value).toBe('');
+
+    // C. Scope is 'CONTRACTOR' (not stale 'NSC')
+    const scopeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
+    expect(scopeSelect?.value).toBe('CONTRACTOR');
+
+    // D. Weather is 'ELOK' (not stale 'RIBUT')
+    const weatherSelect = container.querySelectorAll('select')[2] as HTMLSelectElement;
+    expect(weatherSelect?.value).toBe('ELOK');
+
+    // E. Work times are default '08:00' and '17:00' (not stale '06:00' / '20:00')
+    const timeInputs = container.querySelectorAll('input[type="time"]');
+    expect((timeInputs[0] as HTMLInputElement)?.value).toBe('08:00');
+    expect((timeInputs[1] as HTMLInputElement)?.value).toBe('17:00');
+
+    // F. Notes are blank
+    const notesTextarea = container.querySelector('textarea') as HTMLTextAreaElement;
+    expect(notesTextarea?.value).toBe('');
+
+    // G. Manpower counts are all 0 (no leaked 55/44/33)
+    const genWorkerBumi = container.querySelector('input[aria-label="Bilangan Bumiputera untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    const genWorkerNonBumi = container.querySelector('input[aria-label="Bilangan Bukan Bumiputera untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    const genWorkerForeign = container.querySelector('input[aria-label="Bilangan Bukan Warganegara untuk General Worker (Pekerja Am)"]') as HTMLInputElement;
+    expect(genWorkerBumi?.value).toBe('0');
+    expect(genWorkerNonBumi?.value).toBe('0');
+    expect(genWorkerForeign?.value).toBe('0');
+    expect(container.querySelector('input[value="55"]')).toBeNull();
+    expect(container.querySelector('input[value="44"]')).toBeNull();
+    expect(container.querySelector('input[value="33"]')).toBeNull();
+
+    // H. No stale alerts or saved IDs
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.querySelector('[data-testid="success-banner"]')).toBeNull();
   });
 });
