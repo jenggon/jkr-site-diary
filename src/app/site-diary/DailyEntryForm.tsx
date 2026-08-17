@@ -8,11 +8,13 @@ import DailyEntryFeedback from './DailyEntryFeedback';
 
 export type { ManpowerRow };
 
+export type DailyEntryMode = 'NEW_ACTIVITY' | 'CONTINUE_ACTIVITY' | 'EDIT_SITE_DIARY';
+
 export interface PrintContextData {
   location: string;
   work_start_time: string | null;
   work_end_time: string | null;
-  weather_condition: 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT';
+  weather_condition: 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT' | null;
   rain_start_time: string | null;
   rain_end_time: string | null;
   contractor_scope: 'CONTRACTOR' | 'NSC';
@@ -35,11 +37,11 @@ export interface SubmitDailyEntryParams {
   actualStartDate: string;
   workStatus: 'Sedang Laksana' | 'Siap';
   location: string;
-  workStartTime: string;
-  workEndTime: string;
-  weatherCondition: 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT';
-  rainStartTime: string;
-  rainEndTime: string;
+  workStartTime?: string | null;
+  workEndTime?: string | null;
+  weatherCondition?: 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT' | null;
+  rainStartTime?: string | null;
+  rainEndTime?: string | null;
   contractorScope: 'CONTRACTOR' | 'NSC';
   notes: string;
   manpower: ManpowerRow[];
@@ -48,17 +50,39 @@ export interface SubmitDailyEntryParams {
   fetchFn?: typeof fetch;
 }
 
+export function resolveDailyEntryMode(params: {
+  editingSiteDiaryId?: string | null;
+  editingActivityId?: string | null;
+  selectedSource?: SelectedOperationalSource | null;
+}): DailyEntryMode {
+  const hasSiteDiaryId = Boolean(params.editingSiteDiaryId && params.editingSiteDiaryId.trim());
+  const hasActivityId = Boolean(params.editingActivityId && params.editingActivityId.trim());
+  const hasSource = Boolean(params.selectedSource);
+
+  if (hasSiteDiaryId) {
+    return 'EDIT_SITE_DIARY';
+  }
+
+  if (hasActivityId) {
+    return 'CONTINUE_ACTIVITY';
+  }
+
+  if (hasSource) {
+    return 'NEW_ACTIVITY';
+  }
+
+  throw new Error('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
+}
+
 export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<{ siteDiaryId: string; activityId: string }> {
   const fetcher = params.fetchFn || (typeof window !== 'undefined' ? window.fetch.bind(window) : fetch);
 
-  // 1. Client-Side Field Validation
+  // 1. Client-Side Field Validation & Explicit Mode Resolution
   if (!params.programmeId || !params.revisionId) {
     throw new Error('Sila pastikan Program dan Semakan Projek sah dipilih.');
   }
 
-  if (!params.editingActivityId && !params.editingSiteDiaryId && !params.selectedSource) {
-    throw new Error('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
-  }
+  const mode = resolveDailyEntryMode(params);
 
   if (!params.activityDate) {
     throw new Error('Tarikh Laporan Harian adalah wajib.');
@@ -76,10 +100,14 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
     throw new Error('Sila masukkan Catatan Kemajuan Kerja.');
   }
 
-  let resolvedActivityId = params.editingActivityId ?? null;
+  let resolvedActivityId: string | null = params.editingActivityId ?? null;
 
   // 2. Establish Activity if creating a new entry
-  if (!resolvedActivityId && params.selectedSource) {
+  if (mode === 'NEW_ACTIVITY') {
+    if (!params.selectedSource) {
+      throw new Error('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
+    }
+
     const createActivityPayload: Record<string, unknown> = {
       programmeId: params.programmeId,
       revisionId: params.revisionId,
@@ -112,109 +140,122 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
     resolvedActivityId = actJson?.data?.activityId ?? null;
   }
 
-  if (!resolvedActivityId && !params.editingSiteDiaryId) {
+  if (mode !== 'EDIT_SITE_DIARY' && !resolvedActivityId) {
     throw new Error('ID Aktiviti tidak dapat ditentukan.');
   }
 
-  // 3. Lifecycle Transition Orchestration (only when creating a new diary entry)
-  if (!params.editingSiteDiaryId && resolvedActivityId) {
-    if (params.editingActivityId) {
-      // EXISTING ACTIVITY CONTINUATION: Query server-authoritative Activity state
-      const actStateRes = await fetcher(`/api/activity/${encodeURIComponent(resolvedActivityId)}`);
-      if (actStateRes.status === 401) {
-        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
-      }
-      if (!actStateRes.ok) {
-        const errJson = await actStateRes.json().catch(() => null);
-        throw new Error(errJson?.error || 'Gagal menyemak status terkini aktiviti');
-      }
-      const actStateJson = await actStateRes.json();
-      const serverActivity = actStateJson?.data;
-      const serverStatus = serverActivity?.status;
+  // 3. Lifecycle Transition Orchestration
+  if (mode === 'CONTINUE_ACTIVITY' && resolvedActivityId) {
+    // Query authoritative Activity state from server
+    const actStateRes = await fetcher(`/api/activity/${encodeURIComponent(resolvedActivityId)}`);
+    if (actStateRes.status === 401) {
+      throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+    }
+    if (!actStateRes.ok) {
+      const errJson = await actStateRes.json().catch(() => null);
+      throw new Error(errJson?.error || 'Gagal menyemak status terkini aktiviti');
+    }
 
-      if (serverStatus === 'Completed') {
+    const actStateJson = await actStateRes.json();
+    const serverActivity = actStateJson?.data;
+    const serverStatus: string | undefined = serverActivity?.status;
+
+    // Fail closed on unknown or invalid status
+    const canonicalStatuses = ['New', 'In Progress', 'Completed'];
+    if (!serverStatus || !canonicalStatuses.includes(serverStatus)) {
+      throw new Error(`Status aktiviti tidak sah: ${serverStatus ?? 'null'}`);
+    }
+
+    if (serverStatus === 'Completed') {
+      // Check for legitimate completion recovery:
+      // Activity is Completed with completed_date matching activityDate, and user submits Siap
+      const isLegitimateCompletionRecovery =
+        params.workStatus === 'Siap' &&
+        (serverActivity?.completed_date === params.activityDate ||
+          serverActivity?.actual_end_date === params.activityDate ||
+          serverActivity?.actual_start_date === params.activityDate);
+
+      if (!isLegitimateCompletionRecovery) {
         throw new Error('Aktiviti ini telah selesai sepenuhnya dan tidak boleh diteruskan.');
       }
+      // Legitimate completion recovery: DO NOT call /complete again (no replay).
+      // Proceed directly to Step 4 (Site Diary write).
+    } else if (params.workStatus === 'Siap') {
+      // Transition from New or In Progress to Completed
+      const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualStartDate: params.actualStartDate || params.activityDate,
+          completedDate: params.activityDate,
+        }),
+      });
 
-      if (params.workStatus === 'Siap') {
-        const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            actualStartDate: params.actualStartDate || params.activityDate,
-            completedDate: params.activityDate,
-          }),
-        });
-
-        if (compRes.status === 401) {
-          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
-        }
-
-        if (!compRes.ok) {
-          const errJson = await compRes.json().catch(() => null);
-          throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
-        }
-      } else if (serverStatus === 'New') {
-        // If still 'New', transition to 'In Progress' via /start
-        const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            actualStartDate: params.actualStartDate || params.activityDate,
-          }),
-        });
-
-        if (startRes.status === 401) {
-          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
-        }
-
-        if (!startRes.ok) {
-          const errJson = await startRes.json().catch(() => null);
-          const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
-          throw new Error(errMsg);
-        }
+      if (compRes.status === 401) {
+        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
       }
-      // If serverStatus === 'In Progress' and params.workStatus === 'Sedang Laksana',
-      // NO-OP: do NOT call /start again to avoid illegal lifecycle replay.
+
+      if (!compRes.ok) {
+        const errJson = await compRes.json().catch(() => null);
+        throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
+      }
+    } else if (serverStatus === 'New') {
+      // If still New and workStatus is Sedang Laksana, transition to In Progress via /start
+      const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualStartDate: params.actualStartDate || params.activityDate,
+        }),
+      });
+
+      if (startRes.status === 401) {
+        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+      }
+
+      if (!startRes.ok) {
+        const errJson = await startRes.json().catch(() => null);
+        const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
+        throw new Error(errMsg);
+      }
+    }
+    // If serverStatus === 'In Progress' and params.workStatus === 'Sedang Laksana': NO-OP (no /start replay)
+  } else if (mode === 'NEW_ACTIVITY' && resolvedActivityId) {
+    if (params.workStatus === 'Siap') {
+      const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualStartDate: params.actualStartDate || params.activityDate,
+          completedDate: params.activityDate,
+        }),
+      });
+
+      if (compRes.status === 401) {
+        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+      }
+
+      if (!compRes.ok) {
+        const errJson = await compRes.json().catch(() => null);
+        throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
+      }
     } else {
-      // NEW ACTIVITY ENTRY
-      if (params.workStatus === 'Siap') {
-        const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            actualStartDate: params.actualStartDate || params.activityDate,
-            completedDate: params.activityDate,
-          }),
-        });
+      const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualStartDate: params.actualStartDate || params.activityDate,
+        }),
+      });
 
-        if (compRes.status === 401) {
-          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
-        }
+      if (startRes.status === 401) {
+        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+      }
 
-        if (!compRes.ok) {
-          const errJson = await compRes.json().catch(() => null);
-          throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
-        }
-      } else {
-        // In Progress (Sedang Laksana): transition via /start with known/actual start date
-        const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            actualStartDate: params.actualStartDate || params.activityDate,
-          }),
-        });
-
-        if (startRes.status === 401) {
-          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
-        }
-
-        if (!startRes.ok) {
-          const errJson = await startRes.json().catch(() => null);
-          const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
-          throw new Error(errMsg);
-        }
+      if (!startRes.ok) {
+        const errJson = await startRes.json().catch(() => null);
+        const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
+        throw new Error(errMsg);
       }
     }
   }
@@ -222,11 +263,11 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
   // 4. Site Diary Persistence (Create or Edit)
   const compiledPrintContext: PrintContextData = {
     location: params.location.trim(),
-    work_start_time: params.workStartTime || null,
-    work_end_time: params.workEndTime || null,
-    weather_condition: params.weatherCondition,
-    rain_start_time: params.weatherCondition === 'HUJAN' ? params.rainStartTime || null : null,
-    rain_end_time: params.weatherCondition === 'HUJAN' ? params.rainEndTime || null : null,
+    work_start_time: params.workStartTime?.trim() ? params.workStartTime.trim() : null,
+    work_end_time: params.workEndTime?.trim() ? params.workEndTime.trim() : null,
+    weather_condition: params.weatherCondition ?? null,
+    rain_start_time: params.weatherCondition === 'HUJAN' && params.rainStartTime?.trim() ? params.rainStartTime.trim() : null,
+    rain_end_time: params.weatherCondition === 'HUJAN' && params.rainEndTime?.trim() ? params.rainEndTime.trim() : null,
     contractor_scope: params.contractorScope,
   };
 
@@ -241,11 +282,13 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
       ? 'HeavyRain'
       : params.weatherCondition === 'MENDUNG'
       ? 'Cloudy'
-      : 'Sunny';
+      : params.weatherCondition === 'ELOK'
+      ? 'Sunny'
+      : null;
 
   let savedSiteDiaryId: string | null = params.editingSiteDiaryId ?? null;
 
-  if (params.editingSiteDiaryId) {
+  if (mode === 'EDIT_SITE_DIARY' && params.editingSiteDiaryId) {
     // EDIT MODE: PATCH existing record to preserve site_diary_id
     const patchRes = await fetcher(`/api/site-diary/${encodeURIComponent(params.editingSiteDiaryId)}`, {
       method: 'PATCH',
@@ -334,9 +377,11 @@ export default function DailyEntryForm({
 
   // Print Context (JKR Page 1 Fields)
   const [location, setLocation] = useState<string>('');
-  const [workStartTime, setWorkStartTime] = useState<string>('08:00');
-  const [workEndTime, setWorkEndTime] = useState<string>('17:00');
-  const [weatherCondition, setWeatherCondition] = useState<'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT'>('ELOK');
+  const [workStartTime, setWorkStartTime] = useState<string>(initialActivityId ? '' : '08:00');
+  const [workEndTime, setWorkEndTime] = useState<string>(initialActivityId ? '' : '17:00');
+  const [weatherCondition, setWeatherCondition] = useState<'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT' | null>(
+    initialActivityId ? null : 'ELOK'
+  );
   const [rainStartTime, setRainStartTime] = useState<string>('');
   const [rainEndTime, setRainEndTime] = useState<string>('');
   const [contractorScope, setContractorScope] = useState<'CONTRACTOR' | 'NSC'>('CONTRACTOR');
@@ -431,10 +476,18 @@ export default function DailyEntryForm({
     }
   }, []);
 
-  // If continuing an existing Activity, load its details and prefill from latest prior diary
+  // If continuing an existing Activity, load its details and prefill ONLY safe continuation fields
   const loadExistingActivityAndPrefill = useCallback(async (actId: string, targetDate: string) => {
     try {
-      // 1. Fetch Authoritative Activity details
+      // 1. Reset observational evidence fields explicitly for continuation mode
+      setWeatherCondition(null);
+      setWorkStartTime('');
+      setWorkEndTime('');
+      setRainStartTime('');
+      setRainEndTime('');
+      setNotes('');
+
+      // 2. Fetch Authoritative Activity details
       const actRes = await fetch(`/api/activity/${encodeURIComponent(actId)}`);
       if (actRes.ok) {
         const actJson = await actRes.json();
@@ -454,7 +507,7 @@ export default function DailyEntryForm({
         }
       }
 
-      // 2. Fetch Previous Diaries for Continuation Prefill
+      // 3. Fetch Previous Diaries for Continuation Prefill
       const diariesRes = await fetch(`/api/site-diary/activity/${encodeURIComponent(actId)}`);
       if (diariesRes.ok) {
         const diariesJson = await diariesRes.json();
@@ -698,11 +751,12 @@ export default function DailyEntryForm({
             <div>
               <label className="block text-zinc-400 font-semibold mb-1">Keadaan Cuaca</label>
               <select
-                value={weatherCondition}
-                onChange={(e) => setWeatherCondition(e.target.value as typeof weatherCondition)}
+                value={weatherCondition ?? ''}
+                onChange={(e) => setWeatherCondition(e.target.value ? (e.target.value as NonNullable<typeof weatherCondition>) : null)}
                 disabled={isSubmitting}
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
               >
+                <option value="">-- Sila Pilih Keadaan Cuaca --</option>
                 <option value="ELOK">Elok / Cerah</option>
                 <option value="MENDUNG">Mendung</option>
                 <option value="HUJAN">Hujan</option>

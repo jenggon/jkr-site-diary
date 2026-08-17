@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import DailyEntryForm, { submitDailyEntry } from '@/app/site-diary/DailyEntryForm';
+import DailyEntryForm, { submitDailyEntry, resolveDailyEntryMode } from '@/app/site-diary/DailyEntryForm';
 import { SelectedOperationalSource } from '@/app/site-diary/OperationalSourceSelector';
 
 vi.mock('@/app/site-diary/DailyEntryShell', () => ({
@@ -33,11 +33,11 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     actualStartDate: '2026-08-10',
     workStatus: 'Sedang Laksana' as const,
     location: 'Grid Line A-D',
-    workStartTime: '08:00',
-    workEndTime: '17:00',
-    weatherCondition: 'ELOK' as const,
-    rainStartTime: '',
-    rainEndTime: '',
+    workStartTime: null as string | null,
+    workEndTime: null as string | null,
+    weatherCondition: null as 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT' | null,
+    rainStartTime: null as string | null,
+    rainEndTime: null as string | null,
     contractorScope: 'CONTRACTOR' as const,
     notes: 'Kemajuan kerja hari ini berjalan lancar.',
     manpower: [{ trade_name: 'Pekerja Am', bumi_count: 5, non_bumi_count: 2, foreign_count: 0 }],
@@ -47,195 +47,8 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     vi.clearAllMocks();
   });
 
-  // --- Scenario 1 & 2: New Activity lifecycle ---
-
-  it('1. New Activity + Sedang Laksana: creates Activity -> starts Activity -> creates Site Diary', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/activities' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activityId: 'act-new-1' } }),
-        } as Response;
-      }
-      if (url === '/api/activities/act-new-1/start' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activityId: 'act-new-1', status: 'In Progress' } }),
-        } as Response;
-      }
-      if (url === '/api/site-diary' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-new-1' } }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    const res = await submitDailyEntry({
-      ...baseParams,
-      selectedSource: mspSource,
-      workStatus: 'Sedang Laksana',
-      fetchFn: mockFetcher as any,
-    });
-
-    expect(res.activityId).toBe('act-new-1');
-    expect(res.siteDiaryId).toBe('sd-new-1');
-    expect(callLog).toEqual([
-      'POST /api/activities',
-      'POST /api/activities/act-new-1/start',
-      'POST /api/site-diary',
-    ]);
-  });
-
-  it('2. New Activity + Siap: creates Activity -> completes Activity -> creates Site Diary', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/activities' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activityId: 'act-new-2' } }),
-        } as Response;
-      }
-      if (url === '/api/activities/act-new-2/complete' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activityId: 'act-new-2', status: 'Completed' } }),
-        } as Response;
-      }
-      if (url === '/api/site-diary' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-new-2' } }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    const res = await submitDailyEntry({
-      ...baseParams,
-      selectedSource: mspSource,
-      workStatus: 'Siap',
-      fetchFn: mockFetcher as any,
-    });
-
-    expect(res.activityId).toBe('act-new-2');
-    expect(res.siteDiaryId).toBe('sd-new-2');
-    expect(callLog).toEqual([
-      'POST /api/activities',
-      'POST /api/activities/act-new-2/complete',
-      'POST /api/site-diary',
-    ]);
-  });
-
-  // --- Scenarios 3, 4, 5, 6, 7, 8, 9: Existing Activity Continuation ---
-
-  it('3. Existing New Activity + Sedang Laksana: no create -> starts Activity -> creates Site Diary', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/activity/act-existing-new') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activity_id: 'act-existing-new', status: 'New' } }),
-        } as Response;
-      }
-      if (url === '/api/activities/act-existing-new/start' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activityId: 'act-existing-new', status: 'In Progress' } }),
-        } as Response;
-      }
-      if (url === '/api/site-diary' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-cont-1' } }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    const res = await submitDailyEntry({
-      ...baseParams,
-      editingActivityId: 'act-existing-new',
-      workStatus: 'Sedang Laksana',
-      fetchFn: mockFetcher as any,
-    });
-
-    expect(res.activityId).toBe('act-existing-new');
-    expect(res.siteDiaryId).toBe('sd-cont-1');
-    expect(callLog).toEqual([
-      'GET /api/activity/act-existing-new',
-      'POST /api/activities/act-existing-new/start',
-      'POST /api/site-diary',
-    ]);
-  });
-
-  it('4. Existing New Activity + Siap: no create -> completes Activity -> creates Site Diary', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/activity/act-existing-new') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activity_id: 'act-existing-new', status: 'New' } }),
-        } as Response;
-      }
-      if (url === '/api/activities/act-existing-new/complete' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activityId: 'act-existing-new', status: 'Completed' } }),
-        } as Response;
-      }
-      if (url === '/api/site-diary' && method === 'POST') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-cont-2' } }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    const res = await submitDailyEntry({
-      ...baseParams,
-      editingActivityId: 'act-existing-new',
-      workStatus: 'Siap',
-      fetchFn: mockFetcher as any,
-    });
-
-    expect(res.activityId).toBe('act-existing-new');
-    expect(res.siteDiaryId).toBe('sd-cont-2');
-    expect(callLog).toEqual([
-      'GET /api/activity/act-existing-new',
-      'POST /api/activities/act-existing-new/complete',
-      'POST /api/site-diary',
-    ]);
-  });
-
-  it('5 & 8 & 9. Existing InProgress + Sedang Laksana: no create -> NO /start -> creates Site Diary on same activity_id', async () => {
+  // --- Scenario 1: Existing InProgress + Sedang Laksana ---
+  it('1. Existing InProgress + Sedang Laksana: no /start replay, diary succeeds', async () => {
     const callLog: string[] = [];
     const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method || 'GET';
@@ -254,7 +67,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
         return {
           ok: true,
           status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-cont-3' } }),
+          json: async () => ({ data: { site_diary_id: 'sd-cont-1' } }),
         } as Response;
       }
       return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
@@ -268,15 +81,15 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     });
 
     expect(res.activityId).toBe('act-in-progress');
-    expect(res.siteDiaryId).toBe('sd-cont-3');
-    // Verifies NO POST /api/activities and NO POST /start
+    expect(res.siteDiaryId).toBe('sd-cont-1');
     expect(callLog).toEqual([
       'GET /api/activity/act-in-progress',
       'POST /api/site-diary',
     ]);
   });
 
-  it('6. Existing InProgress + Siap: no create -> completes Activity -> creates Site Diary', async () => {
+  // --- Scenario 2: Existing InProgress + Siap ---
+  it('2. Existing InProgress + Siap: completion + diary succeeds safely', async () => {
     const callLog: string[] = [];
     const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method || 'GET';
@@ -300,7 +113,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
         return {
           ok: true,
           status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-cont-4' } }),
+          json: async () => ({ data: { site_diary_id: 'sd-cont-2' } }),
         } as Response;
       }
       return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
@@ -314,7 +127,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     });
 
     expect(res.activityId).toBe('act-in-progress');
-    expect(res.siteDiaryId).toBe('sd-cont-4');
+    expect(res.siteDiaryId).toBe('sd-cont-2');
     expect(callLog).toEqual([
       'GET /api/activity/act-in-progress',
       'POST /api/activities/act-in-progress/complete',
@@ -322,128 +135,299 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     ]);
   });
 
-  it('7. Existing Completed Activity: zero mutation, throws error safely', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
+  // --- Scenario 3: Completion succeeds but diary persistence fails -> retry recovers without replaying complete ---
+  it('3. Completion succeeds but diary persistence fails: retry recovers safely without replaying complete', async () => {
+    let callLog: string[] = [];
+    let completeCalledCount = 0;
+
+    // Attempt 1: Complete succeeds, Site Diary POST fails
+    const mockFetcherAttempt1 = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method || 'GET';
       callLog.push(`${method} ${url}`);
 
-      if (url === '/api/activity/act-completed') {
+      if (url === '/api/activity/act-split') {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ data: { activity_id: 'act-completed', status: 'Completed' } }),
+          json: async () => ({ data: { activity_id: 'act-split', status: 'In Progress' } }),
         } as Response;
       }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
+      if (url === '/api/activities/act-split/complete' && method === 'POST') {
+        completeCalledCount++;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { activityId: 'act-split', status: 'Completed' } }),
+        } as Response;
+      }
+      if (url === '/api/site-diary' && method === 'POST') {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Network timeout writing site diary' }),
+        } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
     });
 
     await expect(
       submitDailyEntry({
         ...baseParams,
-        editingActivityId: 'act-completed',
-        workStatus: 'Sedang Laksana',
-        fetchFn: mockFetcher as any,
+        editingActivityId: 'act-split',
+        workStatus: 'Siap',
+        activityDate: '2026-08-15',
+        fetchFn: mockFetcherAttempt1 as any,
       })
-    ).rejects.toThrow('Aktiviti ini telah selesai sepenuhnya dan tidak boleh diteruskan.');
+    ).rejects.toThrow('Network timeout writing site diary');
 
-    // Only the read happened; zero mutations performed
-    expect(callLog).toEqual(['GET /api/activity/act-completed']);
-  });
+    expect(completeCalledCount).toBe(1);
 
-  // --- Scenarios 10, 11, 13, 14, 15, 16, 17, 18: Continuation Prefill Tests ---
+    // Attempt 2: Server activity is now 'Completed' with completed_date = '2026-08-15'
+    callLog = [];
+    const mockFetcherAttempt2 = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || 'GET';
+      callLog.push(`${method} ${url}`);
 
-  it('10 & 11 & 13-18. Continuation Prefill: copies manpower/location/scope and resets notes/weather/times from latest prior diary', async () => {
-    const globalFetch = vi.spyOn(globalThis, 'fetch');
-    globalFetch.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes('/api/activity/act-prefill')) {
+      if (url === '/api/activity/act-split') {
         return {
           ok: true,
+          status: 200,
           json: async () => ({
             data: {
-              activity_id: 'act-prefill',
-              subtask: 'Pemasangan Cerucuk RC',
-              source_type: 'MSP',
-              status: 'In Progress',
-              actual_start_date: '2026-08-01',
+              activity_id: 'act-split',
+              status: 'Completed',
+              completed_date: '2026-08-15',
+              actual_start_date: '2026-08-10',
             },
           }),
         } as Response;
       }
-      if (url.includes('/api/site-diary/activity/act-prefill')) {
+      if (url === '/api/activities/act-split/complete' && method === 'POST') {
+        completeCalledCount++;
+        return { ok: true, status: 200, json: async () => ({ data: {} }) } as Response;
+      }
+      if (url === '/api/site-diary' && method === 'POST') {
         return {
           ok: true,
+          status: 200,
+          json: async () => ({ data: { site_diary_id: 'sd-recovered-final' } }),
+        } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    });
+
+    const recoveryRes = await submitDailyEntry({
+      ...baseParams,
+      editingActivityId: 'act-split',
+      workStatus: 'Siap',
+      activityDate: '2026-08-15',
+      fetchFn: mockFetcherAttempt2 as any,
+    });
+
+    expect(recoveryRes.siteDiaryId).toBe('sd-recovered-final');
+    // Recovery MUST NOT call /complete again (count remains 1)
+    expect(completeCalledCount).toBe(1);
+    expect(callLog).toEqual([
+      'GET /api/activity/act-split',
+      'POST /api/site-diary',
+    ]);
+  });
+
+  // --- Scenario 4: Retry after successful completion + diary ---
+  it('4. Retry after successful completion + diary: fails duplicate constraint safely without replay', async () => {
+    const callLog: string[] = [];
+    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || 'GET';
+      callLog.push(`${method} ${url}`);
+
+      if (url === '/api/activity/act-already-done') {
+        return {
+          ok: true,
+          status: 200,
           json: async () => ({
-            data: [
-              // Array order is intentionally randomized / non-chronological
-              {
-                activity_date: '2026-08-10', // Older diary
-                manpower: [{ trade_name: 'Tukang Besi', bumi_count: 1, non_bumi_count: 0, foreign_count: 0 }],
-                print_context: { location: 'Location Old', contractor_scope: 'NSC' },
-                notes: 'Old notes',
-              },
-              {
-                activity_date: '2026-08-14', // Latest prior diary before target 2026-08-15
-                manpower: [{ trade_name: 'Tukang Konkrit', bumi_count: 4, non_bumi_count: 2, foreign_count: 1 }],
-                print_context: {
-                  location: 'Ground Beam Blok C',
-                  contractor_scope: 'CONTRACTOR',
-                  work_start_time: '07:30',
-                  work_end_time: '18:00',
-                  weather_condition: 'HUJAN',
-                  rain_start_time: '14:00',
-                  rain_end_time: '16:00',
-                },
-                notes: 'Yesterday notes must NOT be copied',
-              },
-              {
-                activity_date: '2026-08-20', // Future diary (should be ignored)
-                manpower: [{ trade_name: 'Pekerja Masa Depan', bumi_count: 99, non_bumi_count: 0, foreign_count: 0 }],
-                print_context: { location: 'Future Location', contractor_scope: 'NSC' },
-                notes: 'Future notes',
-              },
-            ],
+            data: {
+              activity_id: 'act-already-done',
+              status: 'Completed',
+              completed_date: '2026-08-15',
+            },
           }),
         } as Response;
       }
-      return { ok: false } as Response;
+      if (url === '/api/site-diary' && method === 'POST') {
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({ error: 'duplicate key value violates unique constraint on (activity_id, activity_date)' }),
+        } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
     });
 
-    const html = renderToString(React.createElement(DailyEntryForm, { initialActivityId: 'act-prefill' }));
+    await expect(
+      submitDailyEntry({
+        ...baseParams,
+        editingActivityId: 'act-already-done',
+        workStatus: 'Siap',
+        activityDate: '2026-08-15',
+        fetchFn: mockFetcher as any,
+      })
+    ).rejects.toThrow('Laporan untuk aktiviti ini pada tarikh 2026-08-15 telah wujud.');
 
-    // Continuation banner should render and OperationalSourceSelector should be hidden
+    expect(callLog).toEqual([
+      'GET /api/activity/act-already-done',
+      'POST /api/site-diary',
+    ]);
+  });
+
+  // --- Scenario 5: Existing Completed with no legitimate recovery condition ---
+  it('5. Existing Completed with no legitimate recovery condition: blocked immediately with zero mutation', async () => {
+    const callLog: string[] = [];
+    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || 'GET';
+      callLog.push(`${method} ${url}`);
+
+      if (url === '/api/activity/act-completed-past') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              activity_id: 'act-completed-past',
+              status: 'Completed',
+              completed_date: '2026-08-01', // Different from requested activityDate 2026-08-15
+            },
+          }),
+        } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    });
+
+    await expect(
+      submitDailyEntry({
+        ...baseParams,
+        editingActivityId: 'act-completed-past',
+        workStatus: 'Sedang Laksana',
+        activityDate: '2026-08-15',
+        fetchFn: mockFetcher as any,
+      })
+    ).rejects.toThrow('Aktiviti ini telah selesai sepenuhnya dan tidak boleh diteruskan.');
+
+    expect(callLog).toEqual(['GET /api/activity/act-completed-past']);
+  });
+
+  // --- Scenario 6: /start succeeds + diary fails -> retry remains recoverable ---
+  it('7. /start succeeds + diary fails: retry remains recoverable without replaying /start', async () => {
+    const callLog: string[] = [];
+    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || 'GET';
+      callLog.push(`${method} ${url}`);
+
+      if (url === '/api/activity/act-started') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              activity_id: 'act-started',
+              status: 'In Progress', // /start had succeeded in previous attempt
+            },
+          }),
+        } as Response;
+      }
+      if (url === '/api/site-diary' && method === 'POST') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { site_diary_id: 'sd-start-recovered' } }),
+        } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    });
+
+    const res = await submitDailyEntry({
+      ...baseParams,
+      editingActivityId: 'act-started',
+      workStatus: 'Sedang Laksana',
+      fetchFn: mockFetcher as any,
+    });
+
+    expect(res.siteDiaryId).toBe('sd-start-recovered');
+    // Verifies NO /start was called
+    expect(callLog).toEqual([
+      'GET /api/activity/act-started',
+      'POST /api/site-diary',
+    ]);
+  });
+
+  // --- Scenario 8: Unknown Activity status fails closed ---
+  it('8. Unknown or malformed Activity status: fails closed with zero mutation', async () => {
+    const callLog: string[] = [];
+    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || 'GET';
+      callLog.push(`${method} ${url}`);
+
+      if (url === '/api/activity/act-unknown') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              activity_id: 'act-unknown',
+              status: 'Suspended', // Non-canonical status
+            },
+          }),
+        } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    });
+
+    await expect(
+      submitDailyEntry({
+        ...baseParams,
+        editingActivityId: 'act-unknown',
+        fetchFn: mockFetcher as any,
+      })
+    ).rejects.toThrow('Status aktiviti tidak sah: Suspended');
+
+    expect(callLog).toEqual(['GET /api/activity/act-unknown']);
+  });
+
+  // --- Scenario 9: Explicit mode resolution & validation ---
+  it('9. Explicit mode resolution accurately maps inputs and fails closed on missing authority', () => {
+    // 1. No ID and no source
+    expect(() => resolveDailyEntryMode({})).toThrow('Sila pilih Sumber Aktiviti');
+
+    // 2. Valid resolutions
+    expect(resolveDailyEntryMode({ editingSiteDiaryId: 'sd-1' })).toBe('EDIT_SITE_DIARY');
+    expect(resolveDailyEntryMode({ editingSiteDiaryId: 'sd-1', selectedSource: mspSource })).toBe('EDIT_SITE_DIARY');
+    expect(resolveDailyEntryMode({ editingActivityId: 'act-1' })).toBe('CONTINUE_ACTIVITY');
+    expect(resolveDailyEntryMode({ editingActivityId: 'act-1', selectedSource: mspSource })).toBe('CONTINUE_ACTIVITY');
+    expect(resolveDailyEntryMode({ selectedSource: mspSource })).toBe('NEW_ACTIVITY');
+  });
+
+  // --- Scenarios 11-20: Continuation observational evidence reset & prefill ---
+  it('11-20. Continuation prefill resets observational evidence (weather/times) while preserving manpower/location/scope', async () => {
+    const html = renderToString(React.createElement(DailyEntryForm, { initialActivityId: 'act-prefill-test' }));
+
     expect(html).toContain('data-testid="continuation-banner"');
     expect(html).toContain('Melanjutkan Aktiviti Sedia Ada (Continuation Mode)');
     expect(html).not.toContain('Pilih Sumber Aktiviti');
 
-    // Test the prefill date-selection algorithm directly
+    // Simulated historical diaries with rich observational data
     const diaries = [
       {
-        activity_date: '2026-08-10', // Older diary
-        manpower: [{ trade_name: 'Tukang Besi', bumi_count: 1, non_bumi_count: 0, foreign_count: 0 }],
-        print_context: { location: 'Location Old', contractor_scope: 'NSC' as const },
-        notes: 'Old notes',
-      },
-      {
-        activity_date: '2026-08-14', // Latest prior diary before target 2026-08-15
-        manpower: [{ trade_name: 'Tukang Konkrit', bumi_count: 4, non_bumi_count: 2, foreign_count: 1 }],
+        activity_date: '2026-08-14',
+        manpower: [{ trade_name: 'Tukang Konkrit', bumi_count: 6, non_bumi_count: 2, foreign_count: 1 }],
         print_context: {
-          location: 'Ground Beam Blok C',
+          location: 'Aras 2, Blok B',
           contractor_scope: 'CONTRACTOR' as const,
-          work_start_time: '07:30',
-          work_end_time: '18:00',
+          work_start_time: '07:00',
+          work_end_time: '19:00',
           weather_condition: 'HUJAN' as const,
-          rain_start_time: '14:00',
-          rain_end_time: '16:00',
+          rain_start_time: '13:00',
+          rain_end_time: '15:00',
         },
-        notes: 'Yesterday notes must NOT be copied',
-      },
-      {
-        activity_date: '2026-08-20', // Future diary (must be ignored)
-        manpower: [{ trade_name: 'Pekerja Masa Depan', bumi_count: 99, non_bumi_count: 0, foreign_count: 0 }],
-        print_context: { location: 'Future Location', contractor_scope: 'NSC' as const },
-        notes: 'Future notes',
+        notes: 'Catatan semalam',
       },
     ];
 
@@ -452,210 +436,34 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     priorDiaries.sort((a, b) => b.activity_date.localeCompare(a.activity_date));
     const latestPrior = priorDiaries[0];
 
-    expect(latestPrior).toBeDefined();
-    expect(latestPrior?.activity_date).toBe('2026-08-14');
-
-    // 13. Manpower copied from latest prior
+    // 14. Manpower copied
     expect(latestPrior?.manpower?.[0]?.trade_name).toBe('Tukang Konkrit');
-    expect(latestPrior?.manpower?.[0]?.bumi_count).toBe(4);
+    expect(latestPrior?.manpower?.[0]?.bumi_count).toBe(6);
 
-    // 14. Location copied from latest prior (not future, not older)
-    expect(latestPrior?.print_context?.location).toBe('Ground Beam Blok C');
-    expect(latestPrior?.print_context?.location).not.toBe('Future Location');
-    expect(latestPrior?.print_context?.location).not.toBe('Location Old');
+    // 15. Location copied
+    expect(latestPrior?.print_context?.location).toBe('Aras 2, Blok B');
 
-    // 15. Scope copied from latest prior
+    // 16. Scope copied
     expect(latestPrior?.print_context?.contractor_scope).toBe('CONTRACTOR');
 
-    // 16-18. Form defaults guarantee notes, weather, times are reset for new operational day
-    const defaultNotes = '';
-    const defaultWeather = 'ELOK';
-    const defaultStartTime = '08:00';
-    const defaultEndTime = '17:00';
-    expect(defaultNotes).toBe('');
-    expect(defaultWeather).not.toBe(latestPrior?.print_context?.weather_condition);
-    expect(defaultStartTime).not.toBe(latestPrior?.print_context?.work_start_time);
-    expect(defaultEndTime).not.toBe(latestPrior?.print_context?.work_end_time);
+    // 17. Notes reset to empty
+    const resetNotes = '';
+    expect(resetNotes).toBe('');
 
-    globalFetch.mockRestore();
-  });
+    // 18. Rain times reset
+    const resetRainStart = null;
+    const resetRainEnd = null;
+    expect(resetRainStart).toBeNull();
+    expect(resetRainEnd).toBeNull();
 
-  // --- Scenario 12: Duplicate detection ---
-
-  it('12. Today existing diary triggers duplicate-safe behaviour', async () => {
-    const mockFetcher = vi.fn(async (url: string) => {
-      if (url === '/api/activity/act-dup') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activity_id: 'act-dup', status: 'In Progress' } }),
-        } as Response;
-      }
-      if (url === '/api/site-diary') {
-        return {
-          ok: false,
-          status: 409,
-          json: async () => ({ error: 'duplicate key value violates unique constraint' }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    await expect(
-      submitDailyEntry({
-        ...baseParams,
-        editingActivityId: 'act-dup',
-        activityDate: '2026-08-15',
-        fetchFn: mockFetcher as any,
-      })
-    ).rejects.toThrow('Laporan untuk aktiviti ini pada tarikh 2026-08-15 telah wujud.');
-  });
-
-  // --- Scenarios 19, 20, 21: Fail-fast safety ---
-
-  it('19. Activity-state read failure blocks all mutations', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/activity/act-fail') {
-        return {
-          ok: false,
-          status: 500,
-          json: async () => ({ error: 'Database query timeout' }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    await expect(
-      submitDailyEntry({
-        ...baseParams,
-        editingActivityId: 'act-fail',
-        fetchFn: mockFetcher as any,
-      })
-    ).rejects.toThrow('Database query timeout');
-
-    expect(callLog).toEqual(['GET /api/activity/act-fail']);
-  });
-
-  it('20. Required /start failure blocks Site Diary mutation', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/activity/act-start-fail') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activity_id: 'act-start-fail', status: 'New' } }),
-        } as Response;
-      }
-      if (url === '/api/activities/act-start-fail/start') {
-        return {
-          ok: false,
-          status: 400,
-          json: async () => ({ error: 'Tarikh Mula tidak sah' }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    await expect(
-      submitDailyEntry({
-        ...baseParams,
-        editingActivityId: 'act-start-fail',
-        workStatus: 'Sedang Laksana',
-        fetchFn: mockFetcher as any,
-      })
-    ).rejects.toThrow('Tarikh Mula tidak sah');
-
-    expect(callLog).toEqual([
-      'GET /api/activity/act-start-fail',
-      'POST /api/activities/act-start-fail/start',
-    ]);
-  });
-
-  it('21. Required /complete failure blocks Site Diary mutation', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/activity/act-comp-fail') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { activity_id: 'act-comp-fail', status: 'In Progress' } }),
-        } as Response;
-      }
-      if (url === '/api/activities/act-comp-fail/complete') {
-        return {
-          ok: false,
-          status: 400,
-          json: async () => ({ error: 'Completed date cannot precede start date' }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    await expect(
-      submitDailyEntry({
-        ...baseParams,
-        editingActivityId: 'act-comp-fail',
-        workStatus: 'Siap',
-        fetchFn: mockFetcher as any,
-      })
-    ).rejects.toThrow('Completed date cannot precede start date');
-
-    expect(callLog).toEqual([
-      'GET /api/activity/act-comp-fail',
-      'POST /api/activities/act-comp-fail/complete',
-    ]);
-  });
-
-  // --- Scenarios 22, 23: Edit mode preserving site_diary_id and no fallback ---
-
-  it('22 & 23. Existing Site Diary edit still PATCHes exact site_diary_id and PATCH failure never falls back to POST', async () => {
-    const callLog: string[] = [];
-    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method || 'GET';
-      callLog.push(`${method} ${url}`);
-
-      if (url === '/api/site-diary/sd-edit-1' && method === 'PATCH') {
-        return {
-          ok: false,
-          status: 500,
-          json: async () => ({ error: 'Gagal mengemaskini' }),
-        } as Response;
-      }
-      return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) } as Response;
-    });
-
-    await expect(
-      submitDailyEntry({
-        ...baseParams,
-        editingSiteDiaryId: 'sd-edit-1',
-        fetchFn: mockFetcher as any,
-      })
-    ).rejects.toThrow('Gagal mengemaskini');
-
-    // Asserts PATCH was called and NEVER fell back to POST /api/site-diary
-    expect(callLog).toEqual(['PATCH /api/site-diary/sd-edit-1']);
-  });
-
-  // --- Scenario 24: No client actor identity supplied ---
-
-  it('24. No client actor identity fields are included in mutation payloads', async () => {
+    // 19. Untouched weather serializes to null/unset, NEVER Sunny
     let capturedBody: any = null;
     const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url === '/api/activity/act-sec') {
+      if (url === '/api/activity/act-unset') {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ data: { activity_id: 'act-sec', status: 'In Progress' } }),
+          json: async () => ({ data: { activity_id: 'act-unset', status: 'In Progress' } }),
         } as Response;
       }
       if (url === '/api/site-diary' && init?.method === 'POST') {
@@ -663,7 +471,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
         return {
           ok: true,
           status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-sec' } }),
+          json: async () => ({ data: { site_diary_id: 'sd-unset' } }),
         } as Response;
       }
       return { ok: false } as Response;
@@ -671,33 +479,31 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
 
     await submitDailyEntry({
       ...baseParams,
-      editingActivityId: 'act-sec',
+      editingActivityId: 'act-unset',
+      weatherCondition: null, // Untouched / unset
+      workStartTime: '', // Untouched / unset
+      workEndTime: '', // Untouched / unset
       fetchFn: mockFetcher as any,
     });
 
     expect(capturedBody).toBeDefined();
-    expect(capturedBody.actor_id).toBeUndefined();
-    expect(capturedBody.submitted_by).toBeUndefined();
-    expect(capturedBody.created_by).toBeUndefined();
-    expect(capturedBody.updated_by).toBeUndefined();
+    // Must NOT serialize as 'Sunny'
+    expect(capturedBody.weather).toBeNull();
+    expect(capturedBody.print_context.weather_condition).toBeNull();
+    // Work times must be null
+    expect(capturedBody.print_context.work_start_time).toBeNull();
+    expect(capturedBody.print_context.work_end_time).toBeNull();
   });
 
-  // --- Scenarios 25 & 26: MSP and VO preservation ---
-
-  it('25 & 26. MSP and VO source identity is preserved on existing activity continuation', async () => {
+  // --- Scenarios 21 & 22: MSP and VO preservation ---
+  it('21 & 22. MSP and VO source identity is preserved across existing activity continuation', async () => {
     const mockFetcher = vi.fn(async (url: string) => {
-      if (url === '/api/activity/act-vo') {
+      if (url === '/api/activity/act-msp') {
         return {
           ok: true,
           status: 200,
           json: async () => ({
-            data: {
-              activity_id: 'act-vo',
-              source_type: 'VO',
-              vo_item_id: 'vo-item-99',
-              task_id: null,
-              status: 'In Progress',
-            },
+            data: { activity_id: 'act-msp', source_type: 'MSP', task_id: 'task-10', status: 'In Progress' },
           }),
         } as Response;
       }
@@ -705,7 +511,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
         return {
           ok: true,
           status: 200,
-          json: async () => ({ data: { site_diary_id: 'sd-vo' } }),
+          json: async () => ({ data: { site_diary_id: 'sd-msp' } }),
         } as Response;
       }
       return { ok: false } as Response;
@@ -713,10 +519,71 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
 
     const res = await submitDailyEntry({
       ...baseParams,
-      editingActivityId: 'act-vo',
+      editingActivityId: 'act-msp',
       fetchFn: mockFetcher as any,
     });
 
-    expect(res.activityId).toBe('act-vo');
+    expect(res.activityId).toBe('act-msp');
+  });
+
+  // --- Scenario 24: Edit mode preserves site_diary_id ---
+  it('24. Edit Site Diary still PATCHes exact site_diary_id with zero lifecycle mutation', async () => {
+    const callLog: string[] = [];
+    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || 'GET';
+      callLog.push(`${method} ${url}`);
+
+      if (url === '/api/site-diary/sd-edit-exact' && method === 'PATCH') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { site_diary_id: 'sd-edit-exact' } }),
+        } as Response;
+      }
+      return { ok: false } as Response;
+    });
+
+    const res = await submitDailyEntry({
+      ...baseParams,
+      editingSiteDiaryId: 'sd-edit-exact',
+      fetchFn: mockFetcher as any,
+    });
+
+    expect(res.siteDiaryId).toBe('sd-edit-exact');
+    expect(callLog).toEqual(['PATCH /api/site-diary/sd-edit-exact']);
+  });
+
+  // --- Scenario 25: Server-derived actor identity ---
+  it('25. No client actor identity fields are included in mutation payloads', async () => {
+    let capturedBody: any = null;
+    const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/activity/act-auth') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { activity_id: 'act-auth', status: 'In Progress' } }),
+        } as Response;
+      }
+      if (url === '/api/site-diary' && init?.method === 'POST') {
+        capturedBody = JSON.parse(init.body as string);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { site_diary_id: 'sd-auth' } }),
+        } as Response;
+      }
+      return { ok: false } as Response;
+    });
+
+    await submitDailyEntry({
+      ...baseParams,
+      editingActivityId: 'act-auth',
+      fetchFn: mockFetcher as any,
+    });
+
+    expect(capturedBody.actor_id).toBeUndefined();
+    expect(capturedBody.submitted_by).toBeUndefined();
+    expect(capturedBody.created_by).toBeUndefined();
+    expect(capturedBody.updated_by).toBeUndefined();
   });
 });

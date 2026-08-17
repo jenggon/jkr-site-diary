@@ -126,6 +126,30 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
+      // Authoritative Activity status and completion recovery validation
+      const validStatuses: ActivityStatus[] = [ActivityStatus.New, ActivityStatus.InProgress, ActivityStatus.Completed];
+      if (!validStatuses.includes(activity.status)) {
+        return Failure(
+          new SiteDiaryValidationError(
+            `Cannot create Site Diary for activity with invalid or unsupported status: ${activity.status}`
+          )
+        );
+      }
+
+      if (activity.status === ActivityStatus.Completed) {
+        const isLegitimateCompletionRecovery =
+          activity.completed_date === cmd.activityDate ||
+          activity.actual_start_date === cmd.activityDate;
+
+        if (!isLegitimateCompletionRecovery) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create Site Diary for Completed activity ${cmd.activityId} on date ${cmd.activityDate}: activity completed date is ${activity.completed_date ?? 'unset'}`
+            )
+          );
+        }
+      }
+
       const now = this.clock.nowIso();
       const siteDiaryId = generateUuid();
       const createPayload = {

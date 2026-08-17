@@ -179,7 +179,17 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
             activity_id: 'act-completed',
             programme_id: 'prog-1',
             revision_id: 'rev-approved',
-            status: ActivityStatus.Completed
+            status: ActivityStatus.Completed,
+            completed_date: '2026-09-05',
+            actual_start_date: '2026-09-01',
+          } as unknown as Activity);
+        }
+        if (id === 'act-invalid-status') {
+          return Success({
+            activity_id: 'act-invalid-status',
+            programme_id: 'prog-1',
+            revision_id: 'rev-approved',
+            status: 'Suspended' as unknown as ActivityStatus,
           } as unknown as Activity);
         }
         if (id === 'act-superseded') {
@@ -426,6 +436,58 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
           const res = await service.carryForwardActiveOperations('prog-1', '2026-09-22', 'user-bulk');
           expect(isSuccess(res)).toBe(true);
         });
+      });
+    });
+
+    describe('F2.2 Server-Authoritative Completion Recovery & Fail-Closed Status', () => {
+      it('Q. Allows Site Diary creation for Completed activity when activityDate matches completed_date (Recovery)', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-completed',
+          activityDate: '2026-09-05', // Exact match with completed_date
+          notes: 'Laporan hari terakhir aktiviti disiapkan',
+          submittedBy: 'user-recovery',
+        });
+
+        expect(isSuccess(res)).toBe(true);
+        if (isSuccess(res)) {
+          expect(res.value.activity_id).toBe('act-completed');
+          expect(res.value.activity_date).toBe('2026-09-05');
+          expect(res.value.status).toBe(ActivityStatus.Completed);
+        }
+      });
+
+      it('R. Rejects Site Diary creation for Completed activity on date different from completed_date', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-completed',
+          activityDate: '2026-09-06', // Mismatch with completed_date 2026-09-05
+          notes: 'Percubaan tidak sah selepas siap',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('Cannot create Site Diary for Completed activity');
+        }
+      });
+
+      it('S. Fails closed on invalid or non-canonical activity status', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-invalid-status',
+          activityDate: '2026-09-05',
+          notes: 'Percubaan status tidak sah',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('invalid or unsupported status: Suspended');
+        }
       });
     });
   });
