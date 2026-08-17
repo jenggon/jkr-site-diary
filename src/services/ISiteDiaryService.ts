@@ -1,6 +1,6 @@
 import { Result } from '@/lib/result';
 import { BaseAppError } from '@/lib/errors';
-import { SiteDiary, SiteDiaryManpower, SiteDiaryPrintContext } from '@/types/siteDiary';
+import { SiteDiary, SiteDiaryManpower, SiteDiaryPrintContext, SiteDiaryOperationIntent } from '@/types/siteDiary';
 import { ActivityWeather } from '@/types/activity';
 
 export interface CreateSiteDiaryCommand {
@@ -13,6 +13,7 @@ export interface CreateSiteDiaryCommand {
   readonly manpower?: SiteDiaryManpower[] | null | undefined;
   readonly printContext?: SiteDiaryPrintContext | null | undefined;
   readonly submittedBy: string;
+  readonly operationIntent?: SiteDiaryOperationIntent | undefined;
 }
 
 export interface UpdateSiteDiaryCommand {

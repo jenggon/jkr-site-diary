@@ -48,7 +48,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
   });
 
   // --- Scenario 1: Existing InProgress + Sedang Laksana ---
-  it('1. Existing InProgress + Sedang Laksana: no /start replay, diary succeeds', async () => {
+  it('1. Existing InProgress + Sedang Laksana: no /start replay, IN_PROGRESS_DIARY succeeds', async () => {
     const callLog: string[] = [];
     const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method || 'GET';
@@ -64,6 +64,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
       if (url === '/api/site-diary' && method === 'POST') {
         const body = JSON.parse(init?.body as string);
         expect(body.activity_id).toBe('act-in-progress');
+        expect(body.operation_intent).toBe('IN_PROGRESS_DIARY');
         return {
           ok: true,
           status: 200,
@@ -89,7 +90,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
   });
 
   // --- Scenario 2: Existing InProgress + Siap ---
-  it('2. Existing InProgress + Siap: completion + diary succeeds safely', async () => {
+  it('2. Existing InProgress + Siap: completion + FINAL_COMPLETION_DIARY succeeds safely', async () => {
     const callLog: string[] = [];
     const mockFetcher = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method || 'GET';
@@ -110,6 +111,8 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
         } as Response;
       }
       if (url === '/api/site-diary' && method === 'POST') {
+        const body = JSON.parse(init?.body as string);
+        expect(body.operation_intent).toBe('FINAL_COMPLETION_DIARY');
         return {
           ok: true,
           status: 200,
@@ -392,16 +395,47 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     expect(callLog).toEqual(['GET /api/activity/act-unknown']);
   });
 
-  // --- Scenario 9: Explicit mode resolution & validation ---
-  it('9. Explicit mode resolution accurately maps inputs and fails closed on missing authority', () => {
-    // 1. No ID and no source
+  // --- Scenario 9: Explicit XOR mode resolution & validation ---
+  it('9. Explicit mode resolution enforces strict XOR authority and fails closed on invalid combinations', () => {
+    // 1. No authority supplied
     expect(() => resolveDailyEntryMode({})).toThrow('Sila pilih Sumber Aktiviti');
+    expect(() => resolveDailyEntryMode({ editingSiteDiaryId: '', editingActivityId: '   ', selectedSource: null })).toThrow(
+      'Sila pilih Sumber Aktiviti'
+    );
 
-    // 2. Valid resolutions
+    // 2. Multiple contradictory authorities (must fail closed)
+    expect(() =>
+      resolveDailyEntryMode({
+        editingSiteDiaryId: 'sd-1',
+        editingActivityId: 'act-1',
+      })
+    ).toThrow('Konflik mod borang: ID Buku Harian dan ID Aktiviti tidak boleh dibekalkan serentak.');
+
+    expect(() =>
+      resolveDailyEntryMode({
+        editingSiteDiaryId: 'sd-1',
+        selectedSource: mspSource,
+      })
+    ).toThrow('Konflik mod borang: Mod Suntingan Laporan tidak membenarkan pemilihan Sumber Aktiviti.');
+
+    expect(() =>
+      resolveDailyEntryMode({
+        editingActivityId: 'act-1',
+        selectedSource: mspSource,
+      })
+    ).toThrow('Konflik mod borang: Mod Lanjutan Aktiviti tidak membenarkan pemilihan Sumber Aktiviti baharu.');
+
+    expect(() =>
+      resolveDailyEntryMode({
+        editingSiteDiaryId: 'sd-1',
+        editingActivityId: 'act-1',
+        selectedSource: mspSource,
+      })
+    ).toThrow('Konflik mod borang: ID Buku Harian dan ID Aktiviti tidak boleh dibekalkan serentak.');
+
+    // 3. Valid single authorities
     expect(resolveDailyEntryMode({ editingSiteDiaryId: 'sd-1' })).toBe('EDIT_SITE_DIARY');
-    expect(resolveDailyEntryMode({ editingSiteDiaryId: 'sd-1', selectedSource: mspSource })).toBe('EDIT_SITE_DIARY');
     expect(resolveDailyEntryMode({ editingActivityId: 'act-1' })).toBe('CONTINUE_ACTIVITY');
-    expect(resolveDailyEntryMode({ editingActivityId: 'act-1', selectedSource: mspSource })).toBe('CONTINUE_ACTIVITY');
     expect(resolveDailyEntryMode({ selectedSource: mspSource })).toBe('NEW_ACTIVITY');
   });
 

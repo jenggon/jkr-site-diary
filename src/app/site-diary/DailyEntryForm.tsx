@@ -59,6 +59,25 @@ export function resolveDailyEntryMode(params: {
   const hasActivityId = Boolean(params.editingActivityId && params.editingActivityId.trim());
   const hasSource = Boolean(params.selectedSource);
 
+  const authorityCount = (hasSiteDiaryId ? 1 : 0) + (hasActivityId ? 1 : 0) + (hasSource ? 1 : 0);
+
+  if (authorityCount === 0) {
+    throw new Error('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
+  }
+
+  if (authorityCount > 1) {
+    if (hasSiteDiaryId && hasActivityId) {
+      throw new Error('Konflik mod borang: ID Buku Harian dan ID Aktiviti tidak boleh dibekalkan serentak.');
+    }
+    if (hasSiteDiaryId && hasSource) {
+      throw new Error('Konflik mod borang: Mod Suntingan Laporan tidak membenarkan pemilihan Sumber Aktiviti.');
+    }
+    if (hasActivityId && hasSource) {
+      throw new Error('Konflik mod borang: Mod Lanjutan Aktiviti tidak membenarkan pemilihan Sumber Aktiviti baharu.');
+    }
+    throw new Error('Konflik mod borang: Hanya satu autoriti dibenarkan.');
+  }
+
   if (hasSiteDiaryId) {
     return 'EDIT_SITE_DIARY';
   }
@@ -67,11 +86,7 @@ export function resolveDailyEntryMode(params: {
     return 'CONTINUE_ACTIVITY';
   }
 
-  if (hasSource) {
-    return 'NEW_ACTIVITY';
-  }
-
-  throw new Error('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
+  return 'NEW_ACTIVITY';
 }
 
 export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<{ siteDiaryId: string; activityId: string }> {
@@ -168,12 +183,11 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
 
     if (serverStatus === 'Completed') {
       // Check for legitimate completion recovery:
-      // Activity is Completed with completed_date matching activityDate, and user submits Siap
+      // Activity is Completed with non-null completed_date exactly matching activityDate, and user submits Siap
       const isLegitimateCompletionRecovery =
         params.workStatus === 'Siap' &&
-        (serverActivity?.completed_date === params.activityDate ||
-          serverActivity?.actual_end_date === params.activityDate ||
-          serverActivity?.actual_start_date === params.activityDate);
+        serverActivity?.completed_date != null &&
+        serverActivity.completed_date === params.activityDate;
 
       if (!isLegitimateCompletionRecovery) {
         throw new Error('Aktiviti ini telah selesai sepenuhnya dan tidak boleh diteruskan.');
@@ -322,6 +336,7 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
         revision_id: params.revisionId,
         activity_id: resolvedActivityId,
         activity_date: params.activityDate,
+        operation_intent: params.workStatus === 'Siap' ? 'FINAL_COMPLETION_DIARY' : 'IN_PROGRESS_DIARY',
         notes: params.notes.trim(),
         weather: mappedWeather,
         manpower: activeManpower,
@@ -456,7 +471,9 @@ export default function DailyEntryForm({
 
       if (diary.notes) setNotes(diary.notes);
       if (diary.activity_date) setActivityDate(diary.activity_date);
-      if (diary.activity_id) setEditingActivityId(diary.activity_id);
+      // Mode authority is strictly editingSiteDiaryId; do not set editingActivityId
+      setEditingActivityId(null);
+      setSelectedSource(null);
 
       if (diary.print_context) {
         if (diary.print_context.location) setLocation(diary.print_context.location);
@@ -579,7 +596,7 @@ export default function DailyEntryForm({
       const result = await submitDailyEntry({
         programmeId: programmeId || '',
         revisionId: revisionId || '',
-        selectedSource,
+        selectedSource: editingSiteDiaryId || editingActivityId ? null : selectedSource,
         activityDate,
         actualStartDate,
         workStatus,
@@ -592,8 +609,8 @@ export default function DailyEntryForm({
         contractorScope,
         notes,
         manpower,
-        editingSiteDiaryId,
-        editingActivityId,
+        editingSiteDiaryId: editingSiteDiaryId || null,
+        editingActivityId: editingSiteDiaryId ? null : editingActivityId || null,
       });
 
       setSavedDiaryId(result.siteDiaryId);

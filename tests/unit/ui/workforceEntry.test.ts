@@ -176,7 +176,7 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
       revisionId: 'rev-uuid-1111-2222-3333',
       selectedSource: null,
       editingSiteDiaryId: 'sd-edit-303',
-      editingActivityId: 'act-existing-505',
+      editingActivityId: null,
       activityDate: '2026-08-16',
       actualStartDate: '2026-08-16',
       workStatus: 'Sedang Laksana',

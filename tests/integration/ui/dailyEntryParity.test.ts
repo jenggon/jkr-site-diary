@@ -249,14 +249,13 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
     const editParams: SubmitDailyEntryParams = {
       ...defaultParams,
       editingSiteDiaryId: 'sd-uuid-existing-7777',
-      editingActivityId: 'act-uuid-existing-4444',
+      editingActivityId: null,
       selectedSource: null,
       notes: 'Kemaskini catatan harian oleh Pegawai Penguasa.',
     };
 
     const result = await submitDailyEntry({ ...editParams, fetchFn: mockFetch });
     expect(result.siteDiaryId).toBe('sd-uuid-existing-7777');
-    expect(result.activityId).toBe('act-uuid-existing-4444');
 
     // Verify no new activity was POSTed
     const actCall = calls.find((c) => c.url === '/api/activities' && c.method === 'POST');
@@ -451,7 +450,7 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
     const editParams: SubmitDailyEntryParams = {
       ...defaultParams,
       editingSiteDiaryId: 'sd-uuid-existing-7777',
-      editingActivityId: 'act-uuid-existing-4444',
+      editingActivityId: null,
       selectedSource: null,
     };
 

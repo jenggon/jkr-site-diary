@@ -126,7 +126,14 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
-      // Authoritative Activity status and completion recovery validation
+      // 1. Resolve and validate operation intent
+      const operationIntent = cmd.operationIntent || 'IN_PROGRESS_DIARY';
+      const validIntents = ['IN_PROGRESS_DIARY', 'FINAL_COMPLETION_DIARY'];
+      if (!validIntents.includes(operationIntent)) {
+        return Failure(new SiteDiaryValidationError(`Unknown or invalid operation intent: ${operationIntent}`));
+      }
+
+      // 2. Validate canonical Activity status against operation intent
       const validStatuses: ActivityStatus[] = [ActivityStatus.New, ActivityStatus.InProgress, ActivityStatus.Completed];
       if (!validStatuses.includes(activity.status)) {
         return Failure(
@@ -136,15 +143,33 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
-      if (activity.status === ActivityStatus.Completed) {
-        const isLegitimateCompletionRecovery =
-          activity.completed_date === cmd.activityDate ||
-          activity.actual_start_date === cmd.activityDate;
-
-        if (!isLegitimateCompletionRecovery) {
+      if (operationIntent === 'IN_PROGRESS_DIARY') {
+        if (activity.status === ActivityStatus.Completed) {
           return Failure(
             new SiteDiaryValidationError(
-              `Cannot create Site Diary for Completed activity ${cmd.activityId} on date ${cmd.activityDate}: activity completed date is ${activity.completed_date ?? 'unset'}`
+              `Cannot create IN_PROGRESS_DIARY for Completed activity ${cmd.activityId}`
+            )
+          );
+        }
+      } else if (operationIntent === 'FINAL_COMPLETION_DIARY') {
+        if (activity.status !== ActivityStatus.Completed) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create FINAL_COMPLETION_DIARY for non-completed activity ${cmd.activityId} with status ${activity.status}`
+            )
+          );
+        }
+        if (!activity.completed_date) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create FINAL_COMPLETION_DIARY for Completed activity ${cmd.activityId}: activity has missing or null completed_date`
+            )
+          );
+        }
+        if (activity.completed_date !== cmd.activityDate) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create Site Diary for Completed activity ${cmd.activityId} on date ${cmd.activityDate}: activity completed date is ${activity.completed_date}`
             )
           );
         }
@@ -158,6 +183,7 @@ export class SiteDiaryService implements ISiteDiaryService {
         revision_id: cmd.revisionId,
         activity_id: cmd.activityId,
         activity_date: cmd.activityDate,
+        operation_intent: operationIntent,
         weather: cmd.weather ?? null,
         notes: cmd.notes.trim(),
         status: activity.status,

@@ -192,6 +192,15 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
             status: 'Suspended' as unknown as ActivityStatus,
           } as unknown as Activity);
         }
+        if (id === 'act-completed-null-date') {
+          return Success({
+            activity_id: 'act-completed-null-date',
+            programme_id: 'prog-1',
+            revision_id: 'rev-approved',
+            status: ActivityStatus.Completed,
+            completed_date: null,
+          } as unknown as Activity);
+        }
         if (id === 'act-superseded') {
            return Success({
             activity_id: 'act-superseded',
@@ -439,13 +448,14 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       });
     });
 
-    describe('F2.2 Server-Authoritative Completion Recovery & Fail-Closed Status', () => {
-      it('Q. Allows Site Diary creation for Completed activity when activityDate matches completed_date (Recovery)', async () => {
+    describe('F2.2 Server-Authoritative Completion Recovery & Operation Intent Contract', () => {
+      it('Q. Allows Site Diary creation with FINAL_COMPLETION_DIARY when activityDate matches completed_date (Recovery)', async () => {
         const res = await service.createSiteDiary({
           programmeId: 'prog-1',
           revisionId: 'rev-approved',
           activityId: 'act-completed',
           activityDate: '2026-09-05', // Exact match with completed_date
+          operationIntent: 'FINAL_COMPLETION_DIARY',
           notes: 'Laporan hari terakhir aktiviti disiapkan',
           submittedBy: 'user-recovery',
         });
@@ -458,12 +468,13 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         }
       });
 
-      it('R. Rejects Site Diary creation for Completed activity on date different from completed_date', async () => {
+      it('R. Rejects FINAL_COMPLETION_DIARY for Completed activity on date different from completed_date', async () => {
         const res = await service.createSiteDiary({
           programmeId: 'prog-1',
           revisionId: 'rev-approved',
           activityId: 'act-completed',
           activityDate: '2026-09-06', // Mismatch with completed_date 2026-09-05
+          operationIntent: 'FINAL_COMPLETION_DIARY',
           notes: 'Percubaan tidak sah selepas siap',
           submittedBy: 'user-invalid',
         });
@@ -471,10 +482,97 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         expect(isFailure(res)).toBe(true);
         if (isFailure(res)) {
           expect(res.error.message).toContain('Cannot create Site Diary for Completed activity');
+          expect(res.error.message).toContain('completed date is 2026-09-05');
         }
       });
 
-      it('S. Fails closed on invalid or non-canonical activity status', async () => {
+      it('S. Rejects FINAL_COMPLETION_DIARY for Completed activity with null or missing completed_date', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-completed-null-date',
+          activityDate: '2026-09-05',
+          operationIntent: 'FINAL_COMPLETION_DIARY',
+          notes: 'Percubaan dengan completed_date null',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('activity has missing or null completed_date');
+        }
+      });
+
+      it('T. Rejects FINAL_COMPLETION_DIARY for non-completed activity (e.g. In Progress)', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-inprogress',
+          activityDate: '2026-09-05',
+          operationIntent: 'FINAL_COMPLETION_DIARY',
+          notes: 'Percubaan FINAL_COMPLETION_DIARY pada aktiviti In Progress',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('Cannot create FINAL_COMPLETION_DIARY for non-completed activity');
+        }
+      });
+
+      it('U. Allows IN_PROGRESS_DIARY for In Progress activity', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-inprogress',
+          activityDate: '2026-09-05',
+          operationIntent: 'IN_PROGRESS_DIARY',
+          notes: 'Kemajuan kerja biasa',
+          submittedBy: 'user-standard',
+        });
+
+        expect(isSuccess(res)).toBe(true);
+        if (isSuccess(res)) {
+          expect(res.value.activity_id).toBe('act-inprogress');
+          expect(res.value.status).toBe(ActivityStatus.InProgress);
+        }
+      });
+
+      it('V. Rejects IN_PROGRESS_DIARY for Completed activity', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-completed',
+          activityDate: '2026-09-05',
+          operationIntent: 'IN_PROGRESS_DIARY',
+          notes: 'Percubaan IN_PROGRESS_DIARY pada aktiviti yang telah Completed',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('Cannot create IN_PROGRESS_DIARY for Completed activity');
+        }
+      });
+
+      it('W. Rejects unknown operation intent', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-inprogress',
+          activityDate: '2026-09-05',
+          operationIntent: 'UNKNOWN_INTENT' as unknown as import('@/types/siteDiary').SiteDiaryOperationIntent,
+          notes: 'Percubaan intent tidak sah',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('Unknown or invalid operation intent');
+        }
+      });
+
+      it('X. Fails closed on invalid or non-canonical activity status', async () => {
         const res = await service.createSiteDiary({
           programmeId: 'prog-1',
           revisionId: 'rev-approved',
