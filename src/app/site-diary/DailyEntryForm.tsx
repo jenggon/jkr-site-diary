@@ -56,7 +56,7 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
     throw new Error('Sila pastikan Program dan Semakan Projek sah dipilih.');
   }
 
-  if (!params.editingActivityId && !params.selectedSource) {
+  if (!params.editingActivityId && !params.editingSiteDiaryId && !params.selectedSource) {
     throw new Error('Sila pilih Sumber Aktiviti (Kerja Jadual MSP atau Kerja VO).');
   }
 
@@ -112,48 +112,109 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
     resolvedActivityId = actJson?.data?.activityId ?? null;
   }
 
-  if (!resolvedActivityId) {
+  if (!resolvedActivityId && !params.editingSiteDiaryId) {
     throw new Error('ID Aktiviti tidak dapat ditentukan.');
   }
 
   // 3. Lifecycle Transition Orchestration (only when creating a new diary entry)
-  if (!params.editingSiteDiaryId) {
-    if (params.workStatus === 'Siap') {
-      const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actualStartDate: params.actualStartDate || params.activityDate,
-          completedDate: params.activityDate,
-        }),
-      });
-
-      if (compRes.status === 401) {
+  if (!params.editingSiteDiaryId && resolvedActivityId) {
+    if (params.editingActivityId) {
+      // EXISTING ACTIVITY CONTINUATION: Query server-authoritative Activity state
+      const actStateRes = await fetcher(`/api/activity/${encodeURIComponent(resolvedActivityId)}`);
+      if (actStateRes.status === 401) {
         throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
       }
-
-      if (!compRes.ok) {
-        const errJson = await compRes.json().catch(() => null);
-        throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
+      if (!actStateRes.ok) {
+        const errJson = await actStateRes.json().catch(() => null);
+        throw new Error(errJson?.error || 'Gagal menyemak status terkini aktiviti');
       }
+      const actStateJson = await actStateRes.json();
+      const serverActivity = actStateJson?.data;
+      const serverStatus = serverActivity?.status;
+
+      if (serverStatus === 'Completed') {
+        throw new Error('Aktiviti ini telah selesai sepenuhnya dan tidak boleh diteruskan.');
+      }
+
+      if (params.workStatus === 'Siap') {
+        const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actualStartDate: params.actualStartDate || params.activityDate,
+            completedDate: params.activityDate,
+          }),
+        });
+
+        if (compRes.status === 401) {
+          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+        }
+
+        if (!compRes.ok) {
+          const errJson = await compRes.json().catch(() => null);
+          throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
+        }
+      } else if (serverStatus === 'New') {
+        // If still 'New', transition to 'In Progress' via /start
+        const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actualStartDate: params.actualStartDate || params.activityDate,
+          }),
+        });
+
+        if (startRes.status === 401) {
+          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+        }
+
+        if (!startRes.ok) {
+          const errJson = await startRes.json().catch(() => null);
+          const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
+          throw new Error(errMsg);
+        }
+      }
+      // If serverStatus === 'In Progress' and params.workStatus === 'Sedang Laksana',
+      // NO-OP: do NOT call /start again to avoid illegal lifecycle replay.
     } else {
-      // In Progress (Sedang Laksana): transition via /start with known/actual start date
-      const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actualStartDate: params.actualStartDate || params.activityDate,
-        }),
-      });
+      // NEW ACTIVITY ENTRY
+      if (params.workStatus === 'Siap') {
+        const compRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actualStartDate: params.actualStartDate || params.activityDate,
+            completedDate: params.activityDate,
+          }),
+        });
 
-      if (startRes.status === 401) {
-        throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
-      }
+        if (compRes.status === 401) {
+          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+        }
 
-      if (!startRes.ok) {
-        const errJson = await startRes.json().catch(() => null);
-        const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
-        throw new Error(errMsg);
+        if (!compRes.ok) {
+          const errJson = await compRes.json().catch(() => null);
+          throw new Error(errJson?.error || 'Gagal mengemaskini status aktiviti ke Selesai');
+        }
+      } else {
+        // In Progress (Sedang Laksana): transition via /start with known/actual start date
+        const startRes = await fetcher(`/api/activities/${encodeURIComponent(resolvedActivityId)}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actualStartDate: params.actualStartDate || params.activityDate,
+          }),
+        });
+
+        if (startRes.status === 401) {
+          throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
+        }
+
+        if (!startRes.ok) {
+          const errJson = await startRes.json().catch(() => null);
+          const errMsg = errJson?.error || 'Gagal memulakan aktiviti';
+          throw new Error(errMsg);
+        }
       }
     }
   }
@@ -251,7 +312,7 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
     throw new Error('ID Laporan Buku Harian Tapak tidak dapat diperolehi.');
   }
 
-  return { siteDiaryId: savedSiteDiaryId, activityId: resolvedActivityId };
+  return { siteDiaryId: savedSiteDiaryId, activityId: resolvedActivityId ?? '' };
 }
 
 export default function DailyEntryForm({
@@ -293,9 +354,14 @@ export default function DailyEntryForm({
     }))
   );
 
-  // Edit Mode state
+  // Continuation / Edit Mode state
   const [editingSiteDiaryId, setEditingSiteDiaryId] = useState<string | null>(initialSiteDiaryId);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(initialActivityId);
+  const [existingActivityInfo, setExistingActivityInfo] = useState<{
+    subtask?: string;
+    sourceType?: string;
+    status?: string;
+  } | null>(null);
 
   // Form execution state
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -329,6 +395,9 @@ export default function DailyEntryForm({
     setSavedDiaryId(null);
     setFormError(null);
     setFormSuccess(null);
+    setEditingSiteDiaryId(null);
+    setEditingActivityId(null);
+    setExistingActivityInfo(null);
   }, [todayIso]);
 
   // If editing an existing Site Diary, load its data
@@ -362,11 +431,69 @@ export default function DailyEntryForm({
     }
   }, []);
 
-  // Clear stale transient source and states if Programme changes while not in edit mode
+  // If continuing an existing Activity, load its details and prefill from latest prior diary
+  const loadExistingActivityAndPrefill = useCallback(async (actId: string, targetDate: string) => {
+    try {
+      // 1. Fetch Authoritative Activity details
+      const actRes = await fetch(`/api/activity/${encodeURIComponent(actId)}`);
+      if (actRes.ok) {
+        const actJson = await actRes.json();
+        const act = actJson.data;
+        if (act) {
+          setExistingActivityInfo({
+            subtask: act.subtask,
+            sourceType: act.source_type,
+            status: act.status,
+          });
+          if (act.actual_start_date) {
+            setActualStartDate(act.actual_start_date);
+          }
+          if (act.status === 'In Progress') {
+            setWorkStatus('Sedang Laksana');
+          }
+        }
+      }
+
+      // 2. Fetch Previous Diaries for Continuation Prefill
+      const diariesRes = await fetch(`/api/site-diary/activity/${encodeURIComponent(actId)}`);
+      if (diariesRes.ok) {
+        const diariesJson = await diariesRes.json();
+        const diaries: Array<{
+          activity_date: string;
+          manpower?: ManpowerRow[] | null;
+          print_context?: Partial<PrintContextData> | null;
+        }> = diariesJson.data;
+
+        if (Array.isArray(diaries) && diaries.length > 0) {
+          // Find strictly previous diaries before targetDate
+          const priorDiaries = diaries.filter((d) => d.activity_date < targetDate);
+          // Sort descending by activity_date to pick the latest prior
+          priorDiaries.sort((a, b) => b.activity_date.localeCompare(a.activity_date));
+          const latestPrior = priorDiaries[0];
+
+          if (latestPrior) {
+            if (Array.isArray(latestPrior.manpower) && latestPrior.manpower.length > 0) {
+              setManpower(latestPrior.manpower);
+            }
+            if (latestPrior.print_context?.location) {
+              setLocation(latestPrior.print_context.location);
+            }
+            if (latestPrior.print_context?.contractor_scope) {
+              setContractorScope(latestPrior.print_context.contractor_scope);
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Clear stale transient source and states if Programme changes while not in edit or continuation mode
   const prevProgrammeIdRef = useRef<string | null>(programmeId);
   useEffect(() => {
     if (prevProgrammeIdRef.current !== null && prevProgrammeIdRef.current !== programmeId) {
-      if (!editingSiteDiaryId) {
+      if (!editingSiteDiaryId && !editingActivityId) {
         setSelectedSource(null);
         setFormError(null);
         setFormSuccess(null);
@@ -374,14 +501,17 @@ export default function DailyEntryForm({
       }
     }
     prevProgrammeIdRef.current = programmeId;
-  }, [programmeId, editingSiteDiaryId]);
+  }, [programmeId, editingSiteDiaryId, editingActivityId]);
 
   useEffect(() => {
     if (initialSiteDiaryId) {
       setEditingSiteDiaryId(initialSiteDiaryId);
       loadExistingDiary(initialSiteDiaryId);
+    } else if (initialActivityId) {
+      setEditingActivityId(initialActivityId);
+      loadExistingActivityAndPrefill(initialActivityId, activityDate);
     }
-  }, [initialSiteDiaryId, loadExistingDiary]);
+  }, [initialSiteDiaryId, initialActivityId, activityDate, loadExistingDiary, loadExistingActivityAndPrefill]);
 
   // Native Form Submission Handler
   const handleSubmit = async (e: FormEvent) => {
@@ -435,13 +565,35 @@ export default function DailyEntryForm({
 
   return (
     <form onSubmit={handleSubmit} className={`w-full space-y-4 ${className}`} aria-label="Borang Buku Harian Tapak">
-      {/* 1. Operational Source Selector (MSP XOR VO) */}
-      {!editingActivityId && (
+      {/* 1. Operational Source Selector (MSP XOR VO) or Continuation Banner */}
+      {!editingActivityId ? (
         <OperationalSourceSelector
           selectedSource={selectedSource}
           onSelectSource={setSelectedSource}
           disabled={isSubmitting}
         />
+      ) : (
+        !editingSiteDiaryId && (
+          <section
+            data-testid="continuation-banner"
+            className="rounded-2xl border border-blue-800/60 bg-blue-950/40 p-4 sm:p-5 shadow-lg space-y-1"
+          >
+            <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-blue-400">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              <span>Melanjutkan Aktiviti Sedia Ada (Continuation Mode)</span>
+            </div>
+            {existingActivityInfo?.subtask && (
+              <div className="text-zinc-100 text-sm sm:text-base font-semibold pt-1">
+                {existingActivityInfo.subtask}
+              </div>
+            )}
+            {existingActivityInfo?.sourceType && (
+              <div className="text-xs text-zinc-400">
+                Sumber: {existingActivityInfo.sourceType === 'VO' ? 'Arahan Perubahan Kerja (VO)' : 'Jadual Kerja Utama (MSP)'}
+              </div>
+            )}
+          </section>
+        )
       )}
 
       {/* 2. Tarikh & Status Perlaksanaan */}
