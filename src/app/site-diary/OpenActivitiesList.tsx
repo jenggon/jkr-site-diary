@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { useAuth } from '@/context/AuthContext';
 import { OpenActivityDto } from '@/types/openActivity';
@@ -30,8 +30,27 @@ export default function OpenActivitiesList({
   const [loading, setLoading] = useState<boolean>(Boolean(programmeId));
   const [error, setError] = useState<string | null>(null);
 
+  const activeRequestRef = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      activeRequestRef.current += 1;
+    };
+  }, []);
+
   const loadOpenActivities = useCallback(
     async (pid: string) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      const currentRequestId = ++activeRequestRef.current;
+
       setLoading(true);
       setError(null);
 
@@ -45,6 +64,7 @@ export default function OpenActivitiesList({
 
         const res = await fetch(`/api/activities/open?programmeId=${encodeURIComponent(pid)}`, {
           headers,
+          signal: abortController.signal,
         });
 
         if (!res.ok) {
@@ -53,13 +73,22 @@ export default function OpenActivitiesList({
         }
 
         const json = await res.json();
-        const list: OpenActivityDto[] = Array.isArray(json.data) ? json.data : [];
-        setActivities(list);
+        if (currentRequestId === activeRequestRef.current) {
+          const list: OpenActivityDto[] = Array.isArray(json.data) ? json.data : [];
+          setActivities(list);
+        }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Ralat ketika memuatkan aktiviti';
-        setError(msg);
+        if (currentRequestId === activeRequestRef.current) {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            return;
+          }
+          const msg = err instanceof Error ? err.message : 'Ralat ketika memuatkan aktiviti';
+          setError(msg);
+        }
       } finally {
-        setLoading(false);
+        if (currentRequestId === activeRequestRef.current) {
+          setLoading(false);
+        }
       }
     },
     [session?.access_token]
@@ -70,6 +99,10 @@ export default function OpenActivitiesList({
       setActivities([]);
       setLoading(false);
       setError(null);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      activeRequestRef.current += 1;
       return;
     }
 

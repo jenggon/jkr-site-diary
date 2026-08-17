@@ -473,41 +473,83 @@ export default function DailyEntryForm({
     setExistingActivityInfo(null);
   }, [todayIso]);
 
+  const editDiaryGenerationRef = useRef<number>(0);
+  const editDiaryAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (editDiaryAbortRef.current) {
+        editDiaryAbortRef.current.abort();
+      }
+      editDiaryGenerationRef.current += 1;
+    };
+  }, []);
+
   // If editing an existing Site Diary, load its data
   const loadExistingDiary = useCallback(async (diaryId: string) => {
+    if (editDiaryAbortRef.current) {
+      editDiaryAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    editDiaryAbortRef.current = abortController;
+    const currentGeneration = ++editDiaryGenerationRef.current;
+
     try {
-      const res = await fetch(`/api/site-diary/${encodeURIComponent(diaryId)}`);
+      const res = await fetch(`/api/site-diary/${encodeURIComponent(diaryId)}`, {
+        signal: abortController.signal
+      });
       if (!res.ok) return;
       const json = await res.json();
-      const diary = json.data;
-      if (!diary) return;
+      if (currentGeneration === editDiaryGenerationRef.current) {
+        const diary = json.data;
+        if (!diary) return;
 
-      if (diary.notes) setNotes(diary.notes);
-      if (diary.activity_date) setActivityDate(diary.activity_date);
-      // Mode authority is strictly editingSiteDiaryId; do not set editingActivityId
-      setEditingActivityId(null);
-      setSelectedSource(null);
+        if (diary.notes) setNotes(diary.notes);
+        if (diary.activity_date) setActivityDate(diary.activity_date);
+        // Mode authority is strictly editingSiteDiaryId; do not set editingActivityId
+        setEditingActivityId(null);
+        setSelectedSource(null);
 
-      if (diary.print_context) {
-        if (diary.print_context.location) setLocation(diary.print_context.location);
-        if (diary.print_context.work_start_time) setWorkStartTime(diary.print_context.work_start_time);
-        if (diary.print_context.work_end_time) setWorkEndTime(diary.print_context.work_end_time);
-        if (diary.print_context.weather_condition) setWeatherCondition(diary.print_context.weather_condition);
-        if (diary.print_context.rain_start_time) setRainStartTime(diary.print_context.rain_start_time);
-        if (diary.print_context.rain_end_time) setRainEndTime(diary.print_context.rain_end_time);
-        if (diary.print_context.contractor_scope) setContractorScope(diary.print_context.contractor_scope);
-      }
+        if (diary.print_context) {
+          if (diary.print_context.location) setLocation(diary.print_context.location);
+          if (diary.print_context.work_start_time) setWorkStartTime(diary.print_context.work_start_time);
+          if (diary.print_context.work_end_time) setWorkEndTime(diary.print_context.work_end_time);
+          if (diary.print_context.weather_condition) setWeatherCondition(diary.print_context.weather_condition);
+          if (diary.print_context.rain_start_time) setRainStartTime(diary.print_context.rain_start_time);
+          if (diary.print_context.rain_end_time) setRainEndTime(diary.print_context.rain_end_time);
+          if (diary.print_context.contractor_scope) setContractorScope(diary.print_context.contractor_scope);
+        }
 
-      if (Array.isArray(diary.manpower) && diary.manpower.length > 0) {
-        setManpower(diary.manpower);
+        if (Array.isArray(diary.manpower) && diary.manpower.length > 0) {
+          setManpower(diary.manpower);
+        }
       }
     } catch {
       // ignore
     }
   }, []);
 
+  const continuationPrefillGenerationRef = useRef<number>(0);
+  const continuationPrefillAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (continuationPrefillAbortRef.current) {
+        continuationPrefillAbortRef.current.abort();
+      }
+      continuationPrefillGenerationRef.current += 1;
+    };
+  }, []);
+
   // If continuing an existing Activity, load its details and prefill ONLY safe continuation fields
   const loadExistingActivityAndPrefill = useCallback(async (actId: string, targetDate: string) => {
+    if (continuationPrefillAbortRef.current) {
+      continuationPrefillAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    continuationPrefillAbortRef.current = abortController;
+    const currentGeneration = ++continuationPrefillGenerationRef.current;
+
     try {
       // 1. Reset observational evidence fields explicitly for continuation mode
       setWeatherCondition(null);
@@ -518,51 +560,59 @@ export default function DailyEntryForm({
       setNotes('');
 
       // 2. Fetch Authoritative Activity details
-      const actRes = await fetch(`/api/activity/${encodeURIComponent(actId)}`);
+      const actRes = await fetch(`/api/activity/${encodeURIComponent(actId)}`, {
+        signal: abortController.signal
+      });
       if (actRes.ok) {
         const actJson = await actRes.json();
-        const act = actJson.data;
-        if (act) {
-          setExistingActivityInfo({
-            subtask: act.subtask,
-            sourceType: act.source_type,
-            status: act.status,
-          });
-          if (act.actual_start_date) {
-            setActualStartDate(act.actual_start_date);
-          }
-          if (act.status === 'In Progress') {
-            setWorkStatus('Sedang Laksana');
+        if (currentGeneration === continuationPrefillGenerationRef.current) {
+          const act = actJson.data;
+          if (act) {
+            setExistingActivityInfo({
+              subtask: act.subtask,
+              sourceType: act.source_type,
+              status: act.status,
+            });
+            if (act.actual_start_date) {
+              setActualStartDate(act.actual_start_date);
+            }
+            if (act.status === 'In Progress') {
+              setWorkStatus('Sedang Laksana');
+            }
           }
         }
       }
 
       // 3. Fetch Previous Diaries for Continuation Prefill
-      const diariesRes = await fetch(`/api/site-diary/activity/${encodeURIComponent(actId)}`);
+      const diariesRes = await fetch(`/api/site-diary/activity/${encodeURIComponent(actId)}`, {
+        signal: abortController.signal
+      });
       if (diariesRes.ok) {
         const diariesJson = await diariesRes.json();
-        const diaries: Array<{
-          activity_date: string;
-          manpower?: ManpowerRow[] | null;
-          print_context?: Partial<PrintContextData> | null;
-        }> = diariesJson.data;
+        if (currentGeneration === continuationPrefillGenerationRef.current) {
+          const diaries: Array<{
+            activity_date: string;
+            manpower?: ManpowerRow[] | null;
+            print_context?: Partial<PrintContextData> | null;
+          }> = diariesJson.data;
 
-        if (Array.isArray(diaries) && diaries.length > 0) {
-          // Find strictly previous diaries before targetDate
-          const priorDiaries = diaries.filter((d) => d.activity_date < targetDate);
-          // Sort descending by activity_date to pick the latest prior
-          priorDiaries.sort((a, b) => b.activity_date.localeCompare(a.activity_date));
-          const latestPrior = priorDiaries[0];
+          if (Array.isArray(diaries) && diaries.length > 0) {
+            // Find strictly previous diaries before targetDate
+            const priorDiaries = diaries.filter((d) => d.activity_date < targetDate);
+            // Sort descending by activity_date to pick the latest prior
+            priorDiaries.sort((a, b) => b.activity_date.localeCompare(a.activity_date));
+            const latestPrior = priorDiaries[0];
 
-          if (latestPrior) {
-            if (Array.isArray(latestPrior.manpower) && latestPrior.manpower.length > 0) {
-              setManpower(latestPrior.manpower);
-            }
-            if (latestPrior.print_context?.location) {
-              setLocation(latestPrior.print_context.location);
-            }
-            if (latestPrior.print_context?.contractor_scope) {
-              setContractorScope(latestPrior.print_context.contractor_scope);
+            if (latestPrior) {
+              if (Array.isArray(latestPrior.manpower) && latestPrior.manpower.length > 0) {
+                setManpower(latestPrior.manpower);
+              }
+              if (latestPrior.print_context?.location) {
+                setLocation(latestPrior.print_context.location);
+              }
+              if (latestPrior.print_context?.contractor_scope) {
+                setContractorScope(latestPrior.print_context.contractor_scope);
+              }
             }
           }
         }
@@ -576,6 +626,11 @@ export default function DailyEntryForm({
   const prevProgrammeIdRef = useRef<string | null>(programmeId);
   useEffect(() => {
     if (prevProgrammeIdRef.current !== null && prevProgrammeIdRef.current !== programmeId) {
+      if (continuationPrefillAbortRef.current) {
+        continuationPrefillAbortRef.current.abort();
+      }
+      continuationPrefillGenerationRef.current += 1;
+
       setEditingActivityId(null);
       setExistingActivityInfo(null);
       setSelectedSource(null);
@@ -726,7 +781,14 @@ export default function DailyEntryForm({
         </div>
       ) : (
         /* View B: Form for New Entry, Continuation, or Edit */
-        <form onSubmit={handleSubmit} className="w-full space-y-4" aria-label="Borang Buku Harian Tapak">
+        <form
+          id="panel-new-activity"
+          role={!editingActivityId && !editingSiteDiaryId ? "tabpanel" : undefined}
+          aria-labelledby={!editingActivityId && !editingSiteDiaryId ? "tab-new-activity" : undefined}
+          onSubmit={handleSubmit}
+          className="w-full space-y-4"
+          aria-label="Borang Buku Harian Tapak"
+        >
           {/* 1. Operational Source Selector (MSP XOR VO) or Continuation Banner */}
           {!editingActivityId ? (
             <OperationalSourceSelector
