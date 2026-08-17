@@ -3,7 +3,7 @@ import { BaseAppError, UnknownError } from '@/lib/errors';
 import { Logger } from '@/lib/logger';
 import { SystemClock } from '@/lib/clock';
 import { generateUuid } from '@/lib/uuid';
-import { SiteDiary } from '@/types/siteDiary';
+import { SiteDiary, SiteDiaryOperationIntent } from '@/types/siteDiary';
 import { ProgrammeNotFoundError, ProgrammeArchivedError, ProgrammeLockedError } from '@/errors/programmeErrors';
 import {
   SiteDiaryValidationError,
@@ -126,6 +126,73 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
+      // 1. Resolve and validate operation intent (MUST BE EXPLICIT, NO DEFAULTING)
+      if (!cmd.operationIntent) {
+        return Failure(new SiteDiaryValidationError('operationIntent is required'));
+      }
+      const operationIntent = cmd.operationIntent;
+      const validIntents: SiteDiaryOperationIntent[] = ['IN_PROGRESS_DIARY', 'FINAL_COMPLETION_DIARY', 'CARRY_FORWARD_DIARY'];
+      if (!validIntents.includes(operationIntent)) {
+        return Failure(new SiteDiaryValidationError(`Unknown or invalid operation intent: ${operationIntent}`));
+      }
+
+      // 2. Validate canonical Activity status against operation intent
+      const validStatuses: ActivityStatus[] = [ActivityStatus.New, ActivityStatus.InProgress, ActivityStatus.Completed];
+      if (!validStatuses.includes(activity.status)) {
+        return Failure(
+          new SiteDiaryValidationError(
+            `Cannot create Site Diary for activity with invalid or unsupported status: ${activity.status}`
+          )
+        );
+      }
+
+      if (operationIntent === 'IN_PROGRESS_DIARY') {
+        if (activity.status === ActivityStatus.New) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create IN_PROGRESS_DIARY for New activity ${cmd.activityId}`
+            )
+          );
+        }
+        if (activity.status === ActivityStatus.Completed) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create IN_PROGRESS_DIARY for Completed activity ${cmd.activityId}`
+            )
+          );
+        }
+      } else if (operationIntent === 'FINAL_COMPLETION_DIARY') {
+        if (activity.status !== ActivityStatus.Completed) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create FINAL_COMPLETION_DIARY for non-completed activity ${cmd.activityId} with status ${activity.status}`
+            )
+          );
+        }
+        if (!activity.completed_date) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create FINAL_COMPLETION_DIARY for Completed activity ${cmd.activityId}: activity has missing or null completed_date`
+            )
+          );
+        }
+        if (activity.completed_date !== cmd.activityDate) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create Site Diary for Completed activity ${cmd.activityId} on date ${cmd.activityDate}: activity completed date is ${activity.completed_date}`
+            )
+          );
+        }
+      } else if (operationIntent === 'CARRY_FORWARD_DIARY') {
+        if (activity.status === ActivityStatus.Completed) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create CARRY_FORWARD_DIARY for Completed activity ${cmd.activityId}`
+            )
+          );
+        }
+      }
+
       const now = this.clock.nowIso();
       const siteDiaryId = generateUuid();
       const createPayload = {
@@ -134,6 +201,7 @@ export class SiteDiaryService implements ISiteDiaryService {
         revision_id: cmd.revisionId,
         activity_id: cmd.activityId,
         activity_date: cmd.activityDate,
+        operation_intent: operationIntent,
         weather: cmd.weather ?? null,
         notes: cmd.notes.trim(),
         status: activity.status,
@@ -255,6 +323,7 @@ export class SiteDiaryService implements ISiteDiaryService {
         revision_id: activity.revision_id,
         activity_id: activity.activity_id,
         activity_date: targetDate,
+        operation_intent: 'CARRY_FORWARD_DIARY',
         weather: null,
         notes: '',
         status: activity.status,

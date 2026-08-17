@@ -18,6 +18,10 @@ export interface SiteDiaryManpower {
 
 export type SiteDiaryContractorScope = 'CONTRACTOR' | 'NSC';
 export type SiteDiaryWeatherCondition = 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT';
+export type SiteDiaryOperationIntent =
+  | 'IN_PROGRESS_DIARY'
+  | 'FINAL_COMPLETION_DIARY'
+  | 'CARRY_FORWARD_DIARY';
 
 export interface SiteDiaryPrintContext {
   location: string;

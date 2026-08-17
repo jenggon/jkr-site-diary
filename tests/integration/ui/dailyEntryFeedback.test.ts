@@ -192,8 +192,9 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
 
     const params: SubmitDailyEntryParams = {
       ...baseParams,
+      selectedSource: null,
       editingSiteDiaryId: 'sd-edit-99',
-      editingActivityId: 'act-existing-99',
+      editingActivityId: null,
       fetchFn: mockFetch,
     };
 

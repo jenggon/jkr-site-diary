@@ -141,8 +141,9 @@ describe('F2.1-G Mandatory 26-Point Master Regression Suite', () => {
     calls = [];
     const editParams: SubmitDailyEntryParams = {
       ...baseParams,
+      selectedSource: null,
       editingSiteDiaryId: 'sd-uuid-preserved-999',
-      editingActivityId: 'act-uuid-existing-999',
+      editingActivityId: null,
       fetchFn: createMockFetch(),
     };
     const editRes = await submitDailyEntry(editParams);

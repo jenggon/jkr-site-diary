@@ -56,6 +56,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
         revision_id: generateUuid(),
         activity_id: generateUuid(),
         activity_date: '2026-09-01',
+        operation_intent: 'IN_PROGRESS_DIARY',
         notes: 'Testing'
       };
       const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify(payload) });
@@ -68,6 +69,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
         revisionId: payload.revision_id,
         activityId: payload.activity_id,
         activityDate: payload.activity_date,
+        operationIntent: 'IN_PROGRESS_DIARY',
         notes: payload.notes,
         submittedBy: 'user-1'
       });
@@ -82,6 +84,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
         revision_id: generateUuid(),
         activity_id: generateUuid(),
         activity_date: '2026-09-01',
+        operation_intent: 'IN_PROGRESS_DIARY',
         notes: 'Testing'
       };
       const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify(payload) });

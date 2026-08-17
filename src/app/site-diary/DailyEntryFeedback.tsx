@@ -9,6 +9,7 @@ export interface DailyEntryFeedbackProps {
   savedSiteDiaryId?: string | null;
   isEditMode?: boolean;
   onResetForNewEntry?: () => void;
+  onBackToOpenActivities?: () => void;
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export default function DailyEntryFeedback({
   savedSiteDiaryId,
   isEditMode = false,
   onResetForNewEntry,
+  onBackToOpenActivities,
   className = '',
 }: DailyEntryFeedbackProps) {
   if (!error && !success) return null;
@@ -87,13 +89,24 @@ export default function DailyEntryFeedback({
                 ID: {savedSiteDiaryId.slice(0, 8)}...
               </span>
 
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex flex-wrap items-center gap-2 ml-auto">
                 <Link
                   href={`/site-diary/print?id=${encodeURIComponent(savedSiteDiaryId)}`}
                   className="px-3 py-1.5 rounded-xl bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 text-xs font-semibold transition-colors border border-emerald-600/50 shadow-sm"
                 >
                   Lihat Format JKR (Print)
                 </Link>
+
+                {onBackToOpenActivities && !isEditMode && (
+                  <button
+                    type="button"
+                    onClick={onBackToOpenActivities}
+                    data-testid="post-save-back-to-open-activities-btn"
+                    className="px-3 py-1.5 rounded-xl bg-blue-900/80 hover:bg-blue-800 text-blue-100 text-xs font-semibold transition-colors border border-blue-700/60 shadow-sm"
+                  >
+                    Aktiviti Terbuka
+                  </button>
+                )}
 
                 {onResetForNewEntry && !isEditMode && (
                   <button
