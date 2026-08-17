@@ -247,6 +247,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         revisionId: 'rev-draft',
         activityId: 'act-draft',
         activityDate: '2026-09-01',
+        operationIntent: 'IN_PROGRESS_DIARY',
         notes: 'Pemasangan acuan',
         submittedBy: 'user-1',
       });
@@ -263,6 +264,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         revisionId: 'rev-under-review',
         activityId: 'act-under-review',
         activityDate: '2026-09-01',
+        operationIntent: 'IN_PROGRESS_DIARY',
         notes: 'Semakan semula',
         submittedBy: 'user-1',
       });
@@ -279,6 +281,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         revisionId: 'rev-superseded',
         activityId: 'act-superseded',
         activityDate: '2026-09-01',
+        operationIntent: 'IN_PROGRESS_DIARY',
         notes: 'Log lama',
         submittedBy: 'user-1',
       });
@@ -295,6 +298,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         revisionId: 'rev-archived',
         activityId: 'act-archived',
         activityDate: '2026-09-01',
+        operationIntent: 'IN_PROGRESS_DIARY',
         notes: 'Log diarkibkan',
         submittedBy: 'user-1',
       });
@@ -311,6 +315,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         revisionId: 'rev-approved',
         activityId: 'act-inprogress',
         activityDate: '2026-09-01',
+        operationIntent: 'IN_PROGRESS_DIARY',
         notes: 'Kerja-kerja konkrit footing berjalan lancar',
         submittedBy: 'user-1',
       });
@@ -348,6 +353,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
           revisionId: 'rev-approved',
           activityId: 'act-new',
           activityDate: '2026-09-02',
+          operationIntent: 'CARRY_FORWARD_DIARY',
           notes: 'Baru bermula',
           submittedBy: 'u1',
         });
@@ -448,7 +454,7 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
       });
     });
 
-    describe('F2.2 Server-Authoritative Completion Recovery & Operation Intent Contract', () => {
+    describe('F2.2 Server-Authoritative Closed Operation Intent Contract', () => {
       it('Q. Allows Site Diary creation with FINAL_COMPLETION_DIARY when activityDate matches completed_date (Recovery)', async () => {
         const res = await service.createSiteDiary({
           programmeId: 'prog-1',
@@ -538,7 +544,24 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         }
       });
 
-      it('V. Rejects IN_PROGRESS_DIARY for Completed activity', async () => {
+      it('V. Rejects IN_PROGRESS_DIARY for New activity (must undergo /start transition first)', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-new',
+          activityDate: '2026-09-05',
+          operationIntent: 'IN_PROGRESS_DIARY',
+          notes: 'Percubaan IN_PROGRESS_DIARY pada aktiviti New',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('Cannot create IN_PROGRESS_DIARY for New activity');
+        }
+      });
+
+      it('W. Rejects IN_PROGRESS_DIARY for Completed activity', async () => {
         const res = await service.createSiteDiary({
           programmeId: 'prog-1',
           revisionId: 'rev-approved',
@@ -555,7 +578,65 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         }
       });
 
-      it('W. Rejects unknown operation intent', async () => {
+      it('X. Allows CARRY_FORWARD_DIARY for New and In Progress activity', async () => {
+        const resNew = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-new',
+          activityDate: '2026-09-05',
+          operationIntent: 'CARRY_FORWARD_DIARY',
+          notes: 'Bawa ke hadapan New',
+          submittedBy: 'user-cf',
+        });
+        expect(isSuccess(resNew)).toBe(true);
+
+        const resInProg = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-inprogress',
+          activityDate: '2026-09-05',
+          operationIntent: 'CARRY_FORWARD_DIARY',
+          notes: 'Bawa ke hadapan In Progress',
+          submittedBy: 'user-cf',
+        });
+        expect(isSuccess(resInProg)).toBe(true);
+      });
+
+      it('Y. Rejects CARRY_FORWARD_DIARY for Completed activity', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-completed',
+          activityDate: '2026-09-05',
+          operationIntent: 'CARRY_FORWARD_DIARY',
+          notes: 'Percubaan CARRY_FORWARD_DIARY pada Completed',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('Cannot create CARRY_FORWARD_DIARY for Completed activity');
+        }
+      });
+
+      it('Z. Rejects missing, null, or empty operation intent', async () => {
+        const res = await service.createSiteDiary({
+          programmeId: 'prog-1',
+          revisionId: 'rev-approved',
+          activityId: 'act-inprogress',
+          activityDate: '2026-09-05',
+          operationIntent: '' as unknown as import('@/types/siteDiary').SiteDiaryOperationIntent,
+          notes: 'Percubaan intent kosong',
+          submittedBy: 'user-invalid',
+        });
+
+        expect(isFailure(res)).toBe(true);
+        if (isFailure(res)) {
+          expect(res.error.message).toContain('operationIntent is required');
+        }
+      });
+
+      it('AA. Rejects unknown operation intent', async () => {
         const res = await service.createSiteDiary({
           programmeId: 'prog-1',
           revisionId: 'rev-approved',
@@ -572,12 +653,13 @@ describe('S2 Phase 1 Unit Test Suite: Revision Lifecycle & Site Diary Binding', 
         }
       });
 
-      it('X. Fails closed on invalid or non-canonical activity status', async () => {
+      it('AB. Fails closed on invalid or non-canonical activity status', async () => {
         const res = await service.createSiteDiary({
           programmeId: 'prog-1',
           revisionId: 'rev-approved',
           activityId: 'act-invalid-status',
           activityDate: '2026-09-05',
+          operationIntent: 'IN_PROGRESS_DIARY',
           notes: 'Percubaan status tidak sah',
           submittedBy: 'user-invalid',
         });

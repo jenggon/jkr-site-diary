@@ -3,7 +3,7 @@ import { BaseAppError, UnknownError } from '@/lib/errors';
 import { Logger } from '@/lib/logger';
 import { SystemClock } from '@/lib/clock';
 import { generateUuid } from '@/lib/uuid';
-import { SiteDiary } from '@/types/siteDiary';
+import { SiteDiary, SiteDiaryOperationIntent } from '@/types/siteDiary';
 import { ProgrammeNotFoundError, ProgrammeArchivedError, ProgrammeLockedError } from '@/errors/programmeErrors';
 import {
   SiteDiaryValidationError,
@@ -126,9 +126,12 @@ export class SiteDiaryService implements ISiteDiaryService {
         );
       }
 
-      // 1. Resolve and validate operation intent
-      const operationIntent = cmd.operationIntent || 'IN_PROGRESS_DIARY';
-      const validIntents = ['IN_PROGRESS_DIARY', 'FINAL_COMPLETION_DIARY'];
+      // 1. Resolve and validate operation intent (MUST BE EXPLICIT, NO DEFAULTING)
+      if (!cmd.operationIntent) {
+        return Failure(new SiteDiaryValidationError('operationIntent is required'));
+      }
+      const operationIntent = cmd.operationIntent;
+      const validIntents: SiteDiaryOperationIntent[] = ['IN_PROGRESS_DIARY', 'FINAL_COMPLETION_DIARY', 'CARRY_FORWARD_DIARY'];
       if (!validIntents.includes(operationIntent)) {
         return Failure(new SiteDiaryValidationError(`Unknown or invalid operation intent: ${operationIntent}`));
       }
@@ -144,6 +147,13 @@ export class SiteDiaryService implements ISiteDiaryService {
       }
 
       if (operationIntent === 'IN_PROGRESS_DIARY') {
+        if (activity.status === ActivityStatus.New) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create IN_PROGRESS_DIARY for New activity ${cmd.activityId}`
+            )
+          );
+        }
         if (activity.status === ActivityStatus.Completed) {
           return Failure(
             new SiteDiaryValidationError(
@@ -170,6 +180,14 @@ export class SiteDiaryService implements ISiteDiaryService {
           return Failure(
             new SiteDiaryValidationError(
               `Cannot create Site Diary for Completed activity ${cmd.activityId} on date ${cmd.activityDate}: activity completed date is ${activity.completed_date}`
+            )
+          );
+        }
+      } else if (operationIntent === 'CARRY_FORWARD_DIARY') {
+        if (activity.status === ActivityStatus.Completed) {
+          return Failure(
+            new SiteDiaryValidationError(
+              `Cannot create CARRY_FORWARD_DIARY for Completed activity ${cmd.activityId}`
             )
           );
         }
@@ -305,6 +323,7 @@ export class SiteDiaryService implements ISiteDiaryService {
         revision_id: activity.revision_id,
         activity_id: activity.activity_id,
         activity_date: targetDate,
+        operation_intent: 'CARRY_FORWARD_DIARY',
         weather: null,
         notes: '',
         status: activity.status,

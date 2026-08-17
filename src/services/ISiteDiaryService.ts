@@ -8,12 +8,12 @@ export interface CreateSiteDiaryCommand {
   readonly revisionId: string;
   readonly activityId: string;
   readonly activityDate: string;
+  readonly operationIntent: SiteDiaryOperationIntent;
   readonly weather?: ActivityWeather | null | undefined;
   readonly notes: string;
   readonly manpower?: SiteDiaryManpower[] | null | undefined;
   readonly printContext?: SiteDiaryPrintContext | null | undefined;
   readonly submittedBy: string;
-  readonly operationIntent?: SiteDiaryOperationIntent | undefined;
 }
 
 export interface UpdateSiteDiaryCommand {

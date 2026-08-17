@@ -41,12 +41,13 @@ describe('Site Diary API Routes', () => {
   }
 
   describe('POST /api/site-diary', () => {
-    it('returns 201 on valid submission', async () => {
+    it('returns 201 on valid submission with explicit operation_intent', async () => {
       const body = {
         programme_id: '123e4567-e89b-12d3-a456-426614174000',
         revision_id: '123e4567-e89b-12d3-a456-426614174001',
         activity_id: '123e4567-e89b-12d3-a456-426614174002',
         activity_date: '2026-08-11',
+        operation_intent: 'IN_PROGRESS_DIARY',
         notes: 'Test notes',
       };
       const req = createMockRequest(body);
@@ -62,9 +63,26 @@ describe('Site Diary API Routes', () => {
         revisionId: body.revision_id,
         activityId: body.activity_id,
         activityDate: body.activity_date,
+        operationIntent: 'IN_PROGRESS_DIARY',
         notes: body.notes,
         submittedBy: 'test-actor',
       });
+    });
+
+    it('returns 400 when operation_intent is missing from payload', async () => {
+      const body = {
+        programme_id: '123e4567-e89b-12d3-a456-426614174000',
+        revision_id: '123e4567-e89b-12d3-a456-426614174001',
+        activity_id: '123e4567-e89b-12d3-a456-426614174002',
+        activity_date: '2026-08-11',
+        notes: 'Test notes without intent',
+      };
+      const req = createMockRequest(body);
+      const res = await createSiteDiary(req as unknown as Request);
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/Validation failed/);
+      expect(mockCreateSiteDiary).not.toHaveBeenCalled();
     });
 
     it('returns 400 on malformed input', async () => {
