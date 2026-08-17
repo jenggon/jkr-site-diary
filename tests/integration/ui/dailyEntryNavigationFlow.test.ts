@@ -134,7 +134,7 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
 
   // 6. Page works cleanly without artificial phone frame
   it('6. Form layout uses clean fluid responsive structure without fixed phone frames', () => {
-    const html = renderToString(React.createElement(DailyEntryForm));
+    const html = renderToString(React.createElement(DailyEntryForm, { initialTab: 'NEW_ACTIVITY' }));
 
     expect(html).not.toContain('mockup-phone');
     expect(html).not.toContain('iphone-frame');

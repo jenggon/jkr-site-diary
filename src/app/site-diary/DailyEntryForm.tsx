@@ -5,6 +5,7 @@ import { useDailyEntryContext } from './DailyEntryShell';
 import OperationalSourceSelector, { SelectedOperationalSource } from './OperationalSourceSelector';
 import WorkforceEntry, { ManpowerRow, COMMON_TRADES_CATALOG } from './WorkforceEntry';
 import DailyEntryFeedback from './DailyEntryFeedback';
+import OpenActivitiesList from './OpenActivitiesList';
 
 export type { ManpowerRow };
 
@@ -23,6 +24,7 @@ export interface PrintContextData {
 export interface DailyEntryFormProps {
   initialSiteDiaryId?: string | null;
   initialActivityId?: string | null;
+  initialTab?: 'OPEN_ACTIVITIES' | 'NEW_ACTIVITY';
   onSuccess?: (siteDiaryId: string) => void;
   className?: string;
 }
@@ -376,10 +378,16 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
 export default function DailyEntryForm({
   initialSiteDiaryId = null,
   initialActivityId = null,
+  initialTab,
   onSuccess,
   className = '',
 }: DailyEntryFormProps) {
   const { programmeId, revisionId } = useDailyEntryContext();
+
+  // Mode Switch Tab State: Default landing tab is 'OPEN_ACTIVITIES' when no initial id is supplied
+  const [activeTab, setActiveTab] = useState<'OPEN_ACTIVITIES' | 'NEW_ACTIVITY'>(
+    initialTab ?? (initialActivityId || initialSiteDiaryId ? 'NEW_ACTIVITY' : 'OPEN_ACTIVITIES')
+  );
 
   // Operational Source
   const [selectedSource, setSelectedSource] = useState<SelectedOperationalSource | null>(null);
@@ -444,6 +452,11 @@ export default function DailyEntryForm({
     setRainEndTime('');
     setContractorScope('CONTRACTOR');
     setNotes('');
+    setEditingActivityId(null);
+    setExistingActivityInfo(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setSavedDiaryId(null);
     setManpower(
       DEFAULT_TRADES.map((trade) => ({
         trade_name: trade,
@@ -559,19 +572,20 @@ export default function DailyEntryForm({
     }
   }, []);
 
-  // Clear stale transient source and states if Programme changes while not in edit or continuation mode
+  // Clear stale transient source, exit continuation mode, and reset to open activities list if Programme changes
   const prevProgrammeIdRef = useRef<string | null>(programmeId);
   useEffect(() => {
     if (prevProgrammeIdRef.current !== null && prevProgrammeIdRef.current !== programmeId) {
-      if (!editingSiteDiaryId && !editingActivityId) {
-        setSelectedSource(null);
-        setFormError(null);
-        setFormSuccess(null);
-        setSavedDiaryId(null);
-      }
+      setEditingActivityId(null);
+      setExistingActivityInfo(null);
+      setSelectedSource(null);
+      setFormError(null);
+      setFormSuccess(null);
+      setSavedDiaryId(null);
+      setActiveTab('OPEN_ACTIVITIES');
     }
     prevProgrammeIdRef.current = programmeId;
-  }, [programmeId, editingSiteDiaryId, editingActivityId]);
+  }, [programmeId]);
 
   useEffect(() => {
     if (initialSiteDiaryId) {
@@ -633,248 +647,406 @@ export default function DailyEntryForm({
     }
   };
 
+
   return (
-    <form onSubmit={handleSubmit} className={`w-full space-y-4 ${className}`} aria-label="Borang Buku Harian Tapak">
-      {/* 1. Operational Source Selector (MSP XOR VO) or Continuation Banner */}
-      {!editingActivityId ? (
-        <OperationalSourceSelector
-          selectedSource={selectedSource}
-          onSelectSource={setSelectedSource}
-          disabled={isSubmitting}
-        />
-      ) : (
-        !editingSiteDiaryId && (
-          <section
-            data-testid="continuation-banner"
-            className="rounded-2xl border border-blue-800/60 bg-blue-950/40 p-4 sm:p-5 shadow-lg space-y-1"
+    <div className={`w-full space-y-4 ${className}`}>
+      {/* Top Mode Switch Nav (Aktiviti Terbuka XOR + Laporan Baharu) */}
+      {!editingActivityId && !editingSiteDiaryId && (
+        <nav aria-label="Navigasi Mod Laporan" className="w-full">
+          <div
+            role="tablist"
+            aria-label="Pilihan Mod Buku Harian"
+            className="grid grid-cols-2 p-1 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm"
           >
-            <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-blue-400">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-              <span>Melanjutkan Aktiviti Sedia Ada (Continuation Mode)</span>
-            </div>
-            {existingActivityInfo?.subtask && (
-              <div className="text-zinc-100 text-sm sm:text-base font-semibold pt-1">
-                {existingActivityInfo.subtask}
-              </div>
-            )}
-            {existingActivityInfo?.sourceType && (
-              <div className="text-xs text-zinc-400">
-                Sumber: {existingActivityInfo.sourceType === 'VO' ? 'Arahan Perubahan Kerja (VO)' : 'Jadual Kerja Utama (MSP)'}
-              </div>
-            )}
-          </section>
-        )
+            <button
+              type="button"
+              role="tab"
+              id="tab-open-activities"
+              aria-selected={activeTab === 'OPEN_ACTIVITIES'}
+              aria-controls="panel-open-activities"
+              onClick={() => {
+                setActiveTab('OPEN_ACTIVITIES');
+                setFormError(null);
+              }}
+              data-testid="tab-open-activities"
+              className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[44px] flex items-center justify-center gap-2 ${
+                activeTab === 'OPEN_ACTIVITIES'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <span>Aktiviti Terbuka</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              id="tab-new-activity"
+              aria-selected={activeTab === 'NEW_ACTIVITY'}
+              aria-controls="panel-new-activity"
+              onClick={() => {
+                setActiveTab('NEW_ACTIVITY');
+                setFormError(null);
+              }}
+              data-testid="tab-new-activity"
+              className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[44px] flex items-center justify-center gap-2 ${
+                activeTab === 'NEW_ACTIVITY'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>+ Laporan Baharu</span>
+            </button>
+          </div>
+        </nav>
       )}
 
-      {/* 2. Tarikh & Status Perlaksanaan */}
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-3 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-          Tarikh & Status Kerja
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div>
-            <label className="block text-zinc-400 font-semibold mb-1">
-              Tarikh Laporan Harian *
-            </label>
-            <input
-              type="date"
-              required
-              value={activityDate}
-              onChange={(e) => setActivityDate(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-zinc-400 font-semibold mb-1">
-              Tarikh Mula Sebenar (Known Start) *
-            </label>
-            <input
-              type="date"
-              required
-              value={actualStartDate}
-              onChange={(e) => setActualStartDate(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-zinc-400 font-semibold mb-1">
-              Status Kemajuan Aktiviti
-            </label>
-            <select
-              value={workStatus}
-              onChange={(e) => setWorkStatus(e.target.value as 'Sedang Laksana' | 'Siap')}
-              disabled={isSubmitting}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
-            >
-              <option value="Sedang Laksana">Sedang Laksana (In Progress)</option>
-              <option value="Siap">Siap Sepenuhnya (Completed)</option>
-            </select>
-          </div>
+      {/* View A: Open Activities List */}
+      {!editingActivityId && !editingSiteDiaryId && activeTab === 'OPEN_ACTIVITIES' ? (
+        <div id="panel-open-activities" role="tabpanel" aria-labelledby="tab-open-activities" className="w-full space-y-4">
+          <OpenActivitiesList
+            programmeId={programmeId}
+            onSelectActivity={(actId) => {
+              setEditingActivityId(actId);
+              setFormError(null);
+              setFormSuccess(null);
+              loadExistingActivityAndPrefill(actId, activityDate);
+            }}
+            onCreateNewActivity={() => {
+              handleResetForNewEntry();
+              setActiveTab('NEW_ACTIVITY');
+            }}
+          />
         </div>
-      </section>
-
-      {/* 3. Maklumat Cetakan JKR (Page 1) */}
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-3 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          Maklumat Tapak & Cuaca (Format JKR Page 1)
-        </h3>
-
-        <div className="space-y-3 text-xs">
-          <div>
-            <label className="block text-zinc-400 font-semibold mb-1">
-              Lokasi Terperinci / Grid Line *
-            </label>
-            <input
-              type="text"
-              required
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+      ) : (
+        /* View B: Form for New Entry, Continuation, or Edit */
+        <form onSubmit={handleSubmit} className="w-full space-y-4" aria-label="Borang Buku Harian Tapak">
+          {/* 1. Operational Source Selector (MSP XOR VO) or Continuation Banner */}
+          {!editingActivityId ? (
+            <OperationalSourceSelector
+              selectedSource={selectedSource}
+              onSelectSource={setSelectedSource}
               disabled={isSubmitting}
-              placeholder="Contoh: Ground Beam Blok A, Grid A1-A4 (Aras Bawah)"
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
             />
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-zinc-400 font-semibold mb-1">Waktu Mula Kerja</label>
-              <input
-                type="time"
-                value={workStartTime}
-                onChange={(e) => setWorkStartTime(e.target.value)}
-                disabled={isSubmitting}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-zinc-400 font-semibold mb-1">Waktu Tamat Kerja</label>
-              <input
-                type="time"
-                value={workEndTime}
-                onChange={(e) => setWorkEndTime(e.target.value)}
-                disabled={isSubmitting}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-zinc-400 font-semibold mb-1">Keadaan Cuaca</label>
-              <select
-                value={weatherCondition ?? ''}
-                onChange={(e) => setWeatherCondition(e.target.value ? (e.target.value as NonNullable<typeof weatherCondition>) : null)}
-                disabled={isSubmitting}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">-- Sila Pilih Keadaan Cuaca --</option>
-                <option value="ELOK">Elok / Cerah</option>
-                <option value="MENDUNG">Mendung</option>
-                <option value="HUJAN">Hujan</option>
-                <option value="RIBUT">Ribut / Hujan Lebat</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-zinc-400 font-semibold mb-1">Skop Kontraktor</label>
-              <select
-                value={contractorScope}
-                onChange={(e) => setContractorScope(e.target.value as typeof contractorScope)}
-                disabled={isSubmitting}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="CONTRACTOR">Kontraktor Utama</option>
-                <option value="NSC">Sub-Kontraktor Dinamakan (NSC)</option>
-              </select>
-            </div>
-          </div>
-
-          {weatherCondition === 'HUJAN' && (
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-blue-950/30 border border-blue-800/40">
-              <div>
-                <label className="block text-blue-300 font-semibold mb-1">Waktu Hujan Mula</label>
-                <input
-                  type="time"
-                  value={rainStartTime}
-                  onChange={(e) => setRainStartTime(e.target.value)}
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-blue-300 font-semibold mb-1">Waktu Hujan Tamat</label>
-                <input
-                  type="time"
-                  value={rainEndTime}
-                  onChange={(e) => setRainEndTime(e.target.value)}
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 4. Tenaga Kerja (Workforce Entry Component) */}
-      <WorkforceEntry
-        manpower={manpower}
-        onChange={setManpower}
-        disabled={isSubmitting}
-      />
-
-      {/* 5. Catatan Kemajuan Kerja (Notes) */}
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-2 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-          Catatan & Huraian Kemajuan Kerja *
-        </h3>
-        <textarea
-          required
-          rows={4}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          disabled={isSubmitting}
-          placeholder="Nyatakan kemajuan fizikal, kuantiti kerja disiapkan, ujian konkrit/tetulang, atau isu tapak hari ini..."
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-purple-500 leading-relaxed"
-        />
-      </section>
-
-      {/* Feedback & Status Surfaces (Accessible role=alert / role=status) */}
-      <DailyEntryFeedback
-        error={formError}
-        success={formSuccess}
-        savedSiteDiaryId={savedDiaryId}
-        isEditMode={Boolean(editingSiteDiaryId)}
-        onResetForNewEntry={handleResetForNewEntry}
-      />
-
-      {/* Submit Button */}
-      <div className="pt-2">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          aria-disabled={isSubmitting}
-          className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg hover:shadow-blue-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {isSubmitting ? (
-            <>
-              <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true"></span>
-              <span>Menyimpan Laporan...</span>
-            </>
           ) : (
-            <span>
-              {editingSiteDiaryId ? 'Kemaskini Laporan Buku Harian Tapak' : 'Hantar & Simpan Buku Harian Tapak'}
-            </span>
+            !editingSiteDiaryId && (
+              <section
+                data-testid="continuation-banner"
+                className="rounded-2xl border border-blue-800/60 bg-blue-950/40 p-4 sm:p-5 shadow-lg space-y-2.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-blue-400">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    <span>Melanjutkan Aktiviti Sedia Ada (Continuation Mode)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingActivityId(null);
+                      setExistingActivityInfo(null);
+                      handleResetForNewEntry();
+                      setActiveTab('OPEN_ACTIVITIES');
+                    }}
+                    data-testid="back-to-open-activities-btn"
+                    aria-label="Kembali ke Senarai Aktiviti Terbuka"
+                    className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 min-h-[36px]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span>Kembali ke Aktiviti Terbuka</span>
+                  </button>
+                </div>
+
+                {existingActivityInfo?.subtask && (
+                  <div className="text-zinc-100 text-sm sm:text-base font-bold pt-0.5 break-words">
+                    {existingActivityInfo.subtask}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {existingActivityInfo?.sourceType && (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        existingActivityInfo.sourceType === 'VO'
+                          ? 'bg-emerald-950/80 border border-emerald-800/60 text-emerald-300'
+                          : 'bg-indigo-950/80 border border-indigo-800/60 text-indigo-300'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          existingActivityInfo.sourceType === 'VO' ? 'bg-emerald-400' : 'bg-indigo-400'
+                        }`}
+                      ></span>
+                      {existingActivityInfo.sourceType === 'VO' ? 'Kerja Tambahan / VO (APK)' : 'Kerja Jadual (MSP)'}
+                    </span>
+                  )}
+                  {existingActivityInfo?.status && (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        existingActivityInfo.status === 'In Progress'
+                          ? 'bg-amber-950/80 border border-amber-800/60 text-amber-300'
+                          : 'bg-blue-950/80 border border-blue-800/60 text-blue-300'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          existingActivityInfo.status === 'In Progress' ? 'bg-amber-400 animate-pulse' : 'bg-blue-400'
+                        }`}
+                      ></span>
+                      {existingActivityInfo.status === 'In Progress' ? 'Sedang Laksana' : 'Belum Mula'}
+                    </span>
+                  )}
+                </div>
+              </section>
+            )
           )}
-        </button>
-      </div>
-    </form>
+
+          {/* 2. Tarikh & Status Perlaksanaan */}
+          <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
+            <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              Tarikh & Status Kerja
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Tarikh Laporan Harian *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={activityDate}
+                  onChange={(e) => setActivityDate(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Tarikh Mula Sebenar (Known Start) *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={actualStartDate}
+                  onChange={(e) => setActualStartDate(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Status Kemajuan Kerja *
+                </label>
+                <select
+                  value={workStatus}
+                  onChange={(e) => setWorkStatus(e.target.value as 'Sedang Laksana' | 'Siap')}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="Sedang Laksana">Sedang Laksana (In Progress)</option>
+                  <option value="Siap">Siap (Completed)</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Maklumat Konteks Cetakan JKR (Print Context) */}
+          <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
+            <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Maklumat Tapak & Cuaca (Format JKR Page 1)
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Lokasi Terperinci / Grid Line *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="cth: Aras 2, Blok Pentadbiran, Grid 4-8"
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Skop Pelaksanaan *
+                </label>
+                <select
+                  value={contractorScope}
+                  onChange={(e) => setContractorScope(e.target.value as 'CONTRACTOR' | 'NSC')}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="CONTRACTOR">Kontraktor Utama (Main Contractor)</option>
+                  <option value="NSC">Sub-Kontraktor Dinamakan (NSC)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mt-3 pt-3 border-t border-zinc-800">
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Keadaan Cuaca Utama
+                </label>
+                <select
+                  value={weatherCondition ?? ''}
+                  onChange={(e) =>
+                    setWeatherCondition(
+                      e.target.value === '' ? null : (e.target.value as 'ELOK' | 'HUJAN' | 'MENDUNG' | 'RIBUT')
+                    )
+                  }
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="">-- Pilih Keadaan Cuaca (Pilihan) --</option>
+                  <option value="ELOK">Elok (Sunny/Fair)</option>
+                  <option value="HUJAN">Hujan (Rainy)</option>
+                  <option value="MENDUNG">Mendung (Cloudy)</option>
+                  <option value="RIBUT">Ribut (Stormy)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Masa Mula Kerja
+                </label>
+                <input
+                  type="time"
+                  value={workStartTime}
+                  onChange={(e) => setWorkStartTime(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 font-semibold mb-1">
+                  Masa Tamat Kerja
+                </label>
+                <input
+                  type="time"
+                  value={workEndTime}
+                  onChange={(e) => setWorkEndTime(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {weatherCondition === 'HUJAN' && (
+                <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="block text-zinc-400 font-semibold mb-1">
+                      Masa Mula Hujan
+                    </label>
+                    <input
+                      type="time"
+                      value={rainStartTime}
+                      onChange={(e) => setRainStartTime(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-400 font-semibold mb-1">
+                      Masa Tamat Hujan
+                    </label>
+                    <input
+                      type="time"
+                      value={rainEndTime}
+                      onChange={(e) => setRainEndTime(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* 4. Tenaga Kerja (Workforce Entry Component) */}
+          <WorkforceEntry
+            manpower={manpower}
+            onChange={setManpower}
+            disabled={isSubmitting}
+          />
+
+          {/* 5. Catatan Kemajuan Kerja (Notes) */}
+          <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
+            <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+              Catatan & Huraian Kemajuan Kerja *
+            </h3>
+            <textarea
+              required
+              rows={4}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              disabled={isSubmitting}
+              placeholder="Nyatakan kemajuan fizikal, kuantiti kerja disiapkan, ujian konkrit/tetulang, atau isu tapak hari ini..."
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-purple-500 leading-relaxed"
+            />
+          </section>
+
+          {/* Feedback & Status Surfaces (Accessible role=alert / role=status) */}
+          <DailyEntryFeedback
+            error={formError}
+            success={formSuccess}
+            savedSiteDiaryId={savedDiaryId}
+            isEditMode={Boolean(editingSiteDiaryId)}
+            onBackToOpenActivities={() => {
+              handleResetForNewEntry();
+              setEditingActivityId(null);
+              setExistingActivityInfo(null);
+              setActiveTab('OPEN_ACTIVITIES');
+            }}
+            onResetForNewEntry={() => {
+              handleResetForNewEntry();
+              setEditingActivityId(null);
+              setExistingActivityInfo(null);
+              setActiveTab('NEW_ACTIVITY');
+            }}
+          />
+
+          {/* Submit Button */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              aria-disabled={isSubmitting}
+              className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg hover:shadow-blue-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true"></span>
+                  <span>Menyimpan Laporan...</span>
+                </>
+              ) : (
+                <span>
+                  {editingSiteDiaryId ? 'Kemaskini Laporan Buku Harian Tapak' : 'Hantar & Simpan Buku Harian Tapak'}
+                </span>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

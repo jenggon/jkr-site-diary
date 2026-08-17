@@ -466,7 +466,7 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
 
   it('Component Rendering: renders native DailyEntryForm with full mobile-first form controls', () => {
     const html = renderToString(
-      React.createElement(DailyEntryForm, {})
+      React.createElement(DailyEntryForm, { initialTab: 'NEW_ACTIVITY' })
     );
 
     expect(html).toContain('Tarikh &amp; Status Kerja');
