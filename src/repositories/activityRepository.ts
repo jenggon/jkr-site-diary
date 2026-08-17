@@ -10,7 +10,9 @@ export interface ActivityRow {
   readonly activity_id: string;
   readonly programme_id: string;
   readonly revision_id: string;
-  readonly task_id: string;
+  readonly source_type?: import('@/types/activity').ActivitySourceType;
+  readonly task_id: string | null;
+  readonly vo_item_id?: string | null;
   readonly activity_uid: string;
   readonly ahi: string | null;
   readonly ahi_display_name: string | null;
@@ -35,11 +37,11 @@ export class ActivityRepository implements IActivityRepository {
   }
 
   private mapRowToDomain(row: ActivityRow): Activity {
-    return {
+    const activity: Activity = {
       activity_id: row.activity_id,
       programme_id: row.programme_id,
       revision_id: row.revision_id,
-      task_id: row.task_id,
+      task_id: row.task_id ?? null,
       activity_uid: row.activity_uid,
       ahi: row.ahi,
       ahi_display_name: row.ahi_display_name,
@@ -55,6 +57,13 @@ export class ActivityRepository implements IActivityRepository {
       created_at: row.created_at,
       updated_at: row.updated_at,
     };
+    if (row.source_type !== undefined) {
+      activity.source_type = row.source_type;
+    }
+    if (row.vo_item_id !== undefined) {
+      activity.vo_item_id = row.vo_item_id;
+    }
+    return activity;
   }
 
   private mapDomainToRow(activity: Activity): Record<string, unknown> {
@@ -99,11 +108,15 @@ export class ActivityRepository implements IActivityRepository {
     return Success(res.value.map((r) => this.mapRowToDomain(r)));
   }
 
-  public async findOpenActivitiesByProgramme(programmeId: string): Promise<Result<Activity[], BaseAppError>> {
-    const res = await this.adapter.selectMany<ActivityRow>('activity', {
+  public async findOpenActivitiesByProgramme(programmeId: string, revisionId?: string): Promise<Result<Activity[], BaseAppError>> {
+    const filter: Record<string, unknown> = {
       programme_id: programmeId,
-      status: [ActivityStatus.New, ActivityStatus.InProgress]
-    });
+      status: [ActivityStatus.New, ActivityStatus.InProgress],
+    };
+    if (revisionId) {
+      filter.revision_id = revisionId;
+    }
+    const res = await this.adapter.selectMany<ActivityRow>('activity', filter);
     if (isFailure(res)) return Failure(res.error);
     return Success(res.value.map((r) => this.mapRowToDomain(r)));
   }

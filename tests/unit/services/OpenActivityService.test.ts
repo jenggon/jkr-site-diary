@@ -65,6 +65,7 @@ describe('OpenActivityService', () => {
   function createService(overrides?: {
     activityRepo?: Partial<IActivityRepository>;
     logRepo?: Partial<IActivityLogRepository>;
+    revisionRepo?: Partial<import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository>;
     txManager?: ITransactionManager;
     eventPublisher?: IDomainEventPublisher;
     logger?: Logger;
@@ -94,7 +95,9 @@ describe('OpenActivityService', () => {
       logger: overrides?.logger ?? mockLogger,
       eventPublisher: overrides?.eventPublisher ?? mockEventPublisher,
       revisionRepository: {
-        findById: async () => import("@/lib/result").then(m => m.Success({ revisionId: 'rev-001', programmeId: 'prog-1', status: 'Approved', isCurrent: true } as unknown as import('@/types/programmeRevision').ProgrammeRevision)),
+        findById: async () => import("@/lib/result").then(m => m.Success({ revisionId: 'rev-001', programmeId: 'prog-1', status: 'Approved', isCurrent: true, revisionNumber: 1, revisionTitle: 'Rev 1', createdAt: '2026-08-01', createdBy: 'user-1' } as unknown as import('@/types/programmeRevision').ProgrammeRevision)),
+        findActiveRevision: async (progId: string) => import("@/lib/result").then(m => m.Success({ revisionId: 'rev-001', programmeId: progId, status: 'Approved', isCurrent: true, revisionNumber: 1, revisionTitle: 'Rev 1', createdAt: '2026-08-01', createdBy: 'user-1' } as unknown as import('@/types/programmeRevision').ProgrammeRevision)),
+        ...overrides?.revisionRepo,
       } as unknown as import('@/repositories/IProgrammeRevisionRepository').IProgrammeRevisionRepository,
       taskRepository: {
         getTaskById: async () => ({
@@ -315,22 +318,63 @@ describe('OpenActivityService', () => {
   });
 
   describe('getOpenActivities', () => {
-    it('should return open activities successfully', async () => {
+    it('should return open activities successfully filtered by current revision', async () => {
+      let passedRevisionId: string | undefined;
       const service = createService({
         activityRepo: {
-          findOpenActivitiesByProgramme: async (progId: string) => 
-            Success([
-              { ...sampleActivity, activity_id: 'act-1', status: ActivityStatus.New, programme_id: progId },
-              { ...sampleActivity, activity_id: 'act-2', status: ActivityStatus.InProgress, programme_id: progId }
-            ]),
+          findOpenActivitiesByProgramme: async (progId: string, revId?: string) => {
+            passedRevisionId = revId;
+            return Success([
+              { ...sampleActivity, activity_id: 'act-1', status: ActivityStatus.New, programme_id: progId, revision_id: revId ?? 'rev-001' },
+              { ...sampleActivity, activity_id: 'act-2', status: ActivityStatus.InProgress, programme_id: progId, revision_id: revId ?? 'rev-001' }
+            ]);
+          },
+        }
+      });
+      const result = await service.getOpenActivities('prog-1');
+      expect(isSuccess(result)).toBe(true);
+      expect(passedRevisionId).toBe('rev-001');
+      if (isSuccess(result) && result.value) {
+        expect(result.value).toHaveLength(2);
+        expect(result.value?.[0]?.status).toBe(ActivityStatus.New);
+        expect(result.value?.[0]?.isLocked).toBe(false);
+        expect(result.value?.[1]?.status).toBe(ActivityStatus.InProgress);
+        expect(result.value?.[1]?.isLocked).toBe(false);
+      }
+    });
+
+    it('should return empty array if no active approved current revision exists', async () => {
+      const service = createService({
+        revisionRepo: {
+          findActiveRevision: async () => Success(null),
         }
       });
       const result = await service.getOpenActivities('prog-1');
       expect(isSuccess(result)).toBe(true);
       if (isSuccess(result) && result.value) {
-        expect(result.value).toHaveLength(2);
-        expect(result.value?.[0]?.status).toBe(ActivityStatus.New);
-        expect(result.value?.[1]?.status).toBe(ActivityStatus.InProgress);
+        expect(result.value).toEqual([]);
+      }
+    });
+
+    it('should return empty array if active revision is not Approved', async () => {
+      const service = createService({
+        revisionRepo: {
+          findActiveRevision: async () => Success({
+            revisionId: 'rev-draft',
+            programmeId: 'prog-1',
+            status: 'Draft',
+            isCurrent: true,
+            revisionNumber: 1,
+            revisionTitle: 'Draft',
+            createdAt: '2026-08-01',
+            createdBy: 'user-1',
+          }),
+        }
+      });
+      const result = await service.getOpenActivities('prog-1');
+      expect(isSuccess(result)).toBe(true);
+      if (isSuccess(result) && result.value) {
+        expect(result.value).toEqual([]);
       }
     });
 
@@ -342,6 +386,5 @@ describe('OpenActivityService', () => {
         expect(result.error.message).toContain('programmeId is required');
       }
     });
-
   });
 });

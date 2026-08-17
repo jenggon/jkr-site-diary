@@ -55,6 +55,11 @@ export class OpenActivityService implements IOpenActivityService {
     this.atomicRepo = deps.atomicRepository;
   }
 
+  /**
+   * Maps Activity entity to OpenActivityDto.
+   * Note: Returned OpenActivityDto rows are verified operational under the current
+   * authorised Revision with status New or InProgress, therefore isLocked is false.
+   */
   private mapToDto(activity: Activity): OpenActivityDto {
     const sourceType = activity.source_type ?? ActivitySourceType.MSP;
     return {
@@ -270,10 +275,24 @@ export class OpenActivityService implements IOpenActivityService {
     }
 
     try {
+      if (!this.revisionRepo) {
+        return Failure(new InfrastructureError('ProgrammeRevisionRepository is required in OpenActivityService'));
+      }
       if (!this.activityRepo.findOpenActivitiesByProgramme) {
         return Failure(new InfrastructureError('ActivityRepository does not support findOpenActivitiesByProgramme'));
       }
-      const res = await this.activityRepo.findOpenActivitiesByProgramme(programmeId);
+
+      const activeRevResult = await this.revisionRepo.findActiveRevision(programmeId);
+      if (isFailure(activeRevResult)) {
+        return Failure(activeRevResult.error);
+      }
+
+      const activeRev = activeRevResult.value;
+      if (!activeRev || activeRev.status !== 'Approved' || !activeRev.isCurrent) {
+        return Success([]);
+      }
+
+      const res = await this.activityRepo.findOpenActivitiesByProgramme(programmeId, activeRev.revisionId);
       if (isFailure(res)) return Failure(res.error);
       return Success(res.value.map(activity => this.mapToDto(activity)));
     } catch (err: unknown) {
