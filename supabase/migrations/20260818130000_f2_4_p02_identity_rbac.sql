@@ -76,7 +76,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 CREATE TRIGGER "trg_check_role_scope"
 BEFORE INSERT OR UPDATE ON "public"."programme_membership"
@@ -168,7 +168,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 CREATE TRIGGER "trg_bootstrap_programme_creator"
 AFTER INSERT ON "public"."programme"

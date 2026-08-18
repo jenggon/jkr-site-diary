@@ -73,4 +73,19 @@ describe('F2.4-P02 Identity & RBAC SQL contract', () => {
   it('prevents Global roles from being used in Programme membership', () => {
     expect(sql).toContain("RAISE EXCEPTION 'Cannot assign a Global role as a Programme membership.'");
   });
+
+  it('hardens SECURITY DEFINER functions with SET search_path', () => {
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION "private"."trg_check_programme_membership_role_scope"\(\)[\s\S]*?LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';/);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION "private"."trg_bootstrap_programme_creator"\(\)[\s\S]*?LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';/);
+  });
+
+  it('retains revocable membership invariant on programme_membership table', () => {
+    const tableDef = sql.match(/CREATE TABLE IF NOT EXISTS "public"\."programme_membership"[\s\S]*?\);/)?.[0];
+    expect(tableDef).toBeDefined();
+    expect(tableDef).toContain('"is_active" boolean NOT NULL DEFAULT true');
+  });
+
+  it('preserves existing Programme backfill invariant', () => {
+    expect(sql).toContain('FOR rec IN SELECT programme_id, created_by FROM "public"."programme" LOOP');
+  });
 });
