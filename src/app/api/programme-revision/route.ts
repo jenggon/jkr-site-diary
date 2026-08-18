@@ -2,8 +2,29 @@ import { NextResponse } from 'next/server';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
 import { z } from 'zod';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractIdentity, extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isValidUuid } from '@/lib/uuid';
+import { createSiteDiaryManagementReadService } from '@/composition/siteDiaryManagementComposition';
+
+export async function GET(request: Request) {
+  try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
+    }
+    const programmeId = new URL(request.url).searchParams.get('programmeId');
+    if (!programmeId || !isValidUuid(programmeId)) {
+      return NextResponse.json({ error: 'Missing or invalid query parameter: programmeId' }, { status: 400 });
+    }
+    const service = createSiteDiaryManagementReadService(identity.accessToken);
+    return NextResponse.json({ data: await service.listRevisions(programmeId) }, { status: 200 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to retrieve Programme Revisions' },
+      { status: 500 }
+    );
+  }
+}
 
 const createRevisionSchema = z.object({
   programmeId: z.string().refine(isValidUuid, 'Invalid UUID format for programmeId'),
