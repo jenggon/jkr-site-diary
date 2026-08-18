@@ -249,6 +249,7 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
     const editParams: SubmitDailyEntryParams = {
       ...defaultParams,
       editingSiteDiaryId: 'sd-uuid-existing-7777',
+      expectedLastModifiedAt: '2026-08-16T08:00:00.000Z',
       editingActivityId: null,
       selectedSource: null,
       notes: 'Kemaskini catatan harian oleh Pegawai Penguasa.',
@@ -450,6 +451,7 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
     const editParams: SubmitDailyEntryParams = {
       ...defaultParams,
       editingSiteDiaryId: 'sd-uuid-existing-7777',
+      expectedLastModifiedAt: '2026-08-16T08:00:00.000Z',
       editingActivityId: null,
       selectedSource: null,
     };

@@ -20,6 +20,7 @@ const printContextSchema = z.object({
 }).optional();
 
 const updateSiteDiarySchema = z.object({
+  expected_last_modified_at: z.string().datetime({ offset: true }),
   weather: z.enum(['Sunny', 'Cloudy', 'Rainy', 'HeavyRain']).nullable().optional(),
   notes: z.string().optional(),
   manpower: z.array(z.object({
@@ -73,6 +74,7 @@ export async function PATCH(request: Request, context: RouteParams) {
 
     const result = await createSiteDiaryService(identity.accessToken).updateSiteDiary({
       siteDiaryId,
+      expectedLastModifiedAt: parseResult.data.expected_last_modified_at,
       weather: parseResult.data.weather as any,
       notes: parseResult.data.notes,
       manpower: parseResult.data.manpower,
@@ -80,8 +82,15 @@ export async function PATCH(request: Request, context: RouteParams) {
       updatedBy: identity.actorId,
     });
 
-    if (isSuccess(result)) return NextResponse.json({ data: result.value }, { status: 200 });
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
+    if (isSuccess(result)) {
+      return NextResponse.json({
+        data: {
+          ...result.value,
+          lastModifiedAt: result.value.updated_at ?? result.value.submitted_at,
+        },
+      }, { status: 200 });
+    }
+    return NextResponse.json({ error: result.error.message }, { status: result.error.httpStatus });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to update site diary' }, { status: 500 });
   }

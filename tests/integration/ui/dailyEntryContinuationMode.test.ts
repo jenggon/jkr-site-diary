@@ -580,6 +580,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     const res = await submitDailyEntry({
       ...baseParams,
       editingSiteDiaryId: 'sd-edit-exact',
+      expectedLastModifiedAt: '2026-08-16T08:00:00.000Z',
       fetchFn: mockFetcher as any,
     });
 

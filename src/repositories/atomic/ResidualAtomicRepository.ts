@@ -8,6 +8,7 @@ import { Workforce } from '@/types/workforce';
 import { SiteDiary } from '@/types/siteDiary';
 import { ProgrammeRowMapper } from '@/repositories/mappers/ProgrammeRowMapper';
 import { ProgrammeRow, ProgrammeRevisionRow } from '@/repositories/types/programmeRow';
+import { SiteDiaryStaleEditError } from '@/errors/siteDiaryErrors';
 
 export class ResidualAtomicRepository {
   private readonly programmeMapper = new ProgrammeRowMapper();
@@ -15,6 +16,9 @@ export class ResidualAtomicRepository {
 
   private async rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
     const { data, error } = await this.client.rpc(name, args);
+    if (error?.code === 'PT409') {
+      throw new SiteDiaryStaleEditError('Site diary was modified by another user');
+    }
     if (error) throw new Error(`${name} failed: ${error.message}`);
     return data as T;
   }
@@ -64,13 +68,19 @@ export class ResidualAtomicRepository {
     });
   }
 
-  updateSiteDiary(siteDiaryId: string, payload: Record<string, unknown>, actorId: string): Promise<SiteDiary> {
+  updateSiteDiary(
+    siteDiaryId: string,
+    payload: Record<string, unknown>,
+    actorId: string,
+    expectedLastModifiedAt: string
+  ): Promise<SiteDiary> {
     return this.rpc('f1_update_site_diary_full_atomic', {
       p_site_diary_id: siteDiaryId,
       p_payload: payload,
       p_actor_id: actorId,
       p_log_id: generateUuid(),
       p_audit_id: generateUuid(),
+      p_expected_last_modified_at: expectedLastModifiedAt,
     });
   }
 

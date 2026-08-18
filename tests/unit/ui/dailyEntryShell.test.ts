@@ -52,13 +52,16 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).toContain('Child Component');
   });
 
-  it('preserves child rendering for native DailyEntryForm in site-diary/page.tsx', () => {
+  it('preserves native DailyEntryForm through the bounded Site Diary workspace composition', () => {
     const pageContent = read('src/app/site-diary/page.tsx');
+    const workspaceContent = read('src/app/site-diary/SiteDiaryWorkspace.tsx');
 
     expect(pageContent).toContain("import DailyEntryShell from './DailyEntryShell'");
-    expect(pageContent).toContain("import DailyEntryForm from './DailyEntryForm'");
+    expect(pageContent).toContain("import SiteDiaryWorkspace from './SiteDiaryWorkspace'");
     expect(pageContent).toContain('<DailyEntryShell>');
-    expect(pageContent).toContain('<DailyEntryForm />');
+    expect(pageContent).toContain('<SiteDiaryWorkspace />');
+    expect(workspaceContent).toContain("import DailyEntryForm from './DailyEntryForm'");
+    expect(workspaceContent).toContain('<DailyEntryForm');
   });
 
   it('uses canonical GET /api/programme discovery and never calls project-summary without explicit programmeId', () => {

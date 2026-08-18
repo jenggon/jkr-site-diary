@@ -260,6 +260,12 @@ export class SiteDiaryService implements ISiteDiaryService {
       if (!cmd.siteDiaryId || cmd.siteDiaryId.trim() === '') {
         return Failure(new SiteDiaryValidationError('siteDiaryId is required'));
       }
+      const isoTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+      if (!cmd.expectedLastModifiedAt
+        || !isoTimestamp.test(cmd.expectedLastModifiedAt)
+        || Number.isNaN(Date.parse(cmd.expectedLastModifiedAt))) {
+        return Failure(new SiteDiaryValidationError('expectedLastModifiedAt must be a valid ISO timestamp'));
+      }
 
       const existing = await this.siteDiaryRepo.getSiteDiaryById(cmd.siteDiaryId);
       if (!existing) {
@@ -283,11 +289,18 @@ export class SiteDiaryService implements ISiteDiaryService {
       if (cmd.manpower !== undefined) updates.manpower = cmd.manpower;
       if (cmd.printContext !== undefined) updates.print_context = cmd.printContext;
 
-      const updated = this.atomicRepo
-        ? await this.atomicRepo.updateSiteDiary(cmd.siteDiaryId, updates as Record<string, unknown>, cmd.updatedBy)
-        : await this.siteDiaryRepo.updateSiteDiary(cmd.siteDiaryId, updates);
+      if (!this.atomicRepo) {
+        return Failure(new UnknownError('Authenticated atomic repository is required for Site Diary updates'));
+      }
+      const updated = await this.atomicRepo.updateSiteDiary(
+        cmd.siteDiaryId,
+        updates as Record<string, unknown>,
+        cmd.updatedBy,
+        cmd.expectedLastModifiedAt
+      );
       return Success(updated);
     } catch (err: unknown) {
+      if (err instanceof BaseAppError) return Failure(err);
       const msg = err instanceof Error ? err.message : 'Failed to update Site Diary';
       return Failure(new UnknownError(msg, { cause: err }));
     }
