@@ -22,8 +22,10 @@ describe('F2.4-B01 SQL transactional integrity contract (source proof, not live 
     expect(lock).toBeLessThan(sealCheck);
     expect(sealCheck).toBeLessThan(updateCore);
 
-    // Proves the seal logic blocks Pending/Approved
+    // Proves the seal logic blocks Pending/Approved, and ONLY Pending/Approved
     expect(sql).toContain("AND approval_status IN ('Pending', 'Approved')");
+    expect(sql).not.toContain("AND approval_status IN ('Pending', 'Approved', 'Returned')");
+    expect(sql).not.toContain("AND approval_status IN ('Pending', 'Approved', 'Rejected')");
     expect(sql).toContain("RAISE EXCEPTION 'F24_SITE_DIARY_SEALED' USING ERRCODE = 'PT409'");
   });
 
