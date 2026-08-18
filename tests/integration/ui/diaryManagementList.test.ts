@@ -130,7 +130,10 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     const detailReads: string[] = [];
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes('/api/site-diary/raw-site-diary-uuid')) {
+      if (url === '/api/site-diary/raw-site-diary-uuid/history') {
+        return json({ data: { siteDiaryId: 'raw-site-diary-uuid', events: [] } });
+      }
+      if (url === '/api/site-diary/raw-site-diary-uuid') {
         detailReads.push(url);
         return json({ data: canonical });
       }

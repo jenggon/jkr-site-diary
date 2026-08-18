@@ -59,6 +59,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     await render();
     expect(container.textContent).toContain('Kerja berjalan lancar');
     expect(container.textContent).toContain('Tukang Besi');
+    expect(container.textContent).toContain('Sejarah Perubahan');
     expect(container.textContent).toContain('Jumlah 6');
     expect(container.textContent).toContain('Edit Rekod');
     await click('Edit Rekod');
@@ -73,6 +74,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
       : json({ data: [currentRevision, historicalRevision] }));
     await render(historyProjection);
     expect(container.textContent).toContain('Sejarah / Baca Sahaja');
+    expect(container.textContent).toContain('Sejarah Perubahan');
     expect(container.textContent).toContain('Tiada rekod tenaga kerja');
     expect(container.textContent).toContain('Tidak tersedia');
     expect(container.textContent).not.toContain('Edit Rekod');
