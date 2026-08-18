@@ -18,6 +18,7 @@ export interface CreateSiteDiaryCommand {
 
 export interface UpdateSiteDiaryCommand {
   readonly siteDiaryId: string;
+  readonly expectedLastModifiedAt: string;
   readonly weather?: ActivityWeather | null | undefined;
   readonly notes?: string | undefined;
   readonly manpower?: SiteDiaryManpower[] | null | undefined;

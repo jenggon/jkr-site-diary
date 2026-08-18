@@ -194,6 +194,7 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
       ...baseParams,
       selectedSource: null,
       editingSiteDiaryId: 'sd-edit-99',
+      expectedLastModifiedAt: '2026-08-16T08:00:00.000Z',
       editingActivityId: null,
       fetchFn: mockFetch,
     };

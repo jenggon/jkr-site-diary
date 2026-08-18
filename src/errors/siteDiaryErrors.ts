@@ -18,6 +18,15 @@ export class SiteDiaryNotFoundError extends BaseAppError {
   }
 }
 
+export class SiteDiaryStaleEditError extends BaseAppError {
+  public readonly errorCode = 'SITE_DIARY_STALE_EDIT';
+  public readonly httpStatus = 409;
+
+  constructor(message: string = 'Site diary was modified by another user', options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+
 export class SiteDiaryRevisionNotApprovedError extends BaseAppError {
   public readonly errorCode = 'SITE_DIARY_REVISION_NOT_APPROVED';
   public readonly httpStatus = 400;

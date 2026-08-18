@@ -143,6 +143,7 @@ describe('F2.1-G Mandatory 26-Point Master Regression Suite', () => {
       ...baseParams,
       selectedSource: null,
       editingSiteDiaryId: 'sd-uuid-preserved-999',
+      expectedLastModifiedAt: '2026-08-16T08:00:00.000Z',
       editingActivityId: null,
       fetchFn: createMockFetch(),
     };

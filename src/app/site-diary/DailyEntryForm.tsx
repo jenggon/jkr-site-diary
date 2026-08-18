@@ -48,6 +48,7 @@ export interface SubmitDailyEntryParams {
   notes: string;
   manpower: ManpowerRow[];
   editingSiteDiaryId?: string | null;
+  expectedLastModifiedAt?: string | null;
   editingActivityId?: string | null;
   fetchFn?: typeof fetch;
 }
@@ -91,7 +92,11 @@ export function resolveDailyEntryMode(params: {
   return 'NEW_ACTIVITY';
 }
 
-export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<{ siteDiaryId: string; activityId: string }> {
+export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<{
+  siteDiaryId: string;
+  activityId: string;
+  lastModifiedAt: string | null;
+}> {
   const fetcher = params.fetchFn || (typeof window !== 'undefined' ? window.fetch.bind(window) : fetch);
 
   // 1. Client-Side Field Validation & Explicit Mode Resolution
@@ -303,13 +308,18 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
       : null;
 
   let savedSiteDiaryId: string | null = params.editingSiteDiaryId ?? null;
+  let responseLastModifiedAt: string | null = params.expectedLastModifiedAt ?? null;
 
   if (mode === 'EDIT_SITE_DIARY' && params.editingSiteDiaryId) {
+    if (!params.expectedLastModifiedAt) {
+      throw new Error('Token suntingan laporan tidak tersedia. Muat semula rekod sebelum menyimpan.');
+    }
     // EDIT MODE: PATCH existing record to preserve site_diary_id
     const patchRes = await fetcher(`/api/site-diary/${encodeURIComponent(params.editingSiteDiaryId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        expected_last_modified_at: params.expectedLastModifiedAt,
         notes: params.notes.trim(),
         weather: mappedWeather,
         manpower: activeManpower,
@@ -321,6 +331,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
       throw new Error('Sesi telah tamat atau pengguna tidak disahkan. Sila log masuk semula.');
     }
 
+    if (patchRes.status === 409) {
+      throw new Error('Laporan ini telah dikemaskini oleh pengguna lain. Muat semula rekod terkini sebelum menyimpan semula perubahan.');
+    }
+
     if (!patchRes.ok) {
       const errJson = await patchRes.json().catch(() => null);
       throw new Error(errJson?.error || 'Gagal mengemaskini laporan Buku Harian Tapak');
@@ -328,6 +342,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
 
     const patchJson = await patchRes.json();
     savedSiteDiaryId = patchJson?.data?.site_diary_id ?? params.editingSiteDiaryId;
+    responseLastModifiedAt = patchJson?.data?.lastModifiedAt
+      ?? patchJson?.data?.updated_at
+      ?? patchJson?.data?.submitted_at
+      ?? null;
   } else {
     // CREATE MODE: POST new Site Diary row
     const postRes = await fetcher('/api/site-diary', {
@@ -372,7 +390,11 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
     throw new Error('ID Laporan Buku Harian Tapak tidak dapat diperolehi.');
   }
 
-  return { siteDiaryId: savedSiteDiaryId, activityId: resolvedActivityId ?? '' };
+  return {
+    siteDiaryId: savedSiteDiaryId,
+    activityId: resolvedActivityId ?? '',
+    lastModifiedAt: responseLastModifiedAt,
+  };
 }
 
 export default function DailyEntryForm({
@@ -424,6 +446,7 @@ export default function DailyEntryForm({
 
   // Continuation / Edit Mode state
   const [editingSiteDiaryId, setEditingSiteDiaryId] = useState<string | null>(initialSiteDiaryId);
+  const [expectedLastModifiedAt, setExpectedLastModifiedAt] = useState<string | null>(null);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(initialActivityId);
   const [existingActivityInfo, setExistingActivityInfo] = useState<{
     subtask?: string;
@@ -484,6 +507,7 @@ export default function DailyEntryForm({
       setEditingActivityId(null);
       setExistingActivityInfo(null);
       setEditingSiteDiaryId(null);
+      setExpectedLastModifiedAt(null);
 
       // 4. Clear operational source & form inputs
       setSelectedSource(null);
@@ -538,6 +562,8 @@ export default function DailyEntryForm({
       if (currentGeneration === editDiaryGenerationRef.current) {
         const diary = json.data;
         if (!diary) return;
+
+        setExpectedLastModifiedAt(diary.updated_at ?? diary.submitted_at ?? null);
 
         if (diary.notes) setNotes(diary.notes);
         if (diary.activity_date) setActivityDate(diary.activity_date);
@@ -698,10 +724,14 @@ export default function DailyEntryForm({
         notes,
         manpower,
         editingSiteDiaryId: editingSiteDiaryId || null,
+        expectedLastModifiedAt,
         editingActivityId: editingSiteDiaryId ? null : editingActivityId || null,
       });
 
       setSavedDiaryId(result.siteDiaryId);
+      if (editingSiteDiaryId && result.lastModifiedAt) {
+        setExpectedLastModifiedAt(result.lastModifiedAt);
+      }
 
       if (editingSiteDiaryId) {
         setFormSuccess('Buku Harian Tapak berjaya dikemaskini.');

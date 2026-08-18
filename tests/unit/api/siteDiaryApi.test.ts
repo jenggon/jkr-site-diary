@@ -5,7 +5,7 @@ import { POST as carryForward } from '@/app/api/site-diary/carry-forward/route';
 import * as identityModule from '@/app/api/_shared/identity';
 import * as compositionModule from '@/composition/siteDiaryComposition';
 import { Success, Failure } from '@/lib/result';
-import { SiteDiaryRevisionNotApprovedError } from '@/errors/siteDiaryErrors';
+import { SiteDiaryRevisionNotApprovedError, SiteDiaryStaleEditError } from '@/errors/siteDiaryErrors';
 import { generateUuid } from '@/lib/uuid';
 
 vi.mock('@/app/api/_shared/identity');
@@ -105,13 +105,64 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
       expect(res.status).toBe(401);
     });
 
+    it('requires a concurrency token', async () => {
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
+      const req = new Request('http://localhost/api/site-diary/sd-1', {
+        method: 'PATCH', body: JSON.stringify({ notes: 'Updated' }),
+      });
+      const res = await updateSiteDiary(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(res.status).toBe(400);
+      expect(mockService.updateSiteDiary).not.toHaveBeenCalled();
+    });
+
+    it('rejects a malformed concurrency token', async () => {
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
+      const req = new Request('http://localhost/api/site-diary/sd-1', {
+        method: 'PATCH', body: JSON.stringify({ notes: 'Updated', expected_last_modified_at: 'yesterday' }),
+      });
+      const res = await updateSiteDiary(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(res.status).toBe(400);
+      expect(mockService.updateSiteDiary).not.toHaveBeenCalled();
+    });
+
+    it('maps the dedicated stale-edit domain error to HTTP 409', async () => {
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
+      mockService.updateSiteDiary.mockResolvedValue(Failure(new SiteDiaryStaleEditError()));
+      const req = new Request('http://localhost/api/site-diary/sd-1', {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: 'Updated', expected_last_modified_at: '2026-08-16T08:00:00.000Z' }),
+      });
+      const res = await updateSiteDiary(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(res.status).toBe(409);
+    });
+
+    it('returns the newly committed canonical token after success', async () => {
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
+      mockService.updateSiteDiary.mockResolvedValue(Success({
+        site_diary_id: 'sd-1', submitted_at: '2026-08-16T08:00:00.000Z', updated_at: '2026-08-16T09:00:00.000Z',
+      }));
+      const req = new Request('http://localhost/api/site-diary/sd-1', {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: 'Updated', expected_last_modified_at: '2026-08-16T08:00:00.000Z' }),
+      });
+      const res = await updateSiteDiary(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(res.status).toBe(200);
+      await expect(res.json()).resolves.toEqual(expect.objectContaining({
+        data: expect.objectContaining({ lastModifiedAt: '2026-08-16T09:00:00.000Z' }),
+      }));
+    });
+
     it('8. Ignores client attempts to manipulate status (status not in schema)', async () => {
       vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.updateSiteDiary.mockResolvedValue(Success({ site_diary_id: 'sd-1' }));
       
       const req = new Request('http://localhost/api/site-diary/sd-1', { 
         method: 'PATCH', 
-        body: JSON.stringify({ notes: 'Updated', status: 'Approved' }) 
+        body: JSON.stringify({
+          notes: 'Updated',
+          status: 'Approved',
+          expected_last_modified_at: '2026-08-16T08:00:00.000Z',
+        })
       });
       // @ts-ignore
       const res = await updateSiteDiary(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
