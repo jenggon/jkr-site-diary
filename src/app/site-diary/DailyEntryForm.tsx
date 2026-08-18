@@ -27,6 +27,7 @@ export interface DailyEntryFormProps {
   initialTab?: 'OPEN_ACTIVITIES' | 'NEW_ACTIVITY';
   onSuccess?: (siteDiaryId: string) => void;
   className?: string;
+  hideModeNavigation?: boolean;
 }
 
 const DEFAULT_TRADES = COMMON_TRADES_CATALOG.slice(0, 9);
@@ -403,6 +404,7 @@ export default function DailyEntryForm({
   initialTab,
   onSuccess,
   className = '',
+  hideModeNavigation = false,
 }: DailyEntryFormProps) {
   const { programmeId, revisionId } = useDailyEntryContext();
 
@@ -755,7 +757,7 @@ export default function DailyEntryForm({
   return (
     <div className={`w-full space-y-4 ${className}`}>
       {/* Top Mode Switch Nav (Aktiviti Terbuka XOR + Laporan Baharu) */}
-      {!editingActivityId && !editingSiteDiaryId && (
+      {!hideModeNavigation && !editingActivityId && !editingSiteDiaryId && (
         <nav aria-label="Navigasi Mod Laporan" className="w-full">
           <div
             role="tablist"

@@ -293,7 +293,7 @@ export default function DailyEntryShell({
                     Semakan Sah
                   </span>
                   <span className="text-xs font-mono text-zinc-400">
-                    {revisionId ? `Rev: ${revisionId.slice(0, 8)}...` : 'Tiada Semakan'}
+                    {revisionId ? 'Semakan Semasa' : 'Tiada Semakan'}
                   </span>
                 </div>
               </div>

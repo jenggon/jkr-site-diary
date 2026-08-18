@@ -1,12 +1,12 @@
 'use client';
 
 import DailyEntryShell from './DailyEntryShell';
-import DailyEntryForm from './DailyEntryForm';
+import SiteDiaryWorkspace from './SiteDiaryWorkspace';
 
 export default function SiteDiaryPage() {
   return (
     <DailyEntryShell>
-      <DailyEntryForm />
+      <SiteDiaryWorkspace />
     </DailyEntryShell>
   );
 }
