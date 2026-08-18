@@ -127,6 +127,7 @@ describe('ApprovalService', () => {
     progress_id: 'prog-1',
     requested_by: 'usr-engineer-1',
     approval_comment: 'Ready for review',
+    expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
   };
 
   describe('createApproval', () => {
@@ -309,6 +310,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Approved,
         approved_by: 'usr-so-1',
         approval_comment: 'Approved on site',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -341,6 +343,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Rejected,
         approved_by: 'usr-so-1',
         approval_comment: 'Invalid rain hours reported',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -359,6 +362,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Rejected,
         approved_by: 'usr-so-1',
         approval_comment: '',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -381,6 +385,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Returned,
         approved_by: 'usr-so-1',
         approval_comment: 'Please clarify trade headcounts',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -398,6 +403,7 @@ describe('ApprovalService', () => {
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Returned,
         approval_comment: '   ',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -420,6 +426,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Cancelled,
         approved_by: 'usr-so-1',
         approval_comment: 'Withdrawn by submitter',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -440,6 +447,7 @@ describe('ApprovalService', () => {
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Returned,
         approval_comment: 'Attempting reopen',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -458,6 +466,7 @@ describe('ApprovalService', () => {
 
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Approved,
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -476,6 +485,7 @@ describe('ApprovalService', () => {
 
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Approved,
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -497,6 +507,7 @@ describe('ApprovalService', () => {
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Approved,
         approved_by: 'usr-so-1',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -534,6 +545,7 @@ describe('ApprovalService', () => {
           approval_status: ApprovalStatus.Approved,
           approved_by: 'usr-so-1',
           approval_comment: 'Approved after fixes',
+          expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
         });
 
         expect(isSuccess(result)).toBe(true);
@@ -567,6 +579,7 @@ describe('ApprovalService', () => {
           approval_status: ApprovalStatus.Rejected,
           approved_by: 'usr-so-1',
           approval_comment: 'Rejected following insufficient corrections',
+          expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
         });
 
         expect(isSuccess(result)).toBe(true);
@@ -600,6 +613,7 @@ describe('ApprovalService', () => {
           approval_status: ApprovalStatus.Returned,
           approved_by: 'usr-so-1',
           approval_comment: 'Still requires clarification on trade headcount',
+          expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
         });
 
         expect(isSuccess(result)).toBe(true);
@@ -631,6 +645,7 @@ describe('ApprovalService', () => {
           approval_status: ApprovalStatus.Cancelled,
           approved_by: 'usr-so-1',
           approval_comment: 'Retracted by submitter following return',
+          expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
         });
 
         expect(isSuccess(result)).toBe(true);

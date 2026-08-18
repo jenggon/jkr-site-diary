@@ -1,5 +1,5 @@
 import { Result, Success, Failure, isFailure } from '@/lib/result';
-import { BaseAppError, ValidationError, InfrastructureError } from '@/lib/errors';
+import { BaseAppError, ValidationError, InfrastructureError, ConflictError } from '@/lib/errors';
 import { Approval, ApprovalStatus } from '@/types/approval';
 import { IApprovalService, CreateApprovalCommand, UpdateApprovalCommand } from './IApprovalService';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
@@ -123,6 +123,10 @@ export class ApprovalService implements IApprovalService {
       const now = this.clock.nowIso();
       const requestedAt = cmd.requested_at || now;
 
+      if (cmd.site_diary_id && !cmd.expected_site_diary_last_modified_at) {
+        return Failure(new ValidationError('expected_site_diary_last_modified_at is required for Site Diary approvals.'));
+      }
+
       const createdApproval = await this.atomicRepo.create({
           programme_id: cmd.programme_id,
           revision_id: cmd.revision_id,
@@ -138,12 +142,15 @@ export class ApprovalService implements IApprovalService {
           requested_at: requestedAt,
           created_at: now,
           updated_at: null,
-        }, cmd.requested_by);
+        }, cmd.requested_by, cmd.expected_site_diary_last_modified_at);
       this.logger.info(`Approval record created: ${createdApproval.approval_id}`);
       return Success(createdApproval);
     } catch (error) {
       const err = error as Error;
       this.logger.error(`Failed to create approval: ${err.message}`);
+      if (err.message.includes('F24_SITE_DIARY_STALE') || err.message.includes('PT409')) {
+        return Failure(new ConflictError('Site Diary has been modified since it was loaded.'));
+      }
       return Failure(new InfrastructureError(err.message));
     }
   }
@@ -241,6 +248,10 @@ export class ApprovalService implements IApprovalService {
       const now = this.clock.nowIso();
       const approvalDate = cmd.approval_status === ApprovalStatus.Approved ? (cmd.approval_date || now) : existing.approval_date;
 
+      if (existing.site_diary_id && !cmd.expected_site_diary_last_modified_at) {
+        return Failure(new ValidationError('expected_site_diary_last_modified_at is required for Site Diary approvals.'));
+      }
+
       if (!cmd.approved_by) {
         return Failure(new ValidationError('Authenticated approval actor is required'));
       }
@@ -249,12 +260,18 @@ export class ApprovalService implements IApprovalService {
           approval_date: approvalDate,
           approval_comment: cmd.approval_comment !== undefined ? cmd.approval_comment : existing.approval_comment,
           updated_at: now,
-        }, cmd.approved_by);
+        }, cmd.approved_by, cmd.expected_site_diary_last_modified_at);
       this.logger.info(`Approval record updated: ${approvalId} to ${cmd.approval_status}`);
       return Success(updatedApproval);
     } catch (error) {
       const err = error as Error;
       this.logger.error(`Failed to update approval: ${err.message}`);
+      if (err.message.includes('F24_SITE_DIARY_STALE') || err.message.includes('PT409')) {
+        return Failure(new ConflictError('Site Diary has been modified or approval context changed.'));
+      }
+      if (err.message.includes('A27_APPROVAL_TERMINAL_STATE')) {
+        return Failure(new ConflictError('Approval is already in a terminal state.'));
+      }
       return Failure(new InfrastructureError(err.message));
     }
   }
