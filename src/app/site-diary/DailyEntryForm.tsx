@@ -26,6 +26,7 @@ export interface DailyEntryFormProps {
   initialActivityId?: string | null;
   initialTab?: 'OPEN_ACTIVITIES' | 'NEW_ACTIVITY';
   onSuccess?: (siteDiaryId: string) => void;
+  onCancel?: () => void;
   className?: string;
   hideModeNavigation?: boolean;
 }
@@ -403,6 +404,7 @@ export default function DailyEntryForm({
   initialActivityId = null,
   initialTab,
   onSuccess,
+  onCancel,
   className = '',
   hideModeNavigation = false,
 }: DailyEntryFormProps) {
@@ -840,7 +842,7 @@ export default function DailyEntryForm({
           aria-label="Borang Buku Harian Tapak"
         >
           {/* 1. Operational Source Selector (MSP XOR VO) or Continuation Banner */}
-          {!editingActivityId ? (
+          {!editingActivityId && !editingSiteDiaryId ? (
             <OperationalSourceSelector
               selectedSource={selectedSource}
               onSelectSource={setSelectedSource}
@@ -915,6 +917,19 @@ export default function DailyEntryForm({
                 </div>
               </section>
             )
+          )}
+
+          {editingSiteDiaryId && onCancel && (
+            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={isSubmitting}
+                className="min-h-[44px] rounded-xl border border-zinc-700 px-4 text-sm font-bold text-zinc-200 disabled:opacity-50"
+              >
+                Batal Suntingan
+              </button>
+            </section>
           )}
 
           {/* 2. Tarikh & Status Perlaksanaan */}

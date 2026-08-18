@@ -120,6 +120,39 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     expect(container.textContent).not.toContain('Kerja Saliran VO');
   });
 
+  it('hands exact canonical diary identity into the existing DailyEntryForm edit mode with bounded cancel', async () => {
+    const canonical = {
+      site_diary_id: 'raw-site-diary-uuid', programme_id: 'programme-A', revision_id: 'revision-current',
+      activity_id: 'raw-activity-uuid', activity_date: '2026-08-17', weather: null, notes: 'Canonical edit evidence',
+      status: 'In Progress', manpower: [], print_context: null, submitted_by: 'actor',
+      submitted_at: '2026-08-17T08:00:00.000Z', updated_at: null,
+    };
+    const detailReads: string[] = [];
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/site-diary/raw-site-diary-uuid')) {
+        detailReads.push(url);
+        return json({ data: canonical });
+      }
+      if (url.includes('/api/programme-revision')) return json({ data: [current, historyA] });
+      return json({ data: [diary()] });
+    });
+    await mount();
+    await click('Lihat Butiran');
+    expect(container.textContent).toContain('Canonical edit evidence');
+    await click('Semakan Terdahulu');
+    expect(container.textContent).not.toContain('Canonical edit evidence');
+    await click('Rekod Semasa');
+    await click('Lihat Butiran');
+    await click('Edit Rekod');
+    expect(container.querySelector('form[aria-label="Borang Buku Harian Tapak"]')).toBeTruthy();
+    expect(container.textContent).toContain('Batal Suntingan');
+    expect(detailReads).toHaveLength(3);
+    expect(detailReads.every((url) => url === '/api/site-diary/raw-site-diary-uuid')).toBe(true);
+    await click('Batal Suntingan');
+    expect(container.textContent).toContain('Canonical edit evidence');
+  });
+
   it('renders historical selector/read-only cards, no edit CTA, fallback, and empty historical states', async () => {
     global.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

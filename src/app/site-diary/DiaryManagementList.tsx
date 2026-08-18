@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDailyEntryContext } from './DailyEntryShell';
 import { SiteDiaryManagementProjection, SiteDiaryManagementRevision } from '@/types/siteDiaryManagement';
+import DiaryDetail from './DiaryDetail';
+import DailyEntryForm from './DailyEntryForm';
 
 type ViewMode = 'CURRENT' | 'HISTORY';
 type SourceFilter = 'ALL' | 'MSP' | 'VO';
@@ -44,6 +46,9 @@ export default function DiaryManagementList() {
   const [loadingRevisions, setLoadingRevisions] = useState(false);
   const [loadingDiaries, setLoadingDiaries] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDiary, setSelectedDiary] = useState<SiteDiaryManagementProjection | null>(null);
+  const [editingSiteDiaryId, setEditingSiteDiaryId] = useState<string | null>(null);
+  const [detailRefresh, setDetailRefresh] = useState(0);
 
   const revisionAbortRef = useRef<AbortController | null>(null);
   const diaryAbortRef = useRef<AbortController | null>(null);
@@ -92,6 +97,8 @@ export default function DiaryManagementList() {
     ++diaryGenerationRef.current;
     setLoadingRevisions(true);
     setLoadingDiaries(false);
+    setSelectedDiary(null);
+    setEditingSiteDiaryId(null);
     setError(null);
     setDiaries([]);
     try {
@@ -172,11 +179,15 @@ export default function DiaryManagementList() {
   }), [diaries, dateFrom, dateTo, sourceFilter, scopeFilter]);
 
   const chooseCurrent = () => {
+    setSelectedDiary(null);
+    setEditingSiteDiaryId(null);
     setViewMode('CURRENT');
     setSelectedHistoricalId(null);
     setSearch('');
   };
   const chooseHistorical = (revisionId: string) => {
+    setSelectedDiary(null);
+    setEditingSiteDiaryId(null);
     setViewMode('HISTORY');
     setSelectedHistoricalId(revisionId);
     setSearch('');
@@ -187,6 +198,36 @@ export default function DiaryManagementList() {
     else void loadDiaries(programmeId, activeRevisionId, search);
   };
 
+  if (editingSiteDiaryId) {
+    return <DailyEntryForm
+      initialTab="NEW_ACTIVITY"
+      initialSiteDiaryId={editingSiteDiaryId}
+      hideModeNavigation
+      onCancel={() => setEditingSiteDiaryId(null)}
+      onSuccess={() => {
+        setEditingSiteDiaryId(null);
+        setDetailRefresh((value) => value + 1);
+        if (programmeId && activeRevisionId) void loadDiaries(programmeId, activeRevisionId, search);
+      }}
+    />;
+  }
+
+  if (selectedDiary && programmeId) {
+    return <div className="space-y-4">
+      <div role="tablist" aria-label="Tukar konteks rekod dari butiran" className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-2">
+        <button type="button" role="tab" aria-selected={viewMode === 'CURRENT'} onClick={chooseCurrent} className="min-h-[44px] rounded-xl bg-zinc-800 px-3 text-sm font-bold">Rekod Semasa</button>
+        <button type="button" role="tab" aria-selected={viewMode === 'HISTORY'} onClick={() => { setSelectedDiary(null); setViewMode('HISTORY'); }} className="min-h-[44px] rounded-xl bg-zinc-800 px-3 text-sm font-bold">Semakan Terdahulu</button>
+      </div>
+      <DiaryDetail
+        key={`${selectedDiary.siteDiaryId}-${detailRefresh}`}
+        projection={selectedDiary}
+        programmeId={programmeId}
+        onBack={() => setSelectedDiary(null)}
+        onEdit={(siteDiaryId) => setEditingSiteDiaryId(siteDiaryId)}
+      />
+    </div>;
+  }
+
   return (
     <section aria-label="Pengurusan Rekod Buku Harian" className="space-y-4">
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
@@ -196,7 +237,7 @@ export default function DiaryManagementList() {
             Rekod Semasa
           </button>
           <button type="button" role="tab" aria-selected={viewMode === 'HISTORY'}
-            onClick={() => setViewMode('HISTORY')}
+            onClick={() => { setSelectedDiary(null); setEditingSiteDiaryId(null); setViewMode('HISTORY'); }}
             className={`min-h-[44px] rounded-xl px-3 py-2 text-sm font-bold ${viewMode === 'HISTORY' ? 'bg-amber-700 text-white' : 'bg-zinc-800 text-zinc-300'}`}>
             Semakan Terdahulu
           </button>
@@ -312,6 +353,10 @@ export default function DiaryManagementList() {
               <p className="mt-3 text-xs text-zinc-400">{revisionLabel(selectedRevision)} · {selectedRevision.revisionStatus}</p>
             )}
             <p className="mt-3 text-[11px] text-zinc-500">Dikemaskini {formatTimestamp(diary.lastModifiedAt)}</p>
+            <button type="button" onClick={() => setSelectedDiary(diary)}
+              className="mt-3 min-h-[44px] w-full rounded-xl border border-zinc-700 px-3 text-sm font-bold text-blue-300">
+              Lihat Butiran
+            </button>
           </article>
         ))}
       </div>
