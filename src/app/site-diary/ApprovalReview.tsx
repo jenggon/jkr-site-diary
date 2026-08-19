@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import DiaryHistoryTimeline from './DiaryHistoryTimeline';
 import { SiteDiary } from '@/types/siteDiary';
+import { Approval, ApprovalStatus } from '@/types/approval';
 
 interface ApprovalReviewProps {
   siteDiaryId: string;
@@ -13,6 +14,7 @@ interface ApprovalReviewProps {
 
 export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSuccess }: ApprovalReviewProps) {
   const [detail, setDetail] = useState<SiteDiary | null>(null);
+  const [reviewApproval, setReviewApproval] = useState<Approval | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
   
   const abortRef = useRef<AbortController | null>(null);
 
-  const fetchDetail = async () => {
+  const fetchDetail = useCallback(async () => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -29,35 +31,82 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
     setLoading(true);
     setError(null);
     setActionError(null);
+    setDetail(null);
+    setReviewApproval(null);
 
     try {
-      const res = await fetch(`/api/site-diary/${encodeURIComponent(siteDiaryId)}`, {
-        signal: controller.signal,
-      });
+      const [diaryResponse, approvalResponse] = await Promise.all([
+        fetch(`/api/site-diary/${encodeURIComponent(siteDiaryId)}`, {
+          signal: controller.signal,
+        }),
+        fetch(`/api/approval/${encodeURIComponent(approvalId)}`, {
+          signal: controller.signal,
+        }),
+      ]);
 
-      if (!res.ok) {
-        if (res.status === 404) throw new Error('Rekod Site Diary tidak ditemui.');
+      if (!diaryResponse.ok) {
+        if (diaryResponse.status === 404) throw new Error('Rekod Site Diary tidak ditemui.');
         throw new Error('Gagal memuatkan butiran rekod.');
       }
+      if (!approvalResponse.ok) {
+        if (approvalResponse.status === 404) throw new Error('Rekod kelulusan tidak ditemui.');
+        throw new Error('Gagal memuatkan rekod kelulusan.');
+      }
 
-      const json = await res.json();
-      setDetail(json.data);
+      const [diaryJson, approvalJson] = await Promise.all([
+        diaryResponse.json(),
+        approvalResponse.json(),
+      ]);
+      const diary = diaryJson.data as SiteDiary;
+      const approval = approvalJson.data as Approval;
+
+      if (
+        diary?.site_diary_id !== siteDiaryId
+        || approval?.approval_id !== approvalId
+        || approval?.site_diary_id !== siteDiaryId
+      ) {
+        throw new Error('Konteks rekod kelulusan tidak sepadan. Muat semula baris gilir.');
+      }
+      if (approval.approval_status !== ApprovalStatus.Pending) {
+        throw new Error('Rekod kelulusan ini tidak lagi menunggu semakan.');
+      }
+
+      if (abortRef.current !== controller) return;
+      setDetail(diary);
+      setReviewApproval(approval);
     } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') {
+      if (
+        abortRef.current === controller
+        && err instanceof Error
+        && err.name !== 'AbortError'
+      ) {
         setError(err.message);
       }
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) {
+        setLoading(false);
+      }
     }
-  };
+  }, [approvalId, siteDiaryId]);
 
   useEffect(() => {
-    fetchDetail();
-    return () => abortRef.current?.abort();
-  }, [siteDiaryId]);
+    void fetchDetail();
+    const controller = abortRef.current;
+    return () => {
+      controller?.abort();
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
+    };
+  }, [fetchDetail]);
 
   const handleDecision = async (status: 'Approved' | 'Returned' | 'Rejected') => {
-    if (!detail) return;
+    if (!detail || !reviewApproval) return;
+    if (
+      reviewApproval.approval_id !== approvalId
+      || reviewApproval.site_diary_id !== siteDiaryId
+      || reviewApproval.approval_status !== ApprovalStatus.Pending
+    ) return;
     if (submitting) return;
 
     setSubmitting(true);
@@ -113,6 +162,10 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
     </div>
   );
   if (!detail) return null;
+
+  const canDecide = reviewApproval?.approval_id === approvalId
+    && reviewApproval.site_diary_id === siteDiaryId
+    && reviewApproval.approval_status === ApprovalStatus.Pending;
 
   return (
     <div className="space-y-6">
@@ -179,7 +232,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
             rows={3}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            disabled={submitting}
+            disabled={submitting || !canDecide}
             placeholder="Sebab pemulangan / penolakan..."
             className="block w-full rounded-xl border border-blue-800 bg-blue-950/50 px-3 py-2 text-sm text-zinc-100 placeholder-blue-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
           />
@@ -188,7 +241,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <button
             type="button"
-            disabled={submitting}
+            disabled={submitting || !canDecide}
             onClick={() => handleDecision('Approved')}
             className="rounded-xl bg-green-600 px-4 py-3 font-bold text-white transition hover:bg-green-500 disabled:opacity-50"
           >
@@ -196,7 +249,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
           </button>
           <button
             type="button"
-            disabled={submitting || !comment.trim()}
+            disabled={submitting || !canDecide || !comment.trim()}
             onClick={() => handleDecision('Returned')}
             title={!comment.trim() ? "Sila masukkan ulasan untuk memulangkan rekod" : ""}
             className="rounded-xl bg-yellow-600 px-4 py-3 font-bold text-white transition hover:bg-yellow-500 disabled:opacity-50"
@@ -205,7 +258,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
           </button>
           <button
             type="button"
-            disabled={submitting || !comment.trim()}
+            disabled={submitting || !canDecide || !comment.trim()}
             onClick={() => handleDecision('Rejected')}
             title={!comment.trim() ? "Sila masukkan ulasan untuk menolak rekod" : ""}
             className="rounded-xl bg-red-600 px-4 py-3 font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
