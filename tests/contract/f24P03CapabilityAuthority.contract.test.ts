@@ -33,20 +33,19 @@ describe('F2.4-P03 Capability Authority SQL contract', () => {
     expect(sql).toContain('up.is_active = true');
     expect(sql).toContain('pm.is_active = true');
     expect(sql).toContain('r.is_active = true');
+    expect(sql).toContain("r.scope = 'Programme'");
     
     // Returns 403 / PT403 on failure
     expect(sql).toContain("RAISE EXCEPTION 'F24_UNAUTHORIZED_CAPABILITY' USING ERRCODE = 'PT403';");
   });
 
-  it('enforces capability in a27_create_approval_atomic', () => {
-    // Must assert SITE_DIARY_APPROVAL_REQUEST before mutating
-    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION "private"."a27_create_approval_atomic"[\s\S]*?PERFORM "private"."assert_capability"\(p_actor_id, v_programme_id, 'SITE_DIARY_APPROVAL_REQUEST'\);[\s\S]*?INSERT INTO "public"."approval"/);
+  it('enforces capability in a27_create_approval_atomic only when site_diary_id IS NOT NULL', () => {
+    expect(sql).toMatch(/IF v_site_diary_id IS NOT NULL THEN\s*PERFORM "private"\."assert_capability"\(p_actor_id, v_programme_id, 'SITE_DIARY_APPROVAL_REQUEST'\);\s*END IF;/);
   });
 
-  it('enforces capability in a27_update_approval_atomic mapped by target status', () => {
+  it('enforces capability in a27_update_approval_atomic mapped by target status only when site_diary_id IS NOT NULL', () => {
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION "private"."a27_update_approval_atomic"/);
-    expect(sql).toContain("IF v_target = 'Approved' THEN");
-    expect(sql).toContain("PERFORM \"private\".\"assert_capability\"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_APPROVE');");
+    expect(sql).toMatch(/IF v_disc_sd_id IS NOT NULL THEN\s*IF v_target = 'Approved' THEN\s*PERFORM "private"\."assert_capability"\(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_APPROVE'\);/);
     expect(sql).toContain("ELSIF v_target = 'Returned' THEN");
     expect(sql).toContain("PERFORM \"private\".\"assert_capability\"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_RETURN');");
     expect(sql).toContain("ELSIF v_target = 'Rejected' THEN");

@@ -30,6 +30,7 @@ BEGIN
           AND pm.programme_id = p_programme_id
           AND pm.is_active = true
           AND r.is_active = true
+          AND r.scope = 'Programme'
           AND p.permission_code = p_permission_code
           AND p.is_active = true
     ) INTO v_authorized;
@@ -59,8 +60,10 @@ DECLARE
 BEGIN
     PERFORM "private"."a27_assert_actor"(p_actor_id);
     
-    -- Capability Authority
-    PERFORM "private"."assert_capability"(p_actor_id, v_programme_id, 'SITE_DIARY_APPROVAL_REQUEST');
+    -- Capability Authority for Site Diary
+    IF v_site_diary_id IS NOT NULL THEN
+        PERFORM "private"."assert_capability"(p_actor_id, v_programme_id, 'SITE_DIARY_APPROVAL_REQUEST');
+    END IF;
 
     PERFORM "private"."a27_assert_revision_operational"(v_programme_id, v_revision_id);
     PERFORM "private"."a27_assert_activity_context"(v_programme_id, v_revision_id, v_activity_id);
@@ -148,16 +151,22 @@ BEGIN
     -- Capability Authority
     -- Attempt to cast target status, will fail early if invalid string
     v_target := (p_payload->>'approval_status')::"public"."approval_status_type";
-    IF v_target = 'Approved' THEN
-        PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_APPROVE');
-    ELSIF v_target = 'Returned' THEN
-        PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_RETURN');
-    ELSIF v_target = 'Rejected' THEN
-        PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_REJECT');
-    ELSIF v_target = 'Cancelled' THEN
-        PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_CANCEL');
+    IF v_disc_sd_id IS NOT NULL THEN
+        IF v_target = 'Approved' THEN
+            PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_APPROVE');
+        ELSIF v_target = 'Returned' THEN
+            PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_RETURN');
+        ELSIF v_target = 'Rejected' THEN
+            PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_REJECT');
+        ELSIF v_target = 'Cancelled' THEN
+            PERFORM "private"."assert_capability"(p_actor_id, v_disc_prog_id, 'SITE_DIARY_APPROVAL_CANCEL');
+        ELSE
+            RAISE EXCEPTION 'A27_APPROVAL_TARGET_INVALID' USING ERRCODE = '23514';
+        END IF;
     ELSE
-        RAISE EXCEPTION 'A27_APPROVAL_TARGET_INVALID' USING ERRCODE = '23514';
+        IF v_target NOT IN ('Approved', 'Rejected', 'Returned', 'Cancelled') THEN
+            RAISE EXCEPTION 'A27_APPROVAL_TARGET_INVALID' USING ERRCODE = '23514';
+        END IF;
     END IF;
 
     -- Canonical Lock Order: Site Diary -> Approval
