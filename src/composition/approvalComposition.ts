@@ -7,6 +7,7 @@ import { progressRepository } from '@/repositories/progressRepository';
 import { approvalRepository } from '@/repositories/approvalRepository';
 import { ApprovalAtomicRepository } from '@/repositories/atomic/ApprovalAtomicRepository';
 import { ApprovalQueueReadRepository } from '@/repositories/ApprovalQueueReadRepository';
+import { ApprovalReviewReadRepository } from '@/repositories/ApprovalReviewReadRepository';
 import { getSupabaseAuthenticatedClient, getSupabaseServerClient } from '@/lib/supabase';
 import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
@@ -33,6 +34,10 @@ export function createApprovalService(accessToken?: string): IApprovalService {
 export function createApprovalQueueRepository(accessToken?: string): ApprovalQueueReadRepository {
   const client = accessToken ? getSupabaseAuthenticatedClient(accessToken) : getSupabaseServerClient();
   return new ApprovalQueueReadRepository(client);
+}
+
+export function createApprovalReviewRepository(accessToken: string): ApprovalReviewReadRepository {
+  return new ApprovalReviewReadRepository(getSupabaseAuthenticatedClient(accessToken));
 }
 
 export const approvalService: IApprovalService = createApprovalService();

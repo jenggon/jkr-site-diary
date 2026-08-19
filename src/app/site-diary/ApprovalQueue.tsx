@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDailyEntryContext } from './DailyEntryShell';
 
 interface QueueItem {
@@ -18,60 +18,101 @@ interface Props {
   onSelectReview: (siteDiaryId: string, approvalId: string) => void;
 }
 
+interface QueueError {
+  message: string;
+  retryable: boolean;
+}
+
+interface QueueRequest {
+  generation: number;
+  controller: AbortController;
+}
+
 export default function ApprovalQueue({ onSelectReview }: Props) {
   const { programmeId } = useDailyEntryContext();
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<QueueError | null>(null);
+  const generationRef = useRef(0);
+  const requestRef = useRef<QueueRequest | null>(null);
 
-  useEffect(() => {
-    let controller = new AbortController();
+  const fetchQueue = useCallback(async () => {
+    requestRef.current?.controller.abort();
+    const request: QueueRequest = {
+      generation: ++generationRef.current,
+      controller: new AbortController(),
+    };
+    requestRef.current = request;
+    const ownsRequest = () => requestRef.current === request
+      && request.generation === generationRef.current;
 
-    const fetchQueue = async () => {
-      if (!programmeId) {
+    if (!programmeId) {
+      if (ownsRequest()) {
         setItems([]);
+        setError(null);
         setLoading(false);
+      }
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/programme/${encodeURIComponent(programmeId)}/approval-queue`, {
+        signal: request.controller.signal,
+      });
+      if (!ownsRequest()) return;
+
+      if (res.status === 403) {
+        setError({
+          message: 'Tiada akses (Unauthorized). Anda tidak mempunyai kebenaran untuk melihat baris gilir.',
+          retryable: false,
+        });
         return;
       }
 
-      setLoading(true);
-      setError(null);
+      if (!res.ok) throw new Error('Gagal mendapatkan senarai kelulusan');
 
-      try {
-        const res = await fetch(`/api/programme/${programmeId}/approval-queue`, {
-          signal: controller.signal,
-        });
-
-        if (res.status === 403) {
-          setError('Tiada akses (Unauthorized). Anda tidak mempunyai kebenaran untuk melihat baris gilir.');
-          setLoading(false);
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error('Gagal mendapatkan senarai kelulusan');
-        }
-
-        const data = await res.json();
-        setItems(data.data || []);
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name !== 'AbortError') {
-          setError(err.message);
-        }
-      } finally {
-        setLoading(false);
+      const data = await res.json();
+      if (ownsRequest()) setItems(data.data || []);
+    } catch (err: unknown) {
+      if (ownsRequest() && err instanceof Error && err.name !== 'AbortError') {
+        setError({ message: err.message, retryable: true });
       }
-    };
-
-    fetchQueue();
-
-    return () => {
-      controller.abort();
-    };
+    } finally {
+      if (ownsRequest()) setLoading(false);
+    }
   }, [programmeId]);
 
+  useEffect(() => {
+    void fetchQueue();
+    const request = requestRef.current;
+
+    return () => {
+      request?.controller.abort();
+      if (requestRef.current === request) {
+        requestRef.current = null;
+        generationRef.current += 1;
+      }
+    };
+  }, [fetchQueue]);
+
   if (loading) return <div className="p-4 text-zinc-400">Memuatkan...</div>;
-  if (error) return <div className="p-4 text-red-400">{error}</div>;
+  if (error) return (
+    <div className="p-4 text-red-400">
+      <p>{error.message}</p>
+      {error.retryable && (
+        <button
+          type="button"
+          onClick={() => void fetchQueue()}
+          className="mt-3 rounded-lg bg-zinc-800 px-3 py-2 text-sm font-bold text-white hover:bg-zinc-700"
+        >
+          Cuba Semula
+        </button>
+      )}
+    </div>
+  );
 
   const pendingItems = items.filter((i) => i.approval_status === 'Pending');
 

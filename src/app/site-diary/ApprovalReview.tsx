@@ -12,6 +12,12 @@ interface ApprovalReviewProps {
   onSuccess: () => void;
 }
 
+interface DecisionRequest {
+  generation: number;
+  controller: AbortController;
+  contextKey: string;
+}
+
 export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSuccess }: ApprovalReviewProps) {
   const [detail, setDetail] = useState<SiteDiary | null>(null);
   const [reviewApproval, setReviewApproval] = useState<Approval | null>(null);
@@ -22,15 +28,17 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
   const [comment, setComment] = useState('');
   
   const abortRef = useRef<AbortController | null>(null);
+  const decisionGenerationRef = useRef(0);
+  const decisionRef = useRef<DecisionRequest | null>(null);
 
-  const fetchDetail = useCallback(async () => {
+  const fetchDetail = useCallback(async (preserveActionError = false) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
     setLoading(true);
     setError(null);
-    setActionError(null);
+    if (!preserveActionError) setActionError(null);
     setDetail(null);
     setReviewApproval(null);
 
@@ -39,7 +47,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
         fetch(`/api/site-diary/${encodeURIComponent(siteDiaryId)}`, {
           signal: controller.signal,
         }),
-        fetch(`/api/approval/${encodeURIComponent(approvalId)}`, {
+        fetch(`/api/approval/${encodeURIComponent(approvalId)}/review`, {
           signal: controller.signal,
         }),
       ]);
@@ -64,6 +72,9 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
         diary?.site_diary_id !== siteDiaryId
         || approval?.approval_id !== approvalId
         || approval?.site_diary_id !== siteDiaryId
+        || approval?.programme_id !== diary?.programme_id
+        || approval?.revision_id !== diary?.revision_id
+        || approval?.activity_id !== diary?.activity_id
       ) {
         throw new Error('Konteks rekod kelulusan tidak sepadan. Muat semula baris gilir.');
       }
@@ -100,15 +111,39 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
     };
   }, [fetchDetail]);
 
+  useEffect(() => {
+    decisionRef.current?.controller.abort();
+    decisionRef.current = null;
+    decisionGenerationRef.current += 1;
+    setSubmitting(false);
+    return () => {
+      decisionRef.current?.controller.abort();
+      decisionRef.current = null;
+      decisionGenerationRef.current += 1;
+    };
+  }, [approvalId, siteDiaryId]);
+
   const handleDecision = async (status: 'Approved' | 'Returned' | 'Rejected') => {
     if (!detail || !reviewApproval) return;
     if (
       reviewApproval.approval_id !== approvalId
       || reviewApproval.site_diary_id !== siteDiaryId
+      || reviewApproval.programme_id !== detail.programme_id
+      || reviewApproval.revision_id !== detail.revision_id
+      || reviewApproval.activity_id !== detail.activity_id
       || reviewApproval.approval_status !== ApprovalStatus.Pending
     ) return;
-    if (submitting) return;
+    if (decisionRef.current) return;
 
+    const request: DecisionRequest = {
+      generation: ++decisionGenerationRef.current,
+      controller: new AbortController(),
+      contextKey: `${approvalId}:${siteDiaryId}`,
+    };
+    decisionRef.current = request;
+    const ownsRequest = () => decisionRef.current === request
+      && request.generation === decisionGenerationRef.current
+      && request.contextKey === `${approvalId}:${siteDiaryId}`;
     setSubmitting(true);
     setActionError(null);
 
@@ -116,6 +151,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
       const expectedToken = detail.updated_at || detail.submitted_at;
       const res = await fetch(`/api/approval/${encodeURIComponent(approvalId)}`, {
         method: 'PATCH',
+        signal: request.controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           approval_status: status,
@@ -123,11 +159,14 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
           expected_site_diary_last_modified_at: expectedToken,
         }),
       });
+      if (!ownsRequest()) return;
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
         if (res.status === 409) {
-          throw new Error(errorData?.error || 'Konflik keadaan/Ralat Rangkaian. Sila semak semula data.');
+          setActionError(errorData?.error || 'Rekod telah berubah. Data terkini sedang dimuatkan.');
+          await fetchDetail(true);
+          return;
         } else if (res.status === 403) {
           throw new Error('Tiada kebenaran (Unauthorized) untuk tindakan ini.');
         } else if (res.status === 404) {
@@ -136,19 +175,18 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
         throw new Error(errorData?.error || 'Tindakan gagal. Sila cuba lagi.');
       }
 
-      onSuccess();
+      if (ownsRequest()) onSuccess();
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (ownsRequest() && err instanceof Error && err.name !== 'AbortError') {
         setActionError(err.message);
-        if (err.message.includes('Konflik')) {
-          // Refresh detail on conflict to show the latest canonical state
-          fetchDetail();
-        }
-      } else {
+      } else if (ownsRequest() && !(err instanceof Error)) {
         setActionError('Tindakan gagal');
       }
     } finally {
-      setSubmitting(false);
+      if (ownsRequest()) {
+        decisionRef.current = null;
+        setSubmitting(false);
+      }
     }
   };
 
@@ -165,6 +203,9 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
 
   const canDecide = reviewApproval?.approval_id === approvalId
     && reviewApproval.site_diary_id === siteDiaryId
+    && reviewApproval.programme_id === detail.programme_id
+    && reviewApproval.revision_id === detail.revision_id
+    && reviewApproval.activity_id === detail.activity_id
     && reviewApproval.approval_status === ApprovalStatus.Pending;
 
   return (
