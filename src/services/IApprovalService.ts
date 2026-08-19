@@ -12,6 +12,7 @@ export interface CreateApprovalCommand {
   requested_by: string;
   requested_at?: string;
   approval_comment?: string | null;
+  expected_site_diary_last_modified_at?: string;
 }
 
 export interface UpdateApprovalCommand {
@@ -19,6 +20,7 @@ export interface UpdateApprovalCommand {
   approved_by?: string | null;
   approval_date?: string | null;
   approval_comment?: string | null;
+  expected_site_diary_last_modified_at?: string;
 }
 
 export interface IApprovalService {

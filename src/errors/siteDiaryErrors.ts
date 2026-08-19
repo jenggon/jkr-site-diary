@@ -44,3 +44,13 @@ export class InvalidSiteDiaryStateError extends BaseAppError {
     super(message, options);
   }
 }
+
+export class SiteDiarySealedError extends BaseAppError {
+  public readonly errorCode = 'SITE_DIARY_SEALED';
+  public readonly httpStatus = 409;
+
+  constructor(message: string = 'Site diary is sealed by an active approval and cannot be modified', options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+

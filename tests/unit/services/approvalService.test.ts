@@ -5,6 +5,7 @@ import { ApprovalStatus } from '@/types/approval';
 import { Success, Failure, isSuccess, isFailure } from '@/lib/result';
 import { ValidationError, InfrastructureError } from '@/lib/errors';
 import { AuditEventType } from '@/types/audit';
+import { ApprovalNotFoundError, ApprovalTerminalStateError } from '@/errors/approvalErrors';
 
 describe('ApprovalService', () => {
   let mockRevisionRepo: any;
@@ -127,6 +128,7 @@ describe('ApprovalService', () => {
     progress_id: 'prog-1',
     requested_by: 'usr-engineer-1',
     approval_comment: 'Ready for review',
+    expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
   };
 
   describe('createApproval', () => {
@@ -295,6 +297,22 @@ describe('ApprovalService', () => {
       mockProgressRepo.getProgressById.mockResolvedValue(validProgress);
     });
 
+    it('returns governed 404 when the Approval does not exist', async () => {
+      mockApprovalRepo.getApprovalById.mockResolvedValue(null);
+
+      const result = await service.updateApproval('missing-approval', {
+        approval_status: ApprovalStatus.Approved,
+        approved_by: 'usr-so-1',
+      });
+
+      expect(isFailure(result)).toBe(true);
+      if (isFailure(result)) {
+        expect(result.error).toBeInstanceOf(ApprovalNotFoundError);
+        expect(result.error.httpStatus).toBe(404);
+      }
+      expect(mockAtomicRepo.update).not.toHaveBeenCalled();
+    });
+
     it('should successfully approve a pending request and log Approve audit event atomically', async () => {
       mockApprovalRepo.getApprovalById.mockResolvedValue(existingPendingApproval);
       mockApprovalRepo.updateApproval.mockResolvedValue({
@@ -309,6 +327,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Approved,
         approved_by: 'usr-so-1',
         approval_comment: 'Approved on site',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -341,6 +360,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Rejected,
         approved_by: 'usr-so-1',
         approval_comment: 'Invalid rain hours reported',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -359,6 +379,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Rejected,
         approved_by: 'usr-so-1',
         approval_comment: '',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -381,6 +402,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Returned,
         approved_by: 'usr-so-1',
         approval_comment: 'Please clarify trade headcounts',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -398,6 +420,7 @@ describe('ApprovalService', () => {
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Returned,
         approval_comment: '   ',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -420,6 +443,7 @@ describe('ApprovalService', () => {
         approval_status: ApprovalStatus.Cancelled,
         approved_by: 'usr-so-1',
         approval_comment: 'Withdrawn by submitter',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isSuccess(result)).toBe(true);
@@ -440,11 +464,12 @@ describe('ApprovalService', () => {
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Returned,
         approval_comment: 'Attempting reopen',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
       if (isFailure(result)) {
-        expect(result.error).toBeInstanceOf(ValidationError);
+        expect(result.error).toBeInstanceOf(ApprovalTerminalStateError);
         expect(result.error.message).toContain('Cannot transition approval from terminal state: Approved');
       }
       expect(mockTxManager.execute).not.toHaveBeenCalled();
@@ -458,11 +483,12 @@ describe('ApprovalService', () => {
 
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Approved,
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
       if (isFailure(result)) {
-        expect(result.error).toBeInstanceOf(ValidationError);
+        expect(result.error).toBeInstanceOf(ApprovalTerminalStateError);
         expect(result.error.message).toContain('Cannot transition approval from terminal state: Rejected');
       }
       expect(mockTxManager.execute).not.toHaveBeenCalled();
@@ -476,11 +502,12 @@ describe('ApprovalService', () => {
 
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Approved,
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
       if (isFailure(result)) {
-        expect(result.error).toBeInstanceOf(ValidationError);
+        expect(result.error).toBeInstanceOf(ApprovalTerminalStateError);
         expect(result.error.message).toContain('Cannot transition approval from terminal state: Cancelled');
       }
       expect(mockTxManager.execute).not.toHaveBeenCalled();
@@ -497,6 +524,7 @@ describe('ApprovalService', () => {
       const result = await service.updateApproval('appr-1', {
         approval_status: ApprovalStatus.Approved,
         approved_by: 'usr-so-1',
+        expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
       });
 
       expect(isFailure(result)).toBe(true);
@@ -520,134 +548,50 @@ describe('ApprovalService', () => {
         approval_comment: 'Initial return comment',
       };
 
-      it('should successfully transition from Returned to Approved and log Approve audit event', async () => {
+      it('resubmits Returned to Pending through the same approval ID', async () => {
         mockApprovalRepo.getApprovalById.mockResolvedValue(existingReturnedApproval);
         mockApprovalRepo.updateApproval.mockResolvedValue({
           ...existingReturnedApproval,
-          approval_status: ApprovalStatus.Approved,
-          approved_by: 'usr-so-1',
-          approval_date: '2026-08-15T12:00:00Z',
+          approval_status: ApprovalStatus.Pending,
+          requested_by: 'usr-engineer-1',
+          approved_by: null,
         });
         mockAuditRepo.createAudit.mockResolvedValue(null);
 
         const result = await service.updateApproval('appr-1', {
-          approval_status: ApprovalStatus.Approved,
-          approved_by: 'usr-so-1',
-          approval_comment: 'Approved after fixes',
+          approval_status: ApprovalStatus.Pending,
+          approved_by: 'usr-engineer-1',
+          approval_comment: 'Corrections completed',
+          expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
         });
 
         expect(isSuccess(result)).toBe(true);
-        expect(mockTxManager.execute).toHaveBeenCalled();
-        expect(mockApprovalRepo.updateApproval).toHaveBeenCalledWith(
+        expect(mockAtomicRepo.update).toHaveBeenCalledWith(
           'appr-1',
-          expect.objectContaining({
-            approval_status: ApprovalStatus.Approved,
-            approved_by: 'usr-so-1',
-          })
+          expect.objectContaining({ approval_status: ApprovalStatus.Pending }),
+          'usr-engineer-1',
+          '2026-08-15T12:00:00Z'
         );
-        expect(mockAuditRepo.createAudit).toHaveBeenCalledWith(
-          expect.objectContaining({
-            event_type: AuditEventType.Approve,
-            old_value: ApprovalStatus.Returned,
-            new_value: ApprovalStatus.Approved,
-          })
-        );
+        expect(mockAtomicRepo.create).not.toHaveBeenCalled();
       });
 
-      it('should successfully transition from Returned to Rejected when comment is provided and log Reject audit event', async () => {
+      it.each([
+        ApprovalStatus.Approved,
+        ApprovalStatus.Rejected,
+        ApprovalStatus.Returned,
+        ApprovalStatus.Cancelled,
+      ])('rejects non-resubmission target %s from Returned', async (target) => {
         mockApprovalRepo.getApprovalById.mockResolvedValue(existingReturnedApproval);
-        mockApprovalRepo.updateApproval.mockResolvedValue({
-          ...existingReturnedApproval,
-          approval_status: ApprovalStatus.Rejected,
-          approved_by: 'usr-so-1',
-        });
-        mockAuditRepo.createAudit.mockResolvedValue(null);
 
         const result = await service.updateApproval('appr-1', {
-          approval_status: ApprovalStatus.Rejected,
+          approval_status: target,
           approved_by: 'usr-so-1',
-          approval_comment: 'Rejected following insufficient corrections',
+          approval_comment: 'Invalid replay',
+          expected_site_diary_last_modified_at: '2026-08-15T12:00:00Z',
         });
 
-        expect(isSuccess(result)).toBe(true);
-        expect(mockTxManager.execute).toHaveBeenCalled();
-        expect(mockApprovalRepo.updateApproval).toHaveBeenCalledWith(
-          'appr-1',
-          expect.objectContaining({
-            approval_status: ApprovalStatus.Rejected,
-            approved_by: 'usr-so-1',
-          })
-        );
-        expect(mockAuditRepo.createAudit).toHaveBeenCalledWith(
-          expect.objectContaining({
-            event_type: AuditEventType.Reject,
-            old_value: ApprovalStatus.Returned,
-            new_value: ApprovalStatus.Rejected,
-          })
-        );
-      });
-
-      it('should successfully transition from Returned to Returned when comment is provided and log Update audit event', async () => {
-        mockApprovalRepo.getApprovalById.mockResolvedValue(existingReturnedApproval);
-        mockApprovalRepo.updateApproval.mockResolvedValue({
-          ...existingReturnedApproval,
-          approval_status: ApprovalStatus.Returned,
-          approval_comment: 'Still requires clarification on trade headcount',
-        });
-        mockAuditRepo.createAudit.mockResolvedValue(null);
-
-        const result = await service.updateApproval('appr-1', {
-          approval_status: ApprovalStatus.Returned,
-          approved_by: 'usr-so-1',
-          approval_comment: 'Still requires clarification on trade headcount',
-        });
-
-        expect(isSuccess(result)).toBe(true);
-        expect(mockTxManager.execute).toHaveBeenCalled();
-        expect(mockApprovalRepo.updateApproval).toHaveBeenCalledWith(
-          'appr-1',
-          expect.objectContaining({
-            approval_status: ApprovalStatus.Returned,
-          })
-        );
-        expect(mockAuditRepo.createAudit).toHaveBeenCalledWith(
-          expect.objectContaining({
-            event_type: AuditEventType.Update,
-            old_value: ApprovalStatus.Returned,
-            new_value: ApprovalStatus.Returned,
-          })
-        );
-      });
-
-      it('should successfully transition from Returned to Cancelled and log Update audit event', async () => {
-        mockApprovalRepo.getApprovalById.mockResolvedValue(existingReturnedApproval);
-        mockApprovalRepo.updateApproval.mockResolvedValue({
-          ...existingReturnedApproval,
-          approval_status: ApprovalStatus.Cancelled,
-        });
-        mockAuditRepo.createAudit.mockResolvedValue(null);
-
-        const result = await service.updateApproval('appr-1', {
-          approval_status: ApprovalStatus.Cancelled,
-          approved_by: 'usr-so-1',
-          approval_comment: 'Retracted by submitter following return',
-        });
-
-        expect(isSuccess(result)).toBe(true);
-        expect(mockTxManager.execute).toHaveBeenCalled();
-        expect(mockApprovalRepo.updateApproval).toHaveBeenCalledWith(
-          'appr-1',
-          expect.objectContaining({
-            approval_status: ApprovalStatus.Cancelled,
-          })
-        );
-        expect(mockAuditRepo.createAudit).toHaveBeenCalledWith(
-          expect.objectContaining({
-            event_type: AuditEventType.Update,
-            old_value: ApprovalStatus.Returned,
-            new_value: ApprovalStatus.Cancelled,
-          })
-        );
+        expect(isFailure(result)).toBe(true);
+        expect(mockAtomicRepo.update).not.toHaveBeenCalled();
       });
     });
   });

@@ -27,7 +27,7 @@ export async function GET(request: Request, context: RouteParams) {
     if (isFailure(result)) {
       return NextResponse.json(
         { error: result.error.message },
-        { status: 500 }
+        { status: result.error.httpStatus || 500 }
       );
     }
 
@@ -82,7 +82,7 @@ export async function PATCH(request: Request, context: RouteParams) {
     if (isFailure(result)) {
       return NextResponse.json(
         { error: result.error.message },
-        { status: 400 }
+        { status: result.error.httpStatus || 400 }
       );
     }
 

@@ -8,6 +8,7 @@ import { ISiteDiaryRepositoryAdapter } from '@/services/siteDiaryService';
 import { IApprovalAtomicRepository } from '@/repositories/atomic/IApprovalAtomicRepository';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
+import { ApprovalNotFoundError, ApprovalTerminalStateError } from '@/errors/approvalErrors';
 
 export interface IApprovalServiceDependencies {
   readonly revisionRepository: IProgrammeRevisionRepository;
@@ -123,6 +124,10 @@ export class ApprovalService implements IApprovalService {
       const now = this.clock.nowIso();
       const requestedAt = cmd.requested_at || now;
 
+      if (cmd.site_diary_id && !cmd.expected_site_diary_last_modified_at) {
+        return Failure(new ValidationError('expected_site_diary_last_modified_at is required for Site Diary approvals.'));
+      }
+
       const createdApproval = await this.atomicRepo.create({
           programme_id: cmd.programme_id,
           revision_id: cmd.revision_id,
@@ -138,10 +143,13 @@ export class ApprovalService implements IApprovalService {
           requested_at: requestedAt,
           created_at: now,
           updated_at: null,
-        }, cmd.requested_by);
+        }, cmd.requested_by, cmd.expected_site_diary_last_modified_at);
       this.logger.info(`Approval record created: ${createdApproval.approval_id}`);
       return Success(createdApproval);
     } catch (error) {
+      if (error instanceof BaseAppError) {
+        return Failure(error);
+      }
       const err = error as Error;
       this.logger.error(`Failed to create approval: ${err.message}`);
       return Failure(new InfrastructureError(err.message));
@@ -195,26 +203,36 @@ export class ApprovalService implements IApprovalService {
     try {
       const existing = await this.approvalRepo.getApprovalById(approvalId);
       if (!existing) {
-        return Failure(new ValidationError(`Approval record not found: ${approvalId}`));
+        return Failure(new ApprovalNotFoundError(`Approval record not found: ${approvalId}`));
       }
 
       // Terminal state validation
       const terminalStates = [ApprovalStatus.Approved, ApprovalStatus.Rejected, ApprovalStatus.Cancelled];
       if (terminalStates.includes(existing.approval_status)) {
         return Failure(
-          new ValidationError(
+          new ApprovalTerminalStateError(
             `Cannot transition approval from terminal state: ${existing.approval_status}`
           )
         );
       }
 
-      // Legal target state validation
-      const validTargetStates = [
-        ApprovalStatus.Approved,
-        ApprovalStatus.Rejected,
-        ApprovalStatus.Returned,
-        ApprovalStatus.Cancelled,
-      ];
+      // Site Diary approvals use the locked single-tier lifecycle. Generic
+      // Activity approvals retain the pre-B02 target contract.
+      const validTargetStates = existing.site_diary_id
+        ? existing.approval_status === ApprovalStatus.Returned
+          ? [ApprovalStatus.Pending]
+          : [
+              ApprovalStatus.Approved,
+              ApprovalStatus.Rejected,
+              ApprovalStatus.Returned,
+              ApprovalStatus.Cancelled,
+            ]
+        : [
+            ApprovalStatus.Approved,
+            ApprovalStatus.Rejected,
+            ApprovalStatus.Returned,
+            ApprovalStatus.Cancelled,
+          ];
       if (!validTargetStates.includes(cmd.approval_status)) {
         return Failure(
           new ValidationError(`Invalid target approval status: ${cmd.approval_status}`)
@@ -241,18 +259,27 @@ export class ApprovalService implements IApprovalService {
       const now = this.clock.nowIso();
       const approvalDate = cmd.approval_status === ApprovalStatus.Approved ? (cmd.approval_date || now) : existing.approval_date;
 
+      if (existing.site_diary_id && !cmd.expected_site_diary_last_modified_at) {
+        return Failure(new ValidationError('expected_site_diary_last_modified_at is required for Site Diary approvals.'));
+      }
+
       if (!cmd.approved_by) {
         return Failure(new ValidationError('Authenticated approval actor is required'));
       }
       const updatedApproval = await this.atomicRepo.update(approvalId, {
           approval_status: cmd.approval_status,
           approval_date: approvalDate,
-          approval_comment: cmd.approval_comment !== undefined ? cmd.approval_comment : existing.approval_comment,
+          approval_comment: cmd.approval_status === ApprovalStatus.Pending
+            ? (cmd.approval_comment ?? null)
+            : (cmd.approval_comment !== undefined ? cmd.approval_comment : existing.approval_comment),
           updated_at: now,
-        }, cmd.approved_by);
+        }, cmd.approved_by, cmd.expected_site_diary_last_modified_at);
       this.logger.info(`Approval record updated: ${approvalId} to ${cmd.approval_status}`);
       return Success(updatedApproval);
     } catch (error) {
+      if (error instanceof BaseAppError) {
+        return Failure(error);
+      }
       const err = error as Error;
       this.logger.error(`Failed to update approval: ${err.message}`);
       return Failure(new InfrastructureError(err.message));

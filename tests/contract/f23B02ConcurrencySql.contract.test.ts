@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 const sql = readFileSync(resolve(
   'supabase/migrations/20260818093000_f2_3_site_diary_optimistic_concurrency.sql'
-), 'utf8');
+), 'utf8').replace(/\r\n/g, '\n');
 
 function index(fragment: string): number {
   const found = sql.indexOf(fragment);

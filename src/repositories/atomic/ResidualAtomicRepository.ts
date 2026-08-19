@@ -8,7 +8,7 @@ import { Workforce } from '@/types/workforce';
 import { SiteDiary } from '@/types/siteDiary';
 import { ProgrammeRowMapper } from '@/repositories/mappers/ProgrammeRowMapper';
 import { ProgrammeRow, ProgrammeRevisionRow } from '@/repositories/types/programmeRow';
-import { SiteDiaryStaleEditError } from '@/errors/siteDiaryErrors';
+import { SiteDiaryStaleEditError, SiteDiarySealedError } from '@/errors/siteDiaryErrors';
 
 export class ResidualAtomicRepository {
   private readonly programmeMapper = new ProgrammeRowMapper();
@@ -17,6 +17,9 @@ export class ResidualAtomicRepository {
   private async rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
     const { data, error } = await this.client.rpc(name, args);
     if (error?.code === 'PT409') {
+      if (error.message === 'F24_SITE_DIARY_SEALED') {
+        throw new SiteDiarySealedError('Site diary is sealed by an active approval and cannot be modified');
+      }
       throw new SiteDiaryStaleEditError('Site diary was modified by another user');
     }
     if (error) throw new Error(`${name} failed: ${error.message}`);
