@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { generateUuid } from '@/lib/uuid';
+import { AuthorizationError } from '@/lib/errors';
 import { Approval } from '@/types/approval';
 import { IApprovalAtomicRepository } from './IApprovalAtomicRepository';
 import {
@@ -15,6 +16,9 @@ export class ApprovalAtomicRepository implements IApprovalAtomicRepository {
   public constructor(private readonly client: SupabaseClient) {}
 
   private handleRpcError(rpcName: string, error: { code?: string; message?: string }): never {
+    if (error.code === 'PT403') {
+      throw new AuthorizationError(error.message || 'Unauthorized capability');
+    }
     if (error.code === 'PT409') {
       if (error.message === 'F24_SITE_DIARY_STALE') {
         throw new ApprovalStaleSiteDiaryError('Site diary has been modified since it was loaded');
