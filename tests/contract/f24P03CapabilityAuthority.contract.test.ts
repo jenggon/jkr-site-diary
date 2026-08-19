@@ -57,6 +57,17 @@ describe('F2.4-P03 Capability Authority SQL contract', () => {
     expect(sql).toContain("RAISE EXCEPTION 'A27_APPROVAL_TARGET_INVALID' USING ERRCODE = '23514';");
   });
 
+  it('keeps the complete generic Approval decision branch capability-free', () => {
+    const genericBranch = sql.match(
+      /ELSE\s+(IF v_target NOT IN \('Approved', 'Rejected', 'Returned', 'Cancelled'\) THEN[\s\S]*?END IF;)\s+END IF;\s+\n\s*-- Canonical Lock Order/
+    )?.[1];
+
+    expect(genericBranch).toBeDefined();
+    expect(genericBranch).toContain("RAISE EXCEPTION 'A27_APPROVAL_TARGET_INVALID' USING ERRCODE = '23514';");
+    expect(genericBranch).not.toContain('assert_capability');
+    expect(genericBranch).not.toContain('SITE_DIARY_APPROVAL_');
+  });
+
   it('preserves B01 canonical lock order and token semantics in update', () => {
     // Verifies that Site Diary is still locked before Approval in update
     expect(sql).toMatch(/SELECT coalesce\(updated_at, submitted_at\) INTO v_sd_token[\s\S]*?FROM "public"."site_diary"[\s\S]*?FOR UPDATE;[\s\S]*?SELECT \* INTO STRICT v_old FROM "public"."approval"[\s\S]*?FOR UPDATE;/);

@@ -44,3 +44,51 @@ export class ApprovalTerminalStateError extends BaseAppError {
     super(message, options);
   }
 }
+
+export class ApprovalPendingExistsError extends BaseAppError {
+  public readonly errorCode = 'APPROVAL_PENDING_EXISTS';
+  public readonly httpStatus = 409;
+
+  constructor(
+    message: string = 'A Pending approval already exists for this Site Diary',
+    options?: ErrorOptions
+  ) {
+    super(message, options);
+  }
+}
+
+export class ApprovalApprovedExistsError extends BaseAppError {
+  public readonly errorCode = 'APPROVAL_APPROVED_EXISTS';
+  public readonly httpStatus = 409;
+
+  constructor(
+    message: string = 'This Site Diary already has an Approved approval',
+    options?: ErrorOptions
+  ) {
+    super(message, options);
+  }
+}
+
+export class ApprovalReturnedRequiresResubmissionError extends BaseAppError {
+  public readonly errorCode = 'APPROVAL_RETURNED_REQUIRES_RESUBMISSION';
+  public readonly httpStatus = 409;
+
+  constructor(
+    message: string = 'The Returned approval must be resubmitted using its existing approval ID',
+    options?: ErrorOptions
+  ) {
+    super(message, options);
+  }
+}
+
+export class ApprovalTransitionConflictError extends BaseAppError {
+  public readonly errorCode = 'APPROVAL_TRANSITION_CONFLICT';
+  public readonly httpStatus = 409;
+
+  constructor(
+    message: string = 'The requested Approval transition is not valid from its current state',
+    options?: ErrorOptions
+  ) {
+    super(message, options);
+  }
+}

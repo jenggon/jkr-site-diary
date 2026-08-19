@@ -9,6 +9,10 @@ import {
   ApprovalTerminalStateError,
   ApprovalNotFoundError,
   ApprovalValidationError,
+  ApprovalPendingExistsError,
+  ApprovalApprovedExistsError,
+  ApprovalReturnedRequiresResubmissionError,
+  ApprovalTransitionConflictError,
 } from '@/errors/approvalErrors';
 import { SiteDiaryNotFoundError } from '@/errors/siteDiaryErrors';
 
@@ -25,6 +29,21 @@ export class ApprovalAtomicRepository implements IApprovalAtomicRepository {
       }
       if (error.message === 'F24_APPROVAL_CONTEXT_CHANGED') {
         throw new ApprovalContextChangedError('Approval context has changed concurrently');
+      }
+      if (error.message === 'F24_PENDING_APPROVAL_EXISTS') {
+        throw new ApprovalPendingExistsError();
+      }
+      if (error.message === 'F24_APPROVED_APPROVAL_EXISTS') {
+        throw new ApprovalApprovedExistsError();
+      }
+      if (error.message === 'F24_RETURNED_APPROVAL_REQUIRES_RESUBMISSION') {
+        throw new ApprovalReturnedRequiresResubmissionError();
+      }
+      if (error.message === 'F24_APPROVAL_TRANSITION_INVALID') {
+        throw new ApprovalTransitionConflictError();
+      }
+      if (error.message === 'A27_APPROVAL_TERMINAL_STATE') {
+        throw new ApprovalTerminalStateError('Approval is already in a terminal state');
       }
       throw new ApprovalStaleSiteDiaryError(error.message || 'Concurrent modification conflict');
     }

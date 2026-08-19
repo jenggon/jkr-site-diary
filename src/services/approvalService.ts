@@ -8,6 +8,7 @@ import { ISiteDiaryRepositoryAdapter } from '@/services/siteDiaryService';
 import { IApprovalAtomicRepository } from '@/repositories/atomic/IApprovalAtomicRepository';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
+import { ApprovalNotFoundError, ApprovalTerminalStateError } from '@/errors/approvalErrors';
 
 export interface IApprovalServiceDependencies {
   readonly revisionRepository: IProgrammeRevisionRepository;
@@ -202,26 +203,36 @@ export class ApprovalService implements IApprovalService {
     try {
       const existing = await this.approvalRepo.getApprovalById(approvalId);
       if (!existing) {
-        return Failure(new ValidationError(`Approval record not found: ${approvalId}`));
+        return Failure(new ApprovalNotFoundError(`Approval record not found: ${approvalId}`));
       }
 
       // Terminal state validation
       const terminalStates = [ApprovalStatus.Approved, ApprovalStatus.Rejected, ApprovalStatus.Cancelled];
       if (terminalStates.includes(existing.approval_status)) {
         return Failure(
-          new ValidationError(
+          new ApprovalTerminalStateError(
             `Cannot transition approval from terminal state: ${existing.approval_status}`
           )
         );
       }
 
-      // Legal target state validation
-      const validTargetStates = [
-        ApprovalStatus.Approved,
-        ApprovalStatus.Rejected,
-        ApprovalStatus.Returned,
-        ApprovalStatus.Cancelled,
-      ];
+      // Site Diary approvals use the locked single-tier lifecycle. Generic
+      // Activity approvals retain the pre-B02 target contract.
+      const validTargetStates = existing.site_diary_id
+        ? existing.approval_status === ApprovalStatus.Returned
+          ? [ApprovalStatus.Pending]
+          : [
+              ApprovalStatus.Approved,
+              ApprovalStatus.Rejected,
+              ApprovalStatus.Returned,
+              ApprovalStatus.Cancelled,
+            ]
+        : [
+            ApprovalStatus.Approved,
+            ApprovalStatus.Rejected,
+            ApprovalStatus.Returned,
+            ApprovalStatus.Cancelled,
+          ];
       if (!validTargetStates.includes(cmd.approval_status)) {
         return Failure(
           new ValidationError(`Invalid target approval status: ${cmd.approval_status}`)
@@ -258,7 +269,9 @@ export class ApprovalService implements IApprovalService {
       const updatedApproval = await this.atomicRepo.update(approvalId, {
           approval_status: cmd.approval_status,
           approval_date: approvalDate,
-          approval_comment: cmd.approval_comment !== undefined ? cmd.approval_comment : existing.approval_comment,
+          approval_comment: cmd.approval_status === ApprovalStatus.Pending
+            ? (cmd.approval_comment ?? null)
+            : (cmd.approval_comment !== undefined ? cmd.approval_comment : existing.approval_comment),
           updated_at: now,
         }, cmd.approved_by, cmd.expected_site_diary_last_modified_at);
       this.logger.info(`Approval record updated: ${approvalId} to ${cmd.approval_status}`);

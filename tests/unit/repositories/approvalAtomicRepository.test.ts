@@ -6,8 +6,13 @@ import {
   ApprovalTerminalStateError,
   ApprovalNotFoundError,
   ApprovalValidationError,
+  ApprovalPendingExistsError,
+  ApprovalApprovedExistsError,
+  ApprovalReturnedRequiresResubmissionError,
+  ApprovalTransitionConflictError,
 } from '@/errors/approvalErrors';
 import { SiteDiaryNotFoundError } from '@/errors/siteDiaryErrors';
+import { AuthorizationError } from '@/lib/errors';
 
 describe('ApprovalAtomicRepository Error Preservation', () => {
   const createMockClient = (rpcFn: (name: string, args: Record<string, unknown>) => Promise<unknown>) => ({
@@ -130,5 +135,34 @@ describe('ApprovalAtomicRepository Error Preservation', () => {
         '2026-08-18T00:00:00.000Z'
       )
     ).rejects.toThrow('a27_update_approval_atomic failed: Internal DB engine failure');
+  });
+
+  it.each([
+    ['F24_PENDING_APPROVAL_EXISTS', ApprovalPendingExistsError],
+    ['F24_APPROVED_APPROVAL_EXISTS', ApprovalApprovedExistsError],
+    ['F24_RETURNED_APPROVAL_REQUIRES_RESUBMISSION', ApprovalReturnedRequiresResubmissionError],
+    ['F24_APPROVAL_TRANSITION_INVALID', ApprovalTransitionConflictError],
+  ])('maps structured PT409 %s without broad message matching', async (message, ErrorType) => {
+    const client = createMockClient(async () => ({
+      data: null,
+      error: { code: 'PT409', message },
+    }));
+    const repo = new ApprovalAtomicRepository(client as never);
+
+    await expect(
+      repo.update('appr-1', { approval_status: 'Pending' }, 'actor-1', '2026-08-18T00:00:00.000Z')
+    ).rejects.toBeInstanceOf(ErrorType);
+  });
+
+  it('maps PT403 capability denial to AuthorizationError', async () => {
+    const client = createMockClient(async () => ({
+      data: null,
+      error: { code: 'PT403', message: 'F24_UNAUTHORIZED_CAPABILITY' },
+    }));
+    const repo = new ApprovalAtomicRepository(client as never);
+
+    await expect(
+      repo.update('appr-1', { approval_status: 'Approved' }, 'actor-1', '2026-08-18T00:00:00.000Z')
+    ).rejects.toBeInstanceOf(AuthorizationError);
   });
 });
