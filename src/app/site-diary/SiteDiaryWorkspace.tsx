@@ -3,20 +3,36 @@
 import React, { useState } from 'react';
 import DailyEntryForm from './DailyEntryForm';
 import DiaryManagementList from './DiaryManagementList';
+import ApprovalQueue from './ApprovalQueue';
+import ApprovalReview from './ApprovalReview';
 
-type WorkspaceTab = 'NEW' | 'OPEN' | 'RECORDS';
+type WorkspaceTab = 'NEW' | 'OPEN' | 'RECORDS' | 'APPROVALS';
 
 export default function SiteDiaryWorkspace() {
   const [tab, setTab] = useState<WorkspaceTab>('RECORDS');
+  const [reviewContext, setReviewContext] = useState<{siteDiaryId: string, approvalId: string} | null>(null);
+
   const tabs: Array<{ id: WorkspaceTab; label: string }> = [
     { id: 'NEW', label: 'Laporan Baharu' },
     { id: 'OPEN', label: 'Aktiviti Terbuka' },
     { id: 'RECORDS', label: 'Rekod / Sejarah' },
+    { id: 'APPROVALS', label: 'Kelulusan' },
   ];
+
+  if (reviewContext) {
+    return (
+      <ApprovalReview
+        siteDiaryId={reviewContext.siteDiaryId}
+        approvalId={reviewContext.approvalId}
+        onBack={() => setReviewContext(null)}
+        onSuccess={() => setReviewContext(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <nav aria-label="Navigasi Buku Harian Tapak" className="grid grid-cols-3 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
+      <nav aria-label="Navigasi Buku Harian Tapak" className="grid grid-cols-4 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -35,6 +51,8 @@ export default function SiteDiaryWorkspace() {
 
       {tab === 'RECORDS' ? (
         <DiaryManagementList />
+      ) : tab === 'APPROVALS' ? (
+        <ApprovalQueue onSelectReview={(siteDiaryId, approvalId) => setReviewContext({siteDiaryId, approvalId})} />
       ) : (
         <DailyEntryForm
           key={tab}

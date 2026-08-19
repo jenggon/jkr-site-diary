@@ -32,7 +32,7 @@ describe('Site Diary runtime workspace navigation', () => {
     await act(async () => root.render(React.createElement(SiteDiaryWorkspace)));
     expect(container.textContent).toContain('PRODUCTION_RECORDS');
     const tabs = [...container.querySelectorAll('[role="tab"]')];
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Laporan Baharu', 'Aktiviti Terbuka', 'Rekod / Sejarah']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Laporan Baharu', 'Aktiviti Terbuka', 'Rekod / Sejarah', 'Kelulusan']);
     expect(tabs[2]?.getAttribute('aria-selected')).toBe('true');
 
     await act(async () => (tabs[0] as HTMLButtonElement).click());
