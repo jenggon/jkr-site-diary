@@ -1,6 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { SiteDiaryPrintDto } from '@/types/siteDiaryPrint';
+
 
 type Manpower = {
   trade_name: string;
@@ -188,25 +191,74 @@ function WorkforceBlock({ contractor, nsc, contractorCapacity, nscCapacity }: { 
 }
 
 export default function PrintSiteDiaryClient() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [reports, setReports] = useState<DailyReport[]>([]);
+  const searchParams = useSearchParams();
+  const id = searchParams?.get('id');
+
+  const [diary, setDiary] = useState<SiteDiaryPrintDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!id) {
+      setError('ID rekod tidak ditemui');
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     setLoading(true);
     setError('');
-    fetch(`/api/reports?date=${encodeURIComponent(date)}`)
+    fetch(`/api/site-diary/${encodeURIComponent(id)}/print`)
       .then(async (response) => {
-        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Gagal memuat laporan');
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          if (response.status === 401) throw new Error('401 Unauthorized');
+          if (response.status === 403) throw new Error('403 Forbidden');
+          if (response.status === 404) throw new Error('404 Not Found');
+          throw new Error(body?.error ?? 'Gagal memuat laporan');
+        }
         return response.json();
       })
-      .then((data) => { if (active) setReports(Array.isArray(data) ? data : []); })
+      .then((data) => { if (active && data.data) setDiary(data.data); })
       .catch((err) => { if (active) setError(err instanceof Error ? err.message : 'Gagal memuat laporan'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [date]);
+  }, [id]);
+
+  const reports: DailyReport[] = useMemo(() => {
+    if (!diary) return [];
+    
+    let workStatus = 'Sedang Laksana';
+    if (diary.activityStatus === 'New') workStatus = 'Mula';
+    if (diary.activityStatus === 'In Progress') workStatus = 'Sedang Laksana';
+    if (diary.activityStatus === 'Completed') workStatus = 'Siap';
+
+    return [{
+      id: diary.siteDiaryId,
+      site_diary_id: diary.siteDiaryId,
+      activity_id: diary.activityId,
+      source_type: diary.sourceType,
+      wbs: diary.wbs,
+      task_name: diary.taskName,
+      is_critical: diary.isCritical,
+      work_status: workStatus,
+      activity_date: diary.activityDate,
+      location: diary.printContext.location,
+      work_start_time: diary.printContext.workStartTime,
+      work_end_time: diary.printContext.workEndTime,
+      weather_condition: diary.printContext.weatherCondition ?? null,
+      rain_start_time: diary.printContext.rainStartTime,
+      rain_end_time: diary.printContext.rainEndTime,
+      contractor_scope: diary.printContext.contractorScope,
+      manpower: diary.manpower.map(m => ({
+        trade_name: m.tradeName,
+        bumi_count: m.bumiCount,
+        non_bumi_count: m.nonBumiCount,
+        foreign_count: m.foreignCount,
+      })),
+      notes: diary.notes,
+    }];
+  }, [diary]);
 
   const sorted = useMemo(() => [...reports].sort((a, b) => priorityRank(a) - priorityRank(b)), [reports]);
   const contractor = useMemo(() => aggregateWorkforce(reports, 'CONTRACTOR'), [reports]);
@@ -221,10 +273,12 @@ export default function PrintSiteDiaryClient() {
   const nscChunks = chunk(remainingNsc, CONTINUATION_NSC_CAPACITY);
   const continuationCount = Math.max(activityChunks.length, contractorChunks.length, nscChunks.length);
   const totalPages = 1 + continuationCount;
-  const weather = reports.find((row) => row.weather_condition)?.weather_condition ?? '';
-  const rainStart = reports.find((row) => row.rain_start_time)?.rain_start_time ?? null;
-  const rainEnd = reports.find((row) => row.rain_end_time)?.rain_end_time ?? null;
-  const notes = [...new Set(reports.map((row) => row.notes).filter(Boolean))].join(' | ');
+  
+  const date = diary?.activityDate ?? '';
+  const weather = diary?.printContext?.weatherCondition ?? '';
+  const rainStart = diary?.printContext?.rainStartTime ?? null;
+  const rainEnd = diary?.printContext?.rainEndTime ?? null;
+  const notes = diary?.notes ?? '';
 
   return <main className="print-shell">
     <style jsx global>{`
@@ -234,12 +288,11 @@ export default function PrintSiteDiaryClient() {
 
     <div className="toolbar">
       <strong>JKR Site Diary</strong>
-      <label>Tarikh <input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-      <button type="button" onClick={() => window.print()} disabled={loading || reports.length === 0}>Cetak / Simpan PDF</button>
-      <span className="status">{loading ? 'Memuat...' : `${reports.length} aktiviti`}</span>
+      <button type="button" onClick={() => window.print()} disabled={loading || !diary}>Cetak / Simpan PDF</button>
+      <span className="status">{loading ? 'Memuat...' : (diary ? '1 aktiviti' : '')}</span>
     </div>
 
-    {error ? <div className="page empty-state">Ralat: {error}</div> : <>
+    {error ? <div className="page empty-state">Ralat: {error}</div> : (!diary ? null : <>
       <article className="page">
         <header className="jkr-header"><div className="logo-cell"><img src="/jkr-logo.svg" alt="JKR" /></div><div className="agency-cell">JABATAN KERJA RAYA<br/>MALAYSIA</div><div className="date-cell">TARIKH:<br/><strong>{formatDate(date)}</strong></div></header>
         <section className="weather-row"><WeatherClock rainStart={rainStart} rainEnd={rainEnd}/><div className="weather-fields"><div>CUACA: <span className="field-line">{weather}</span> (Nyatakan CUACA ELOK atau HUJAN)</div><div>WAKTU MULA HUJAN: <span className="field-line short">{timeText(rainStart)}</span> &nbsp; WAKTU TAMAT HUJAN: <span className="field-line short">{timeText(rainEnd)}</span></div><div>CATATAN: <span className="field-line">{notes}</span></div></div></section>
@@ -250,11 +303,11 @@ export default function PrintSiteDiaryClient() {
       </article>
 
       {Array.from({ length: continuationCount }, (_, index) => <article className="page continuation-page" key={`continuation-${index}`}>
-        <div className="continuation-label">SAMBUNGAN — {formatDate(date)}</div>
+        <div className="continuation-label">SAMBUNGAN - {formatDate(date)}</div>
         <ActivityTable rows={activityChunks[index] ?? []} capacity={CONTINUATION_ACTIVITY_CAPACITY} continuation/>
         <WorkforceBlock contractor={contractorChunks[index] ?? []} nsc={nscChunks[index] ?? []} contractorCapacity={CONTINUATION_CONTRACTOR_CAPACITY} nscCapacity={CONTINUATION_NSC_CAPACITY}/>
         <div className="page-number">{index + 2}/{totalPages}</div>
       </article>)}
-    </>}
+    </>)}
   </main>;
 }
