@@ -1,6 +1,11 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { ActivityStatus, ActivityWeather } from '@/types/activity';
-import { SiteDiaryContractorScope, SiteDiaryManpower, SiteDiaryPrintContext } from '@/types/siteDiary';
+import {
+  SiteDiaryContractorScope,
+  SiteDiaryManpower,
+  SiteDiaryPrintContext,
+  SiteDiaryWeatherCondition,
+} from '@/types/siteDiary';
 import {
   SiteDiaryPrintContextDto,
   SiteDiaryPrintDto,
@@ -119,13 +124,23 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
     if (!activity.vo_item || !activity.vo_item.vo_item_id) {
       throw new SiteDiaryPrintReadError(500, 'Canonical context missing: vo_item');
     }
-    wbs = activity.vo_item.vo_reference;
+    wbs = activity.vo_item.vo_reference || '';
     taskName =
       activity.subtask_display_name ||
       activity.subtask ||
       activity.vo_item.description ||
       activity.vo_item.line_item ||
-      'VO Item';
+      '';
+      
+    if (taskName.trim() === '' && wbs.trim() === '' && (!activity.vo_item.line_item || activity.vo_item.line_item.trim() === '')) {
+      throw new SiteDiaryPrintReadError(500, 'Canonical context missing: VO has no usable identity');
+    }
+    
+    // Fallback if taskName is totally empty but we have some identity
+    if (taskName.trim() === '') {
+      taskName = activity.vo_item.line_item || wbs;
+    }
+
     isCritical = false;
   } else {
     if (!activity.task || !activity.task.task_id) {
@@ -141,50 +156,93 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
       activity.task.task_name ||
       activity.subtask_display_name ||
       activity.subtask ||
-      'Activity';
+      '';
+      
+    if (taskName.trim() === '') {
+      throw new SiteDiaryPrintReadError(500, 'Canonical context missing: MSP task has no usable identity');
+    }
+
     isCritical = Boolean(activity.task.is_critical);
   }
 
   // Explicit fail-closed validation for print context
   const rawCtx = row.print_context;
-  if (!rawCtx || typeof rawCtx !== 'object') {
+  if (!rawCtx || typeof rawCtx !== 'object' || Array.isArray(rawCtx)) {
     throw new SiteDiaryPrintReadError(500, 'Malformed print_context in database record');
   }
   
-  const contractorScope = typeof rawCtx.contractor_scope === 'string' 
-    ? rawCtx.contractor_scope 
-    : undefined;
-    
-  if (contractorScope !== 'CONTRACTOR' && contractorScope !== 'NSC') {
-     throw new SiteDiaryPrintReadError(500, `Invalid contractor_scope: ${contractorScope}`);
+  const ctxRecord = rawCtx as unknown as Record<string, unknown>;
+
+  const validateStringOptional = (field: keyof SiteDiaryPrintContext, defaultValue: string): string => {
+    if (!(field in ctxRecord) || ctxRecord[field] === undefined) {
+      return defaultValue;
+    }
+    if (typeof ctxRecord[field] !== 'string') {
+      throw new SiteDiaryPrintReadError(500, `Malformed print_context: ${field} must be string`);
+    }
+    return ctxRecord[field] as string;
+  };
+
+  const validateTimeOptional = (field: keyof SiteDiaryPrintContext): string | null => {
+    if (!(field in ctxRecord) || ctxRecord[field] === undefined) {
+      return null;
+    }
+    const val = ctxRecord[field];
+    if (val === null) return null;
+    if (typeof val !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(val)) {
+      throw new SiteDiaryPrintReadError(500, `Malformed print_context: ${field} has invalid format`);
+    }
+    return val;
+  };
+
+  const validateWeatherOptional = (field: keyof SiteDiaryPrintContext): SiteDiaryWeatherCondition | null => {
+    if (!(field in ctxRecord) || ctxRecord[field] === undefined) {
+      return null;
+    }
+    const val = ctxRecord[field];
+    if (val === null) return null;
+    if (val !== 'ELOK' && val !== 'HUJAN' && val !== 'MENDUNG' && val !== 'RIBUT') {
+      throw new SiteDiaryPrintReadError(500, `Malformed print_context: ${field} has invalid format`);
+    }
+    return val as SiteDiaryWeatherCondition;
+  };
+
+  const contractorScopeRaw = validateStringOptional('contractor_scope', 'CONTRACTOR');
+  if (contractorScopeRaw !== 'CONTRACTOR' && contractorScopeRaw !== 'NSC') {
+    throw new SiteDiaryPrintReadError(500, `Invalid contractor_scope: ${contractorScopeRaw}`);
   }
 
   const printContext: SiteDiaryPrintContextDto = {
-    location: typeof rawCtx.location === 'string' ? rawCtx.location : '',
-    workStartTime: typeof rawCtx.work_start_time === 'string' ? rawCtx.work_start_time : null,
-    workEndTime: typeof rawCtx.work_end_time === 'string' ? rawCtx.work_end_time : null,
-    weatherCondition: rawCtx.weather_condition ?? null,
-    rainStartTime: typeof rawCtx.rain_start_time === 'string' ? rawCtx.rain_start_time : null,
-    rainEndTime: typeof rawCtx.rain_end_time === 'string' ? rawCtx.rain_end_time : null,
-    contractorScope: contractorScope as SiteDiaryContractorScope,
+    location: validateStringOptional('location', ''),
+    workStartTime: validateTimeOptional('work_start_time'),
+    workEndTime: validateTimeOptional('work_end_time'),
+    weatherCondition: validateWeatherOptional('weather_condition'),
+    rainStartTime: validateTimeOptional('rain_start_time'),
+    rainEndTime: validateTimeOptional('rain_end_time'),
+    contractorScope: contractorScopeRaw as SiteDiaryContractorScope,
   };
 
-  const manpower: SiteDiaryPrintManpowerItem[] = Array.isArray(row.manpower)
-    ? row.manpower.map((item) => {
-        if (!item || typeof item.trade_name !== 'string' || item.trade_name.trim() === '') {
-          throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: manpower trade_name missing');
-        }
-        if (typeof item.bumi_count !== 'number' || typeof item.non_bumi_count !== 'number' || typeof item.foreign_count !== 'number') {
-          throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: manpower count missing or invalid');
-        }
-        return {
-          tradeName: item.trade_name.trim(),
-          bumiCount: item.bumi_count,
-          nonBumiCount: item.non_bumi_count,
-          foreignCount: item.foreign_count,
-        };
-      })
-    : [];
+  // Explicit fail-closed validation for manpower
+  let manpower: SiteDiaryPrintManpowerItem[] = [];
+  if (row.manpower !== null && row.manpower !== undefined) {
+    if (!Array.isArray(row.manpower)) {
+      throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: manpower is not an array');
+    }
+    manpower = row.manpower.map((item) => {
+      if (!item || typeof item !== 'object' || typeof item.trade_name !== 'string' || item.trade_name.trim() === '') {
+        throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: manpower trade_name missing');
+      }
+      if (typeof item.bumi_count !== 'number' || typeof item.non_bumi_count !== 'number' || typeof item.foreign_count !== 'number') {
+        throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: manpower count missing or invalid');
+      }
+      return {
+        tradeName: item.trade_name.trim(),
+        bumiCount: item.bumi_count,
+        nonBumiCount: item.non_bumi_count,
+        foreignCount: item.foreign_count,
+      };
+    });
+  }
 
   return {
     siteDiaryId: row.site_diary_id,

@@ -320,6 +320,36 @@ describe('mapRawRowToPrintDto Fail Closed Behavior', () => {
       err: 'Malformed print_context in database record',
     },
     {
+      name: 'explicit invalid contractor_scope',
+      mod: { print_context: { ...baseRawRow.print_context!, contractor_scope: 'INVALID' } },
+      err: 'Invalid contractor_scope: INVALID',
+    },
+    {
+      name: 'explicit malformed location',
+      mod: { print_context: { ...baseRawRow.print_context!, location: 123 } },
+      err: 'Malformed print_context: location must be string',
+    },
+    {
+      name: 'explicit invalid weather',
+      mod: { print_context: { ...baseRawRow.print_context!, weather_condition: 'SUNNY' } },
+      err: 'Malformed print_context: weather_condition has invalid format',
+    },
+    {
+      name: 'explicit malformed work time',
+      mod: { print_context: { ...baseRawRow.print_context!, work_start_time: '99:99' } },
+      err: 'Malformed print_context: work_start_time has invalid format',
+    },
+    {
+      name: 'explicit malformed rain time',
+      mod: { print_context: { ...baseRawRow.print_context!, rain_end_time: 'not-a-time' } },
+      err: 'Malformed print_context: rain_end_time has invalid format',
+    },
+    {
+      name: 'malformed non-array manpower',
+      mod: { manpower: 'not-an-array' },
+      err: 'Canonical context malformed: manpower is not an array',
+    },
+    {
       name: 'malformed manpower entry (missing trade_name)',
       mod: { manpower: [{ trade_name: '', bumi_count: 0, non_bumi_count: 0, foreign_count: 0 }] },
       err: 'Canonical context malformed: manpower trade_name missing',
@@ -328,6 +358,36 @@ describe('mapRawRowToPrintDto Fail Closed Behavior', () => {
       name: 'malformed manpower count',
       mod: { manpower: [{ trade_name: 'Trade', bumi_count: null, non_bumi_count: 0, foreign_count: 0 }] },
       err: 'Canonical context malformed: manpower count missing or invalid',
+    },
+    {
+      name: 'MSP missing usable identity',
+      mod: { 
+        activity: { 
+          ...baseRawRow.activity!, 
+          subtask: '', 
+          subtask_display_name: '',
+          task: { ...baseRawRow.activity!.task!, task_name: '' } 
+        } 
+      },
+      err: 'Canonical context missing: MSP task has no usable identity',
+    },
+    {
+      name: 'VO missing usable identity',
+      mod: { 
+        activity: { 
+          ...baseRawRow.activity!, 
+          source_type: 'VO',
+          subtask: '', 
+          subtask_display_name: '',
+          vo_item: { 
+            vo_item_id: 'v-1', 
+            vo_reference: '', 
+            line_item: '', 
+            description: '' 
+          } 
+        } 
+      },
+      err: 'Canonical context missing: VO has no usable identity',
     },
   ];
 
@@ -376,5 +436,41 @@ describe('mapRawRowToPrintDto Fail Closed Behavior', () => {
     const dto = mapRawRowToPrintDto(row);
     expect(dto.isHistorical).toBe(true);
     expect(dto.isCurrentRevision).toBe(false);
+  });
+
+  it('canonical print_context {} succeeds and uses established CONTRACTOR default', () => {
+    const row = {
+      ...baseRawRow,
+      print_context: {},
+    } as unknown as RawPrintDiaryRow;
+    const dto = mapRawRowToPrintDto(row);
+    expect(dto.printContext.contractorScope).toBe('CONTRACTOR');
+    expect(dto.printContext.location).toBe('');
+    expect(dto.printContext.workStartTime).toBeNull();
+  });
+
+  it('missing contractor_scope uses established CONTRACTOR default', () => {
+    const row = {
+      ...baseRawRow,
+      print_context: { location: 'L1' },
+    } as unknown as RawPrintDiaryRow;
+    const dto = mapRawRowToPrintDto(row);
+    expect(dto.printContext.contractorScope).toBe('CONTRACTOR');
+  });
+
+  it('null/absent canonical manpower maps to valid empty manpower', () => {
+    const row = {
+      ...baseRawRow,
+      manpower: null,
+    } as unknown as RawPrintDiaryRow;
+    const dto = mapRawRowToPrintDto(row);
+    expect(dto.manpower).toEqual([]);
+    
+    const row2 = {
+      ...baseRawRow,
+      manpower: undefined,
+    } as unknown as RawPrintDiaryRow;
+    const dto2 = mapRawRowToPrintDto(row2);
+    expect(dto2.manpower).toEqual([]);
   });
 });
