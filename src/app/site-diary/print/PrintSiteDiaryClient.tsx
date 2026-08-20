@@ -3,6 +3,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SiteDiaryPrintDto } from '@/types/siteDiaryPrint';
+import {
+  CONTINUATION_CONTRACTOR_CAPACITY,
+  CONTINUATION_NSC_CAPACITY,
+  PAGE1_CONTRACTOR_CAPACITY,
+  PAGE1_NSC_CAPACITY,
+  paginateWorkforce,
+  WorkforceRow,
+} from './printPagination';
 
 type Manpower = {
   trade_name: string;
@@ -32,19 +40,8 @@ type DailyReport = {
   notes: string;
 };
 
-type WorkforceRow = {
-  trade: string;
-  bumi: number;
-  nonBumi: number;
-  foreign: number;
-};
-
 const PAGE1_ACTIVITY_CAPACITY = 14;
-const PAGE1_CONTRACTOR_CAPACITY = 9;
-const PAGE1_NSC_CAPACITY = 6;
 const CONTINUATION_ACTIVITY_CAPACITY = 24;
-const CONTINUATION_CONTRACTOR_CAPACITY = 6;
-const CONTINUATION_NSC_CAPACITY = 4;
 
 const statusRank: Record<string, number> = {
   'Sedang Laksana': 1,
@@ -64,23 +61,6 @@ function formatDate(value: string): string {
 
 function timeText(value: string | null): string {
   return value ? value.slice(0, 5) : '';
-}
-
-function aggregateWorkforce(reports: DailyReport[], scope: 'CONTRACTOR' | 'NSC'): WorkforceRow[] {
-  const map = new Map<string, WorkforceRow>();
-  for (const report of reports) {
-    if (report.contractor_scope !== scope) continue;
-    for (const item of report.manpower ?? []) {
-      const trade = item.trade_name?.trim();
-      if (!trade) continue;
-      const current = map.get(trade) ?? { trade, bumi: 0, nonBumi: 0, foreign: 0 };
-      current.bumi += Number(item.bumi_count ?? 0);
-      current.nonBumi += Number(item.non_bumi_count ?? 0);
-      current.foreign += Number(item.foreign_count ?? 0);
-      map.set(trade, current);
-    }
-  }
-  return [...map.values()].sort((a, b) => a.trade.localeCompare(b.trade));
 }
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -335,17 +315,12 @@ export default function PrintSiteDiaryClient() {
   }, [diary]);
 
   const sorted = useMemo(() => [...reports].sort((a, b) => priorityRank(a) - priorityRank(b)), [reports]);
-  const contractor = useMemo(() => aggregateWorkforce(reports, 'CONTRACTOR'), [reports]);
-  const nsc = useMemo(() => aggregateWorkforce(reports, 'NSC'), [reports]);
+  const workforce = useMemo(() => paginateWorkforce(reports), [reports]);
   const page1Activities = sorted.slice(0, PAGE1_ACTIVITY_CAPACITY);
   const remainingActivities = sorted.slice(PAGE1_ACTIVITY_CAPACITY);
-  const remainingContractor = contractor.slice(PAGE1_CONTRACTOR_CAPACITY);
-  const remainingNsc = nsc.slice(PAGE1_NSC_CAPACITY);
 
   const activityChunks = chunk(remainingActivities, CONTINUATION_ACTIVITY_CAPACITY);
-  const contractorChunks = chunk(remainingContractor, CONTINUATION_CONTRACTOR_CAPACITY);
-  const nscChunks = chunk(remainingNsc, CONTINUATION_NSC_CAPACITY);
-  const continuationCount = Math.max(activityChunks.length, contractorChunks.length, nscChunks.length);
+  const continuationCount = Math.max(activityChunks.length, workforce.continuations.length);
   const totalPages = 1 + continuationCount;
 
   const date = diary?.activityDate ?? '';
@@ -371,7 +346,7 @@ export default function PrintSiteDiaryClient() {
         <header className="jkr-header"><div className="logo-cell"><img src="/jkr-logo.svg" alt="JKR" /></div><div className="agency-cell">JABATAN KERJA RAYA<br/>MALAYSIA</div><div className="date-cell">TARIKH:<br/><strong>{formatDate(date)}</strong></div></header>
         <section className="weather-row"><WeatherClock rainStart={rainStart} rainEnd={rainEnd}/><div className="weather-fields"><div>CUACA: <span className="field-line">{weather}</span> (Nyatakan CUACA ELOK atau HUJAN)</div><div>WAKTU MULA HUJAN: <span className="field-line short">{timeText(rainStart)}</span> &nbsp; WAKTU TAMAT HUJAN: <span className="field-line short">{timeText(rainEnd)}</span></div><div>CATATAN: <span className="field-line">{notes}</span></div></div></section>
         <ActivityTable rows={page1Activities} capacity={PAGE1_ACTIVITY_CAPACITY}/>
-        <WorkforceBlock contractor={contractor} nsc={nsc} contractorCapacity={PAGE1_CONTRACTOR_CAPACITY} nscCapacity={PAGE1_NSC_CAPACITY}/>
+        <WorkforceBlock contractor={workforce.page1.contractor} nsc={workforce.page1.nsc} contractorCapacity={PAGE1_CONTRACTOR_CAPACITY} nscCapacity={PAGE1_NSC_CAPACITY}/>
         <div className="footer-note"><strong>Nota:</strong> Rekod dan Buku Harian Tapak perlu diisi dan ditandatangani setiap hari oleh PTB JKR<br/>Maklumat Kontraktor dan Subkontraktor Dinamakan hendaklah diisi</div>
         <div className="page-number">1/{totalPages}</div>
       </article>
@@ -379,7 +354,7 @@ export default function PrintSiteDiaryClient() {
       {Array.from({ length: continuationCount }, (_, index) => <article className="page continuation-page" key={`continuation-${index}`}>
         <div className="continuation-label">SAMBUNGAN — {formatDate(date)}</div>
         <ActivityTable rows={activityChunks[index] ?? []} capacity={CONTINUATION_ACTIVITY_CAPACITY} continuation/>
-        <WorkforceBlock contractor={contractorChunks[index] ?? []} nsc={nscChunks[index] ?? []} contractorCapacity={CONTINUATION_CONTRACTOR_CAPACITY} nscCapacity={CONTINUATION_NSC_CAPACITY}/>
+        <WorkforceBlock contractor={workforce.continuations[index]?.contractor ?? []} nsc={workforce.continuations[index]?.nsc ?? []} contractorCapacity={CONTINUATION_CONTRACTOR_CAPACITY} nscCapacity={CONTINUATION_NSC_CAPACITY}/>
         <div className="page-number">{index + 2}/{totalPages}</div>
       </article>)}
     </>)}

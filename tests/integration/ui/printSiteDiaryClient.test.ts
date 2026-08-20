@@ -503,4 +503,50 @@ describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
     expect(getHTML()).not.toContain('Gagal memuatkan laporan');
     expect(isButtonDisabled()).toBe(false);
   });
+
+  it('T23: historical exact workforce overflow preserves identity and page contract', async () => {
+    mockSearchParams.set('id', 'sd-historical');
+    const manpower = Array.from({ length: 16 }, (_, index) => ({
+      tradeName: `Trade ${String(index + 1).padStart(2, '0')}`,
+      bumiCount: index + 1,
+      nonBumiCount: index + 2,
+      foreignCount: index + 3,
+    }));
+    fetchMock.mockResolvedValueOnce(json({
+      data: makeDto({
+        siteDiaryId: 'sd-historical',
+        activityId: 'act-historical',
+        revisionId: 'rev-superseded',
+        revisionNumber: 2,
+        revisionStatus: 'SUPERSEDED',
+        isCurrentRevision: false,
+        isHistorical: true,
+        activityDate: '2025-03-04',
+        wbs: 'HIST-7.2',
+        taskName: 'Historical exact task',
+        manpower,
+      }),
+    }));
+
+    await act(async () => { render(); });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-historical/print');
+    expect(getHTML()).not.toContain('/api/reports');
+    expect(getHTML()).toContain('Historical exact task');
+    expect(getHTML()).toContain('HIST-7.2');
+    expect(container.querySelectorAll('.continuation-page')).toHaveLength(2);
+    expect(Array.from(container.querySelectorAll('.continuation-label')).map(node => node.textContent)).toEqual([
+      'SAMBUNGAN — 04/03/2025',
+      'SAMBUNGAN — 04/03/2025',
+    ]);
+    expect(Array.from(container.querySelectorAll('.page-number')).map(node => node.textContent)).toEqual([
+      '1/3',
+      '2/3',
+      '3/3',
+    ]);
+    for (const row of manpower) {
+      expect(getHTML().match(new RegExp(`>${row.tradeName}<`, 'g'))).toHaveLength(1);
+    }
+  });
 });
