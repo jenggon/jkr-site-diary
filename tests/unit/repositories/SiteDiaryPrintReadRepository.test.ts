@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   mapRawRowToPrintDto,
-  PRINT_DIARY_PROJECTION,
   RawPrintDiaryRow,
   SiteDiaryPrintReadRepository,
+  SiteDiaryPrintReadError,
 } from '@/repositories/SiteDiaryPrintReadRepository';
 import { ActivityStatus, ActivityWeather } from '@/types/activity';
 
@@ -72,36 +72,23 @@ describe('SiteDiaryPrintReadRepository', () => {
       revision_title: 'Rev 2 Approved Baseline',
       status: 'Approved',
     },
-    approval: [
-      {
-        approval_id: 'app-1',
-        approval_status: 'Approved',
-        approval_date: '2026-08-20T10:00:00.000Z',
-        approved_by: 'approver-1',
-        approval_comment: 'Verified on site',
-      },
-    ],
   };
 
-  it('queries exact site_diary_id using canonical PRINT_DIARY_PROJECTION', async () => {
+  it('queries exact site_diary_id using RPC f25_get_site_diary_print_read', async () => {
     const queryBuilder: Record<string, ReturnType<typeof vi.fn>> = {};
-    queryBuilder.select = vi.fn(() => queryBuilder);
-    queryBuilder.eq = vi.fn(() => queryBuilder);
     queryBuilder.maybeSingle = vi.fn().mockResolvedValue({ data: mockRawRow, error: null });
 
     const client = {
-      from: vi.fn((table: string) => {
-        if (table === 'site_diary') return queryBuilder;
-        throw new Error(`Unexpected table ${table}`);
+      rpc: vi.fn((rpcName: string, _args: unknown) => {
+        if (rpcName === 'f25_get_site_diary_print_read') return queryBuilder;
+        throw new Error(`Unexpected rpc ${rpcName}`);
       }),
     };
 
     const repository = new SiteDiaryPrintReadRepository(client as never);
     const result = await repository.getExact(diaryAId, actorId);
 
-    expect(client.from).toHaveBeenCalledWith('site_diary');
-    expect(queryBuilder.select).toHaveBeenCalledWith(PRINT_DIARY_PROJECTION);
-    expect(queryBuilder.eq).toHaveBeenCalledWith('site_diary_id', diaryAId);
+    expect(client.rpc).toHaveBeenCalledWith('f25_get_site_diary_print_read', { p_site_diary_id: diaryAId });
     expect(result.siteDiaryId).toBe(diaryAId);
     expect(result.activityId).toBe('act-1');
     expect(result.programmeId).toBe(programmeId);
@@ -112,7 +99,6 @@ describe('SiteDiaryPrintReadRepository', () => {
     expect(result.taskName).toBe('Substructure Concreting');
     expect(result.isCritical).toBe(true);
     expect(result.manpower).toHaveLength(2);
-    expect(result.approval?.approvalStatus).toBe('Approved');
   });
 
   it('maps VO activity projection accurately', () => {
@@ -158,12 +144,10 @@ describe('SiteDiaryPrintReadRepository', () => {
     };
 
     const queryBuilder: Record<string, ReturnType<typeof vi.fn>> = {};
-    queryBuilder.select = vi.fn(() => queryBuilder);
-    queryBuilder.eq = vi.fn(() => queryBuilder);
     queryBuilder.maybeSingle = vi.fn().mockResolvedValue({ data: historicalRow, error: null });
 
     const client = {
-      from: vi.fn(() => queryBuilder),
+      rpc: vi.fn(() => queryBuilder),
     };
 
     const repository = new SiteDiaryPrintReadRepository(client as never);
@@ -176,33 +160,35 @@ describe('SiteDiaryPrintReadRepository', () => {
     expect(result.isHistorical).toBe(true);
   });
 
-  it('handles null / legacy print_context with safe contract defaults', () => {
+  it('throws error for null print_context (fail closed)', () => {
     const legacyRow: RawPrintDiaryRow = {
       ...mockRawRow,
       print_context: null,
       manpower: null,
     };
 
-    const dto = mapRawRowToPrintDto(legacyRow);
-    expect(dto.printContext).toEqual({
-      location: '',
-      workStartTime: null,
-      workEndTime: null,
-      weatherCondition: null,
-      rainStartTime: null,
-      rainEndTime: null,
-      contractorScope: 'CONTRACTOR',
-    });
-    expect(dto.manpower).toEqual([]);
+    expect(() => mapRawRowToPrintDto(legacyRow)).toThrowError(SiteDiaryPrintReadError);
+    expect(() => mapRawRowToPrintDto(legacyRow)).toThrowError('Malformed print_context in database record');
+  });
+  
+  it('throws error for invalid contractor_scope (fail closed)', () => {
+    const legacyRow: RawPrintDiaryRow = {
+      ...mockRawRow,
+      print_context: {
+         ...mockRawRow.print_context!,
+         contractor_scope: 'INVALID_SCOPE' as never,
+      },
+    };
+
+    expect(() => mapRawRowToPrintDto(legacyRow)).toThrowError(SiteDiaryPrintReadError);
+    expect(() => mapRawRowToPrintDto(legacyRow)).toThrowError('Invalid contractor_scope: INVALID_SCOPE');
   });
 
   it('throws 404 when site diary record does not exist', async () => {
     const queryBuilder: Record<string, ReturnType<typeof vi.fn>> = {};
-    queryBuilder.select = vi.fn(() => queryBuilder);
-    queryBuilder.eq = vi.fn(() => queryBuilder);
     queryBuilder.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
-    const client = { from: vi.fn(() => queryBuilder) };
+    const client = { rpc: vi.fn(() => queryBuilder) };
     const repository = new SiteDiaryPrintReadRepository(client as never);
 
     await expect(repository.getExact('non-existent-id', actorId)).rejects.toMatchObject({
@@ -211,73 +197,19 @@ describe('SiteDiaryPrintReadRepository', () => {
     });
   });
 
-  it('throws 403 when non-creator actor has no active programme membership', async () => {
-    const rowOtherCreator: RawPrintDiaryRow = {
-      ...mockRawRow,
-      programme: {
-        ...mockRawRow.programme!,
-        created_by: 'different-creator',
-      },
-    };
+  it('throws 403 on RPC P0001 CANONICAL_CONTEXT_MISMATCH error', async () => {
+    const queryBuilder: Record<string, ReturnType<typeof vi.fn>> = {};
+    queryBuilder.maybeSingle = vi.fn().mockResolvedValue({ 
+      data: null, 
+      error: { code: 'P0001', message: 'CANONICAL_CONTEXT_MISMATCH' } 
+    });
 
-    const diaryQuery: Record<string, ReturnType<typeof vi.fn>> = {};
-    diaryQuery.select = vi.fn(() => diaryQuery);
-    diaryQuery.eq = vi.fn(() => diaryQuery);
-    diaryQuery.maybeSingle = vi.fn().mockResolvedValue({ data: rowOtherCreator, error: null });
-
-    const membershipQuery: Record<string, ReturnType<typeof vi.fn>> = {};
-    membershipQuery.select = vi.fn(() => membershipQuery);
-    membershipQuery.eq = vi.fn(() => membershipQuery);
-    membershipQuery.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
-
-    const client = {
-      from: vi.fn((table: string) => {
-        if (table === 'site_diary') return diaryQuery;
-        if (table === 'programme_membership') return membershipQuery;
-        throw new Error(`Unexpected table ${table}`);
-      }),
-    };
-
+    const client = { rpc: vi.fn(() => queryBuilder) };
     const repository = new SiteDiaryPrintReadRepository(client as never);
 
-    await expect(repository.getExact(diaryAId, 'unauthorized-user')).rejects.toMatchObject({
+    await expect(repository.getExact(diaryAId, actorId)).rejects.toMatchObject({
       status: 403,
-      message: 'Forbidden: Not authorized for programme',
+      message: 'Forbidden: Not authorized for programme or context mismatch',
     });
-  });
-
-  it('authorizes non-creator actor who holds active programme membership', async () => {
-    const rowOtherCreator: RawPrintDiaryRow = {
-      ...mockRawRow,
-      programme: {
-        ...mockRawRow.programme!,
-        created_by: 'different-creator',
-      },
-    };
-
-    const diaryQuery: Record<string, ReturnType<typeof vi.fn>> = {};
-    diaryQuery.select = vi.fn(() => diaryQuery);
-    diaryQuery.eq = vi.fn(() => diaryQuery);
-    diaryQuery.maybeSingle = vi.fn().mockResolvedValue({ data: rowOtherCreator, error: null });
-
-    const membershipQuery: Record<string, ReturnType<typeof vi.fn>> = {};
-    membershipQuery.select = vi.fn(() => membershipQuery);
-    membershipQuery.eq = vi.fn(() => membershipQuery);
-    membershipQuery.maybeSingle = vi.fn().mockResolvedValue({
-      data: { membership_id: 'mem-1' },
-      error: null,
-    });
-
-    const client = {
-      from: vi.fn((table: string) => {
-        if (table === 'site_diary') return diaryQuery;
-        if (table === 'programme_membership') return membershipQuery;
-        throw new Error(`Unexpected table ${table}`);
-      }),
-    };
-
-    const repository = new SiteDiaryPrintReadRepository(client as never);
-    const result = await repository.getExact(diaryAId, 'authorized-member');
-    expect(result.siteDiaryId).toBe(diaryAId);
   });
 });

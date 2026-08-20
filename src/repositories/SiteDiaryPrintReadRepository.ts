@@ -2,7 +2,6 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { ActivityStatus, ActivityWeather } from '@/types/activity';
 import { SiteDiaryContractorScope, SiteDiaryManpower, SiteDiaryPrintContext } from '@/types/siteDiary';
 import {
-  SiteDiaryPrintApprovalDto,
   SiteDiaryPrintContextDto,
   SiteDiaryPrintDto,
   SiteDiaryPrintManpowerItem,
@@ -18,25 +17,6 @@ export class SiteDiaryPrintReadError extends Error {
   }
 }
 
-export const PRINT_DIARY_PROJECTION = `
-  site_diary_id, programme_id, revision_id, activity_id, activity_date,
-  weather, notes, status, manpower, print_context, submitted_by, submitted_at, updated_at,
-  activity (
-    activity_id, source_type, task_id, vo_item_id, subtask,
-    subtask_display_name, status, actual_start_date, completed_date,
-    task (task_id, task_name, task_uid, wbs, outline_number, is_critical),
-    vo_item (vo_item_id, vo_reference, line_item, description)
-  ),
-  programme (
-    programme_id, programme_code, programme_name, current_revision_id, created_by
-  ),
-  programme_revision (
-    revision_id, revision_no, revision_title, status
-  ),
-  approval (
-    approval_id, approval_status, approval_date, approved_by, approval_comment
-  )
-`;
 
 export interface RawPrintDiaryRow {
   readonly site_diary_id: string;
@@ -90,13 +70,6 @@ export interface RawPrintDiaryRow {
     readonly revision_title: string;
     readonly status: string;
   } | null;
-  readonly approval: Array<{
-    readonly approval_id: string;
-    readonly approval_status: string;
-    readonly approval_date: string | null;
-    readonly approved_by: string | null;
-    readonly approval_comment: string | null;
-  }> | null;
 }
 
 export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
@@ -140,15 +113,28 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
     isCritical = Boolean(activity?.task?.is_critical);
   }
 
+  // Explicit fail-closed validation for print context
   const rawCtx = row.print_context;
+  if (!rawCtx || typeof rawCtx !== 'object') {
+    throw new SiteDiaryPrintReadError(500, 'Malformed print_context in database record');
+  }
+  
+  const contractorScope = typeof rawCtx.contractor_scope === 'string' 
+    ? rawCtx.contractor_scope 
+    : 'CONTRACTOR';
+    
+  if (contractorScope !== 'CONTRACTOR' && contractorScope !== 'NSC') {
+     throw new SiteDiaryPrintReadError(500, `Invalid contractor_scope: ${contractorScope}`);
+  }
+
   const printContext: SiteDiaryPrintContextDto = {
-    location: typeof rawCtx?.location === 'string' ? rawCtx.location : '',
-    workStartTime: typeof rawCtx?.work_start_time === 'string' ? rawCtx.work_start_time : null,
-    workEndTime: typeof rawCtx?.work_end_time === 'string' ? rawCtx.work_end_time : null,
-    weatherCondition: rawCtx?.weather_condition ?? null,
-    rainStartTime: typeof rawCtx?.rain_start_time === 'string' ? rawCtx.rain_start_time : null,
-    rainEndTime: typeof rawCtx?.rain_end_time === 'string' ? rawCtx.rain_end_time : null,
-    contractorScope: (rawCtx?.contractor_scope === 'NSC' ? 'NSC' : 'CONTRACTOR') as SiteDiaryContractorScope,
+    location: typeof rawCtx.location === 'string' ? rawCtx.location : '',
+    workStartTime: typeof rawCtx.work_start_time === 'string' ? rawCtx.work_start_time : null,
+    workEndTime: typeof rawCtx.work_end_time === 'string' ? rawCtx.work_end_time : null,
+    weatherCondition: rawCtx.weather_condition ?? null,
+    rainStartTime: typeof rawCtx.rain_start_time === 'string' ? rawCtx.rain_start_time : null,
+    rainEndTime: typeof rawCtx.rain_end_time === 'string' ? rawCtx.rain_end_time : null,
+    contractorScope: contractorScope as SiteDiaryContractorScope,
   };
 
   const manpower: SiteDiaryPrintManpowerItem[] = Array.isArray(row.manpower)
@@ -161,18 +147,6 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
           foreignCount: Number(item.foreign_count ?? 0),
         }))
     : [];
-
-  const approvalList = Array.isArray(row.approval) ? row.approval : [];
-  const latestApproval = approvalList.length > 0 ? approvalList[0] : null;
-  const approval: SiteDiaryPrintApprovalDto | null = latestApproval
-    ? {
-        approvalId: latestApproval.approval_id,
-        approvalStatus: latestApproval.approval_status,
-        approvalDate: latestApproval.approval_date,
-        approvedBy: latestApproval.approved_by,
-        approvalComment: latestApproval.approval_comment,
-      }
-    : null;
 
   return {
     siteDiaryId: row.site_diary_id,
@@ -200,28 +174,31 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
     submittedBy: row.submitted_by,
     submittedAt: row.submitted_at,
     updatedAt: row.updated_at,
-    ...(approval ? { approval } : {}),
   };
 }
 
 export class SiteDiaryPrintReadRepository {
   public constructor(private readonly client: SupabaseClient) {}
 
-  public async getExact(siteDiaryId: string, actorId: string): Promise<SiteDiaryPrintDto> {
+  public async getExact(siteDiaryId: string, _actorId: string): Promise<SiteDiaryPrintDto> {
     const { data, error } = await this.client
-      .from('site_diary')
-      .select(PRINT_DIARY_PROJECTION)
-      .eq('site_diary_id', siteDiaryId)
+      .rpc('f25_get_site_diary_print_read', { p_site_diary_id: siteDiaryId })
       .maybeSingle();
 
     if (error) {
-      if (error.code === 'PT403' || error.message?.includes('UNAUTHORIZED') || error.message?.includes('FORBIDDEN')) {
-        throw new SiteDiaryPrintReadError(403, 'Forbidden: Not authorized for programme');
+      if (
+        error.code === 'PT403' || 
+        error.message?.includes('UNAUTHORIZED') || 
+        error.message?.includes('FORBIDDEN') ||
+        error.message?.includes('CANONICAL_CONTEXT_MISMATCH') ||
+        (error.code === 'P0001' && error.message?.includes('CANONICAL_CONTEXT_MISMATCH'))
+      ) {
+        throw new SiteDiaryPrintReadError(403, 'Forbidden: Not authorized for programme or context mismatch');
       }
-      if (error.code === 'PT404' || error.message?.includes('NOT_FOUND')) {
+      if (error.code === 'PT404' || error.message?.includes('NOT_FOUND') || error.message?.includes('PT404_SITE_DIARY_NOT_FOUND')) {
         throw new SiteDiaryPrintReadError(404, 'Site diary record not found');
       }
-      throw new SiteDiaryPrintReadError(500, `Failed to retrieve Site Diary print record: ${error.message}`);
+      throw new SiteDiaryPrintReadError(500, `Failed to retrieve Site Diary print record`);
     }
 
     if (!data) {
@@ -229,23 +206,6 @@ export class SiteDiaryPrintReadRepository {
     }
 
     const row = data as unknown as RawPrintDiaryRow;
-
-    // Verify Programme-level authorization
-    const isCreator = row.programme?.created_by === actorId;
-    if (!isCreator) {
-      const { data: member, error: memberErr } = await this.client
-        .from('programme_membership')
-        .select('membership_id')
-        .eq('programme_id', row.programme_id)
-        .eq('user_id', actorId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (memberErr || !member) {
-        throw new SiteDiaryPrintReadError(403, 'Forbidden: Not authorized for programme');
-      }
-    }
-
     return mapRawRowToPrintDto(row);
   }
 }

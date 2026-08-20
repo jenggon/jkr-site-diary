@@ -110,7 +110,7 @@ describe('GET /api/site-diary/[siteDiaryId]/print', () => {
     expect(body.error).toBe('Site diary record not found');
   });
 
-  it('maps unexpected repository errors to 500 status', async () => {
+  it('maps unexpected repository errors to 500 status without leaking raw message', async () => {
     mocks.getExact.mockRejectedValue(new Error('Unexpected DB timeout'));
 
     const response = await GET(
@@ -120,6 +120,6 @@ describe('GET /api/site-diary/[siteDiaryId]/print', () => {
 
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body.error).toBe('Unexpected DB timeout');
+    expect(body.error).toBe('Internal server error occurred while retrieving print data');
   });
 });

@@ -18,14 +18,6 @@ export interface SiteDiaryPrintContextDto {
   readonly contractorScope: SiteDiaryContractorScope;
 }
 
-export interface SiteDiaryPrintApprovalDto {
-  readonly approvalId: string;
-  readonly approvalStatus: string;
-  readonly approvalDate: string | null;
-  readonly approvedBy: string | null;
-  readonly approvalComment: string | null;
-}
-
 export interface SiteDiaryPrintDto {
   readonly siteDiaryId: string;
   readonly activityId: string;
@@ -52,5 +44,4 @@ export interface SiteDiaryPrintDto {
   readonly submittedBy: string;
   readonly submittedAt: string;
   readonly updatedAt: string | null;
-  readonly approval?: SiteDiaryPrintApprovalDto | null;
 }

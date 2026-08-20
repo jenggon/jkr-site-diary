@@ -35,7 +35,8 @@ export async function GET(request: Request, context: RouteParams) {
     if (error instanceof SiteDiaryPrintReadError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    const message = error instanceof Error ? error.message : 'Failed to retrieve site diary print data';
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Do not return raw infrastructure/database error messages in HTTP 500
+    console.error('Unhandled Site Diary Print Error:', error);
+    return NextResponse.json({ error: 'Internal server error occurred while retrieving print data' }, { status: 500 });
   }
 }
