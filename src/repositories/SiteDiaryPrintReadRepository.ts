@@ -67,7 +67,7 @@ export interface RawPrintDiaryRow {
   readonly programme_revision: {
     readonly revision_id: string;
     readonly revision_no: number;
-    readonly revision_title: string;
+    readonly revision_name: string | null;
     readonly status: string;
   } | null;
 }
@@ -77,40 +77,72 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
   const programme = row.programme;
   const revision = row.programme_revision;
 
-  const isCurrentRevision = Boolean(
-    programme && revision && programme.current_revision_id === revision.revision_id
-  );
+  if (!programme || !programme.programme_id) {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context missing: programme');
+  }
+  if (programme.programme_id !== row.programme_id) {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context mismatch: programme_id');
+  }
+
+  if (!revision || !revision.revision_id) {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context missing: revision');
+  }
+  if (revision.revision_id !== row.revision_id) {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context mismatch: revision_id');
+  }
+  if (typeof revision.revision_no !== 'number') {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: revision_no');
+  }
+  if (typeof revision.status !== 'string') {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: revision status');
+  }
+
+  if (!activity || !activity.activity_id) {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context missing: activity');
+  }
+  if (activity.activity_id !== row.activity_id) {
+    throw new SiteDiaryPrintReadError(500, 'Canonical context mismatch: activity_id');
+  }
+  if (activity.source_type !== 'MSP' && activity.source_type !== 'VO') {
+    throw new SiteDiaryPrintReadError(500, `Canonical context invalid: activity source_type`);
+  }
+
+  const isCurrentRevision = Boolean(programme.current_revision_id === revision.revision_id);
   const isHistorical = !isCurrentRevision;
 
-  let sourceType: 'MSP' | 'VO' = 'MSP';
+  let sourceType: 'MSP' | 'VO' = activity.source_type;
   let wbs = '';
   let taskName = '';
   let isCritical = false;
 
-  if (activity?.source_type === 'VO') {
-    sourceType = 'VO';
-    wbs = activity.vo_item?.vo_reference || 'VO';
+  if (sourceType === 'VO') {
+    if (!activity.vo_item || !activity.vo_item.vo_item_id) {
+      throw new SiteDiaryPrintReadError(500, 'Canonical context missing: vo_item');
+    }
+    wbs = activity.vo_item.vo_reference;
     taskName =
       activity.subtask_display_name ||
       activity.subtask ||
-      activity.vo_item?.description ||
-      activity.vo_item?.line_item ||
+      activity.vo_item.description ||
+      activity.vo_item.line_item ||
       'VO Item';
     isCritical = false;
   } else {
-    sourceType = 'MSP';
+    if (!activity.task || !activity.task.task_id) {
+      throw new SiteDiaryPrintReadError(500, 'Canonical context missing: task');
+    }
     wbs =
-      activity?.task?.wbs ||
-      activity?.task?.outline_number ||
-      (activity?.task?.task_uid !== undefined && activity?.task?.task_uid !== null
+      activity.task.wbs ||
+      activity.task.outline_number ||
+      (activity.task.task_uid !== undefined && activity.task.task_uid !== null
         ? String(activity.task.task_uid)
         : '');
     taskName =
-      activity?.task?.task_name ||
-      activity?.subtask_display_name ||
-      activity?.subtask ||
+      activity.task.task_name ||
+      activity.subtask_display_name ||
+      activity.subtask ||
       'Activity';
-    isCritical = Boolean(activity?.task?.is_critical);
+    isCritical = Boolean(activity.task.is_critical);
   }
 
   // Explicit fail-closed validation for print context
@@ -121,7 +153,7 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
   
   const contractorScope = typeof rawCtx.contractor_scope === 'string' 
     ? rawCtx.contractor_scope 
-    : 'CONTRACTOR';
+    : undefined;
     
   if (contractorScope !== 'CONTRACTOR' && contractorScope !== 'NSC') {
      throw new SiteDiaryPrintReadError(500, `Invalid contractor_scope: ${contractorScope}`);
@@ -138,31 +170,37 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
   };
 
   const manpower: SiteDiaryPrintManpowerItem[] = Array.isArray(row.manpower)
-    ? row.manpower
-        .filter((item): item is SiteDiaryManpower => Boolean(item && typeof item.trade_name === 'string'))
-        .map((item) => ({
+    ? row.manpower.map((item) => {
+        if (!item || typeof item.trade_name !== 'string' || item.trade_name.trim() === '') {
+          throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: manpower trade_name missing');
+        }
+        if (typeof item.bumi_count !== 'number' || typeof item.non_bumi_count !== 'number' || typeof item.foreign_count !== 'number') {
+          throw new SiteDiaryPrintReadError(500, 'Canonical context malformed: manpower count missing or invalid');
+        }
+        return {
           tradeName: item.trade_name.trim(),
-          bumiCount: Number(item.bumi_count ?? 0),
-          nonBumiCount: Number(item.non_bumi_count ?? 0),
-          foreignCount: Number(item.foreign_count ?? 0),
-        }))
+          bumiCount: item.bumi_count,
+          nonBumiCount: item.non_bumi_count,
+          foreignCount: item.foreign_count,
+        };
+      })
     : [];
 
   return {
     siteDiaryId: row.site_diary_id,
     activityId: row.activity_id,
     programmeId: row.programme_id,
-    programmeName: programme?.programme_name || '',
-    programmeCode: programme?.programme_code || '',
+    programmeName: programme.programme_name,
+    programmeCode: programme.programme_code,
     revisionId: row.revision_id,
-    revisionNumber: revision?.revision_no ?? 0,
-    revisionTitle: revision?.revision_title || '',
-    revisionStatus: revision?.status || '',
+    revisionNumber: revision.revision_no,
+    revisionTitle: revision.revision_name || '',
+    revisionStatus: revision.status,
     isCurrentRevision,
     isHistorical,
     activityDate: row.activity_date,
     diaryStatus: row.status,
-    activityStatus: activity?.status ?? row.status ?? null,
+    activityStatus: activity.status ?? row.status ?? null,
     sourceType,
     wbs,
     taskName,
@@ -189,14 +227,15 @@ export class SiteDiaryPrintReadRepository {
       if (
         error.code === 'PT403' || 
         error.message?.includes('UNAUTHORIZED') || 
-        error.message?.includes('FORBIDDEN') ||
-        error.message?.includes('CANONICAL_CONTEXT_MISMATCH') ||
-        (error.code === 'P0001' && error.message?.includes('CANONICAL_CONTEXT_MISMATCH'))
+        error.message?.includes('FORBIDDEN')
       ) {
-        throw new SiteDiaryPrintReadError(403, 'Forbidden: Not authorized for programme or context mismatch');
+        throw new SiteDiaryPrintReadError(403, 'Forbidden: Not authorized for programme');
       }
       if (error.code === 'PT404' || error.message?.includes('NOT_FOUND') || error.message?.includes('PT404_SITE_DIARY_NOT_FOUND')) {
         throw new SiteDiaryPrintReadError(404, 'Site diary record not found');
+      }
+      if (error.code === 'P0001' && error.message?.includes('CANONICAL_CONTEXT_MISMATCH')) {
+        throw new SiteDiaryPrintReadError(500, 'Internal Server Error: Canonical Context Mismatch');
       }
       throw new SiteDiaryPrintReadError(500, `Failed to retrieve Site Diary print record`);
     }

@@ -69,7 +69,7 @@ describe('SiteDiaryPrintReadRepository', () => {
     programme_revision: {
       revision_id: currentRevisionId,
       revision_no: 2,
-      revision_title: 'Rev 2 Approved Baseline',
+      revision_name: 'Rev 2 Approved Baseline',
       status: 'Approved',
     },
   };
@@ -102,8 +102,9 @@ describe('SiteDiaryPrintReadRepository', () => {
   });
 
   it('maps VO activity projection accurately', () => {
-    const voRow: RawPrintDiaryRow = {
+    const voRow = {
       ...mockRawRow,
+      activity_id: 'act-vo-1',
       activity: {
         activity_id: 'act-vo-1',
         source_type: 'VO',
@@ -122,7 +123,7 @@ describe('SiteDiaryPrintReadRepository', () => {
           description: 'Construct additional pile cap due to ground variation',
         },
       },
-    };
+    } as unknown as RawPrintDiaryRow;
 
     const dto = mapRawRowToPrintDto(voRow);
     expect(dto.sourceType).toBe('VO');
@@ -138,7 +139,7 @@ describe('SiteDiaryPrintReadRepository', () => {
       programme_revision: {
         revision_id: supersededRevisionId,
         revision_no: 1,
-        revision_title: 'Rev 1 Original Baseline',
+        revision_name: 'Rev 1 Original Baseline',
         status: 'Superseded',
       },
     };
@@ -197,7 +198,7 @@ describe('SiteDiaryPrintReadRepository', () => {
     });
   });
 
-  it('throws 403 on RPC P0001 CANONICAL_CONTEXT_MISMATCH error', async () => {
+  it('throws 500 on RPC P0001 CANONICAL_CONTEXT_MISMATCH error', async () => {
     const queryBuilder: Record<string, ReturnType<typeof vi.fn>> = {};
     queryBuilder.maybeSingle = vi.fn().mockResolvedValue({ 
       data: null, 
@@ -208,8 +209,172 @@ describe('SiteDiaryPrintReadRepository', () => {
     const repository = new SiteDiaryPrintReadRepository(client as never);
 
     await expect(repository.getExact(diaryAId, actorId)).rejects.toMatchObject({
-      status: 403,
-      message: 'Forbidden: Not authorized for programme or context mismatch',
+      status: 500,
+      message: 'Internal Server Error: Canonical Context Mismatch',
     });
+  });
+});
+
+describe('mapRawRowToPrintDto Fail Closed Behavior', () => {
+  const baseRawRow: RawPrintDiaryRow = {
+    site_diary_id: 'diary-1',
+    programme_id: 'prog-1',
+    revision_id: 'rev-1',
+    activity_id: 'act-1',
+    activity_date: '2026-08-20',
+    weather: ActivityWeather.Morning,
+    notes: '',
+    status: ActivityStatus.InProgress,
+    manpower: [],
+    print_context: {
+      location: 'Section A',
+      work_start_time: '08:00',
+      work_end_time: '17:00',
+      weather_condition: 'ELOK',
+      rain_start_time: null,
+      rain_end_time: null,
+      contractor_scope: 'CONTRACTOR',
+    },
+    submitted_by: 'actor-1',
+    submitted_at: '2026-08-20T08:00:00.000Z',
+    updated_at: null,
+    activity: {
+      activity_id: 'act-1',
+      source_type: 'MSP',
+      task_id: 'task-1',
+      vo_item_id: null,
+      subtask: 'Subtask 1',
+      subtask_display_name: 'Subtask 1 Display',
+      status: ActivityStatus.InProgress,
+      actual_start_date: '2026-08-19',
+      completed_date: null,
+      task: {
+        task_id: 'task-1',
+        task_name: 'Task 1',
+        task_uid: 1,
+        wbs: '1.1',
+        outline_number: '1.1',
+        is_critical: false,
+      },
+      vo_item: null,
+    },
+    programme: {
+      programme_id: 'prog-1',
+      programme_code: 'P1',
+      programme_name: 'Programme 1',
+      current_revision_id: 'rev-1',
+      created_by: 'actor-1',
+    },
+    programme_revision: {
+      revision_id: 'rev-1',
+      revision_no: 1,
+      revision_name: 'Rev 1',
+      status: 'Approved',
+    },
+  };
+
+  const cases = [
+    {
+      name: 'missing Programme',
+      mod: { programme: null },
+      err: 'Canonical context missing: programme',
+    },
+    {
+      name: 'Programme ID mismatch',
+      mod: { programme: { ...baseRawRow.programme!, programme_id: 'wrong-prog' } },
+      err: 'Canonical context mismatch: programme_id',
+    },
+    {
+      name: 'missing Revision',
+      mod: { programme_revision: null },
+      err: 'Canonical context missing: revision',
+    },
+    {
+      name: 'Revision ID mismatch',
+      mod: { programme_revision: { ...baseRawRow.programme_revision!, revision_id: 'wrong-rev' } },
+      err: 'Canonical context mismatch: revision_id',
+    },
+    {
+      name: 'missing Activity',
+      mod: { activity: null },
+      err: 'Canonical context missing: activity',
+    },
+    {
+      name: 'invalid source_type',
+      mod: { activity: { ...baseRawRow.activity!, source_type: 'INVALID' as never } },
+      err: 'Canonical context invalid: activity source_type',
+    },
+    {
+      name: 'MSP without Task',
+      mod: { activity: { ...baseRawRow.activity!, source_type: 'MSP', task: null } },
+      err: 'Canonical context missing: task',
+    },
+    {
+      name: 'VO without VO Item',
+      mod: { activity: { ...baseRawRow.activity!, source_type: 'VO', vo_item: null } },
+      err: 'Canonical context missing: vo_item',
+    },
+    {
+      name: 'malformed print_context',
+      mod: { print_context: null },
+      err: 'Malformed print_context in database record',
+    },
+    {
+      name: 'malformed manpower entry (missing trade_name)',
+      mod: { manpower: [{ trade_name: '', bumi_count: 0, non_bumi_count: 0, foreign_count: 0 }] },
+      err: 'Canonical context malformed: manpower trade_name missing',
+    },
+    {
+      name: 'malformed manpower count',
+      mod: { manpower: [{ trade_name: 'Trade', bumi_count: null, non_bumi_count: 0, foreign_count: 0 }] },
+      err: 'Canonical context malformed: manpower count missing or invalid',
+    },
+  ];
+
+  cases.forEach(({ name, mod, err }) => {
+    it(`fails closed on ${name}`, () => {
+      const row = { ...baseRawRow, ...mod } as unknown as RawPrintDiaryRow;
+      expect(() => mapRawRowToPrintDto(row)).toThrow(err);
+    });
+  });
+
+  it('maps valid MSP successfully', () => {
+    const dto = mapRawRowToPrintDto(baseRawRow);
+    expect(dto.sourceType).toBe('MSP');
+    expect(dto.wbs).toBe('1.1');
+    expect(dto.revisionTitle).toBe('Rev 1');
+  });
+
+  it('maps valid VO successfully', () => {
+    const row = {
+      ...baseRawRow,
+      activity: {
+        ...baseRawRow.activity!,
+        source_type: 'VO',
+        task: null,
+        vo_item: {
+          vo_item_id: 'vo-1',
+          vo_reference: 'VO-1',
+          line_item: 'Line 1',
+          description: 'Desc',
+        },
+      },
+    } as unknown as RawPrintDiaryRow;
+    const dto = mapRawRowToPrintDto(row);
+    expect(dto.sourceType).toBe('VO');
+    expect(dto.wbs).toBe('VO-1');
+  });
+
+  it('maps valid historical record successfully', () => {
+    const row = {
+      ...baseRawRow,
+      programme: {
+        ...baseRawRow.programme!,
+        current_revision_id: 'rev-2',
+      },
+    } as unknown as RawPrintDiaryRow;
+    const dto = mapRawRowToPrintDto(row);
+    expect(dto.isHistorical).toBe(true);
+    expect(dto.isCurrentRevision).toBe(false);
   });
 });

@@ -11,15 +11,11 @@ DECLARE
     v_pm_id uuid := (SELECT role_id FROM "public"."role" WHERE role_code = 'PROJECT_MANAGER');
     v_re_id uuid := (SELECT role_id FROM "public"."role" WHERE role_code = 'RESIDENT_ENGINEER');
     v_ss_id uuid := (SELECT role_id FROM "public"."role" WHERE role_code = 'SITE_SUPERVISOR');
-    v_ct_id uuid := (SELECT role_id FROM "public"."role" WHERE role_code = 'CONTRACTOR');
-    v_vi_id uuid := (SELECT role_id FROM "public"."role" WHERE role_code = 'VIEWER');
     v_print_read uuid := (SELECT permission_id FROM "public"."permission" WHERE permission_code = 'SITE_DIARY_PRINT_READ');
 BEGIN
     INSERT INTO "public"."role_permission" (role_id, permission_id) VALUES (v_pm_id, v_print_read) ON CONFLICT DO NOTHING;
     INSERT INTO "public"."role_permission" (role_id, permission_id) VALUES (v_re_id, v_print_read) ON CONFLICT DO NOTHING;
     INSERT INTO "public"."role_permission" (role_id, permission_id) VALUES (v_ss_id, v_print_read) ON CONFLICT DO NOTHING;
-    INSERT INTO "public"."role_permission" (role_id, permission_id) VALUES (v_ct_id, v_print_read) ON CONFLICT DO NOTHING;
-    INSERT INTO "public"."role_permission" (role_id, permission_id) VALUES (v_vi_id, v_print_read) ON CONFLICT DO NOTHING;
 END;
 $$;
 
@@ -46,10 +42,22 @@ BEGIN
         sd.revision_id,
         sd.activity_id,
         a.programme_id AS act_prog_id,
-        a.revision_id AS act_rev_id
+        a.revision_id AS act_rev_id,
+        pr.programme_id AS sd_rev_prog_id,
+        t.programme_id AS task_prog_id,
+        t.revision_id AS task_rev_id,
+        v.programme_id AS vo_prog_id,
+        v.revision_id AS vo_rev_id,
+        p.current_revision_id,
+        curr_rev.programme_id AS curr_rev_prog_id
     INTO v_site_diary_record
     FROM "public"."site_diary" sd
     JOIN "public"."activity" a ON sd.activity_id = a.activity_id
+    JOIN "public"."programme" p ON sd.programme_id = p.programme_id
+    JOIN "public"."programme_revision" pr ON sd.revision_id = pr.revision_id
+    LEFT JOIN "public"."task" t ON a.task_id = t.task_id
+    LEFT JOIN "public"."vo_item" v ON a.vo_item_id = v.vo_item_id
+    LEFT JOIN "public"."programme_revision" curr_rev ON p.current_revision_id = curr_rev.revision_id
     WHERE sd.site_diary_id = p_site_diary_id;
 
     IF v_site_diary_record IS NULL THEN
@@ -58,7 +66,12 @@ BEGIN
 
     -- Canonical context equality: fail closed unless relationships agree
     IF v_site_diary_record.programme_id != v_site_diary_record.act_prog_id OR
-       v_site_diary_record.revision_id != v_site_diary_record.act_rev_id THEN
+       v_site_diary_record.revision_id != v_site_diary_record.act_rev_id OR
+       v_site_diary_record.programme_id != v_site_diary_record.sd_rev_prog_id OR
+       (v_site_diary_record.task_prog_id IS NOT NULL AND (v_site_diary_record.programme_id != v_site_diary_record.task_prog_id OR v_site_diary_record.revision_id != v_site_diary_record.task_rev_id)) OR
+       (v_site_diary_record.vo_prog_id IS NOT NULL AND (v_site_diary_record.programme_id != v_site_diary_record.vo_prog_id OR v_site_diary_record.revision_id != v_site_diary_record.vo_rev_id)) OR
+       (v_site_diary_record.current_revision_id IS NOT NULL AND v_site_diary_record.programme_id != v_site_diary_record.curr_rev_prog_id)
+    THEN
         RAISE EXCEPTION 'CANONICAL_CONTEXT_MISMATCH' USING ERRCODE = 'P0001';
     END IF;
 
@@ -69,7 +82,7 @@ BEGIN
         p_actor_id, v_canonical_programme_id, 'SITE_DIARY_PRINT_READ'
     );
 
-    -- 3. Construct JSON result matching RawPrintDiaryRow (omitting approval)
+    -- 3. Construct JSON result matching RawPrintDiaryRow
     SELECT jsonb_build_object(
         'site_diary_id', sd.site_diary_id,
         'programme_id', sd.programme_id,
@@ -128,7 +141,7 @@ BEGIN
             SELECT jsonb_build_object(
                 'revision_id', pr.revision_id,
                 'revision_no', pr.revision_no,
-                'revision_title', pr.revision_title,
+                'revision_name', pr.revision_name,
                 'status', pr.status
             ) FROM "public"."programme_revision" pr WHERE pr.revision_id = sd.revision_id
         )
@@ -139,6 +152,8 @@ BEGIN
     RETURN v_result;
 END;
 $$;
+
+REVOKE ALL ON FUNCTION "private"."get_site_diary_print_read"(uuid, uuid) FROM PUBLIC, anon, authenticated;
 
 -- 4. Create Public Wrapper
 CREATE OR REPLACE FUNCTION "public"."f25_get_site_diary_print_read"(
