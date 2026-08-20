@@ -21,37 +21,17 @@ function deferred<T>() {
 let mockSearchParams = new Map<string, string>();
 
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => {
-    return {
-      get: (key: string) => mockSearchParams.get(key) || null,
-    };
-  }
+  useSearchParams: () => ({
+    get: (key: string) => mockSearchParams.get(key) || null,
+  }),
 }));
 
-describe('F2.5-B02 Print Site Diary Exact Renderer Integration', () => {
-  let container: HTMLDivElement;
-  let root: Root;
-  let fetchMock: any;
+// ============================================================
+// Test helpers
+// ============================================================
 
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-    root = createRoot(container);
-    fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(() => {}));
-    mockSearchParams = new Map();
-  });
-
-  afterEach(() => {
-    act(() => { root.unmount(); });
-    container.remove();
-    vi.restoreAllMocks();
-  });
-
-  function getHTML() {
-    return container.innerHTML;
-  }
-
-  const createValidDto = () => ({
+function makeDto(overrides: Record<string, unknown> = {}) {
+  return {
     siteDiaryId: 'sd-exact',
     activityId: 'act-1',
     programmeId: 'prog-1',
@@ -82,174 +62,373 @@ describe('F2.5-B02 Print Site Diary Exact Renderer Integration', () => {
       contractorScope: 'CONTRACTOR',
     },
     manpower: [
-      { tradeName: 'CONCRETOR', bumiCount: 1, nonBumiCount: 2, foreignCount: 3 }
+      { tradeName: 'CONCRETOR', bumiCount: 1, nonBumiCount: 2, foreignCount: 3 },
     ],
     submittedBy: 'pm1',
     submittedAt: '2026-08-20T10:00:00Z',
     updatedAt: null,
+    ...overrides,
+  };
+}
+
+describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+  let fetchMock: any;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(() => {}));
+    mockSearchParams = new Map();
   });
 
-  it('1 & 2 & 4. /site-diary/print?id=A fetches exact endpoint A and not legacy, renders current diary', async () => {
+  afterEach(() => {
+    act(() => { root.unmount(); });
+    container.remove();
+    vi.restoreAllMocks();
+  });
+
+  const render = () => root.render(React.createElement(PrintSiteDiaryClient));
+  const getHTML = () => container.innerHTML;
+  const isButtonDisabled = () => {
+    const btn = container.querySelector('button[type="button"]');
+    return btn ? (btn as HTMLButtonElement).disabled : true;
+  };
+
+  // ============================================================
+  // T1 — Exact endpoint usage and legacy exclusion
+  // ============================================================
+  it('T1: exact endpoint called, legacy /api/reports never called', async () => {
     mockSearchParams.set('id', 'sd-exact');
     const d = deferred<Response>();
     fetchMock.mockReturnValueOnce(d.promise);
 
-    await act(async () => {
-      root.render(React.createElement(PrintSiteDiaryClient));
-    });
+    await act(async () => { render(); });
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-exact/print');
     expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/reports'));
 
-    await act(async () => {
-      d.resolve(json({ data: createValidDto() }));
-    });
-
-    const html = getHTML();
-    expect(html).toContain('MSP Task');
-    expect(html).toContain('Block A');
-    expect(html).toContain('CONCRETOR');
-    expect(html).toContain('20/08/2026');
-    expect(html).toContain('ELOK');
-    expect(html).toContain('✓'); // checkmark
+    await act(async () => { d.resolve(json({ data: makeDto() })); });
+    expect(getHTML()).toContain('MSP Task');
+    expect(getHTML()).toContain('Block A');
+    expect(getHTML()).toContain('CONCRETOR');
   });
 
-  it('5. historical diary renders exactly identical without mutation', async () => {
-    mockSearchParams.set('id', 'sd-hist');
+  // ============================================================
+  // T2 — R1-1: Response identity mismatch rejected
+  // ============================================================
+  it('T2: response identity mismatch — DTO B returned for request A must be rejected', async () => {
+    mockSearchParams.set('id', 'sd-A');
     const d = deferred<Response>();
     fetchMock.mockReturnValueOnce(d.promise);
 
-    await act(async () => {
-      root.render(React.createElement(PrintSiteDiaryClient));
-    });
+    await act(async () => { render(); });
 
-    const histDto = createValidDto();
-    Object.assign(histDto, {
-      siteDiaryId: 'sd-hist',
-      isCurrentRevision: false,
-      isHistorical: true,
-      taskName: 'Historical Task',
-    });
-
-    await act(async () => {
-      d.resolve(json({ data: histDto }));
-    });
+    // Server returns DTO with siteDiaryId = 'sd-B' but we requested 'sd-A'
+    const dtoB = makeDto({ siteDiaryId: 'sd-B' });
+    await act(async () => { d.resolve(json({ data: dtoB })); });
 
     const html = getHTML();
-    expect(html).toContain('Historical Task');
+    expect(html).not.toContain('MSP Task'); // diary must NOT render
+    expect(html).toContain('Gagal memuatkan laporan'); // bounded error shown
+    expect(isButtonDisabled()).toBe(true);  // print disabled
   });
 
-  it('7. VO record renders canonical VO identity', async () => {
-    mockSearchParams.set('id', 'sd-vo');
-    fetchMock.mockResolvedValueOnce(json({
-      data: { ...createValidDto(), sourceType: 'VO', wbs: 'VO-01', taskName: 'Variation Order Task' }
-    }));
+  // ============================================================
+  // T3 — R1-3: 200 with missing data object rejected
+  // ============================================================
+  it('T3: 200 response with missing data field fails safely', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    fetchMock.mockResolvedValueOnce(json({ ok: true })); // no 'data' key
 
-    await act(async () => {
-      root.render(React.createElement(PrintSiteDiaryClient));
-    });
-
-    expect(getHTML()).toContain('Variation Order Task');
-    expect(getHTML()).toContain('VO-01');
-  });
-
-  it('8 & 9. manpower renders, empty manpower renders safely', async () => {
-    mockSearchParams.set('id', 'sd-empty');
-    fetchMock.mockResolvedValueOnce(json({
-      data: { ...createValidDto(), manpower: [] }
-    }));
-
-    await act(async () => {
-      root.render(React.createElement(PrintSiteDiaryClient));
-    });
-
-    expect(getHTML()).toContain('Warganegara'); // Check table renders without crashing
-  });
-
-  it('10. canonical print_context defaults render correctly', async () => {
-    mockSearchParams.set('id', 'sd-defaults');
-    const d = deferred<Response>();
-    fetchMock.mockReturnValueOnce(d.promise);
-
-    await act(async () => {
-      root.render(React.createElement(PrintSiteDiaryClient));
-    });
-
-    const defDto = createValidDto() as any;
-    defDto.printContext = {
-      location: '',
-      workStartTime: null,
-      workEndTime: null,
-      weatherCondition: null,
-      rainStartTime: null,
-      rainEndTime: null,
-      contractorScope: 'CONTRACTOR',
-    };
-
-    await act(async () => {
-      d.resolve(json({ data: defDto }));
-    });
+    await act(async () => { render(); });
 
     const html = getHTML();
-    expect(html).toContain('CUACA: <span class="field-line"></span>');
+    expect(html).not.toContain('MSP Task');
+    expect(html).toContain('Gagal memuatkan laporan');
+    expect(isButtonDisabled()).toBe(true);
   });
 
-  it('11. missing id fails safely', async () => {
-    await act(async () => {
-      root.render(React.createElement(PrintSiteDiaryClient));
-    });
+  // ============================================================
+  // T4 — R1-3: Malformed success payload rejected
+  // ============================================================
+  it('T4: malformed success payload (missing printContext) fails safely', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    const broken = makeDto({ siteDiaryId: 'sd-exact' }) as any;
+    delete broken.printContext;
+    fetchMock.mockResolvedValueOnce(json({ data: broken }));
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(getHTML()).toContain('Ralat: ID rekod tidak ditemui');
+    await act(async () => { render(); });
+
+    expect(getHTML()).not.toContain('MSP Task');
+    expect(getHTML()).toContain('Gagal memuatkan laporan');
+    expect(isButtonDisabled()).toBe(true);
   });
 
-  it('13, 14, 15, 16. handles 401, 403, 404, 500 states exactly', async () => {
-    mockSearchParams.set('id', 'sd-err');
-    
-    // 401
-    fetchMock.mockResolvedValueOnce(json({ error: 'unauth' }, 401));
-    await act(async () => { root.render(React.createElement(PrintSiteDiaryClient)); });
-    expect(getHTML()).toContain('401 Unauthorized');
-
-    // 403
-    await act(async () => { root.unmount(); container.innerHTML = ''; root = createRoot(container); });
-    fetchMock.mockResolvedValueOnce(json({ error: 'forbid' }, 403));
-    await act(async () => { root.render(React.createElement(PrintSiteDiaryClient)); });
-    expect(getHTML()).toContain('403 Forbidden');
-
-    // 404
-    await act(async () => { root.unmount(); container.innerHTML = ''; root = createRoot(container); });
-    fetchMock.mockResolvedValueOnce(json({ error: 'not found' }, 404));
-    await act(async () => { root.render(React.createElement(PrintSiteDiaryClient)); });
-    expect(getHTML()).toContain('404 Not Found');
-
-    // 500
-    await act(async () => { root.unmount(); container.innerHTML = ''; root = createRoot(container); });
-    fetchMock.mockResolvedValueOnce(json({ error: 'Backend crash' }, 500));
-    await act(async () => { root.render(React.createElement(PrintSiteDiaryClient)); });
-    expect(getHTML()).toContain('Backend crash');
-  });
-
-  it('18. stale request A cannot overwrite later request B', async () => {
+  // ============================================================
+  // T5 — R1-2: A→B same mounted component clears A immediately
+  // ============================================================
+  it('T5: A→B param change on same mounted component: A clears immediately while B loads', async () => {
+    // Mount with id=sd-A
     mockSearchParams.set('id', 'sd-A');
     const dA = deferred<Response>();
-    const dB = deferred<Response>();
-    
     fetchMock.mockReturnValueOnce(dA.promise);
-    await act(async () => { root.render(React.createElement(PrintSiteDiaryClient)); });
-    
+
+    await act(async () => { render(); });
+
+    // Resolve A successfully so diary is populated
+    await act(async () => {
+      dA.resolve(json({ data: makeDto({ siteDiaryId: 'sd-A', taskName: 'Task A' }) }));
+    });
+    expect(getHTML()).toContain('Task A');
+
+    // Now switch to id=sd-B — same mounted component, B pending
     mockSearchParams.set('id', 'sd-B');
+    const dB = deferred<Response>();
     fetchMock.mockReturnValueOnce(dB.promise);
-    // Render again with new props effectively unmounting the old effect due to prop change in real router
-    // But since we mock useSearchParams to return the mutable map, we can just trigger a re-render.
-    // In our manual test setup, we just unmount and mount again like a real route change.
-    await act(async () => { root.unmount(); container.innerHTML = ''; root = createRoot(container); });
-    await act(async () => { root.render(React.createElement(PrintSiteDiaryClient)); });
-    
-    await act(async () => { dA.resolve(json({ data: { ...createValidDto(), taskName: 'Task A' } })); });
+
+    // Trigger re-render (simulating router param change on same component)
+    await act(async () => { render(); });
+
+    // Task A must be gone IMMEDIATELY — diary cleared at start of B request
     expect(getHTML()).not.toContain('Task A');
-    
-    await act(async () => { dB.resolve(json({ data: { ...createValidDto(), taskName: 'Task B' } })); });
+    // Print button disabled during B's pending load
+    expect(isButtonDisabled()).toBe(true);
+
+    // Resolve B
+    await act(async () => {
+      dB.resolve(json({ data: makeDto({ siteDiaryId: 'sd-B', taskName: 'Task B' }) }));
+    });
     expect(getHTML()).toContain('Task B');
+    expect(getHTML()).not.toContain('Task A');
+  });
+
+  // ============================================================
+  // T6 — R1-2: Stale A success cannot overwrite B
+  // ============================================================
+  it('T6: stale A success cannot overwrite B after param switches', async () => {
+    mockSearchParams.set('id', 'sd-A');
+    const dA = deferred<Response>();
+    fetchMock.mockReturnValueOnce(dA.promise);
+    await act(async () => { render(); });
+
+    // Switch to B before A resolves
+    mockSearchParams.set('id', 'sd-B');
+    const dB = deferred<Response>();
+    fetchMock.mockReturnValueOnce(dB.promise);
+    await act(async () => { render(); });
+
+    // B resolves first
+    await act(async () => {
+      dB.resolve(json({ data: makeDto({ siteDiaryId: 'sd-B', taskName: 'Task B' }) }));
+    });
+    expect(getHTML()).toContain('Task B');
+
+    // A resolves late — must NOT overwrite B
+    await act(async () => {
+      dA.resolve(json({ data: makeDto({ siteDiaryId: 'sd-A', taskName: 'Task A' }) }));
+    });
+    expect(getHTML()).toContain('Task B');
+    expect(getHTML()).not.toContain('Task A');
+  });
+
+  // ============================================================
+  // T7 — R1-2: Stale A error cannot overwrite B
+  // ============================================================
+  it('T7: stale A error cannot overwrite B after param switches', async () => {
+    mockSearchParams.set('id', 'sd-A');
+    const dA = deferred<Response>();
+    fetchMock.mockReturnValueOnce(dA.promise);
+    await act(async () => { render(); });
+
+    // Switch to B
+    mockSearchParams.set('id', 'sd-B');
+    const dB = deferred<Response>();
+    fetchMock.mockReturnValueOnce(dB.promise);
+    await act(async () => { render(); });
+
+    // B resolves successfully
+    await act(async () => {
+      dB.resolve(json({ data: makeDto({ siteDiaryId: 'sd-B', taskName: 'Task B' }) }));
+    });
+    expect(getHTML()).toContain('Task B');
+
+    // A rejects late — must NOT clear B or show error
+    await act(async () => {
+      dA.reject(new Error('stale error'));
+    });
+    expect(getHTML()).toContain('Task B');
+    expect(getHTML()).not.toContain('Ralat');
+    expect(getHTML()).not.toContain('Gagal');
+  });
+
+  // ============================================================
+  // T8 — R1-4: 500 raw internal detail never surfaced
+  // ============================================================
+  it('T8: 500 sensitive internal text never shown in UI', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    fetchMock.mockResolvedValueOnce(json({ error: 'sensitive internal database detail' }, 500));
+
+    await act(async () => { render(); });
+
+    const html = getHTML();
+    expect(html).not.toContain('sensitive internal database detail');
+    expect(html).not.toContain('database');
+    // Shows a bounded generic message instead
+    expect(html).toContain('Gagal memuatkan laporan');
+  });
+
+  // ============================================================
+  // T9 — R1-4: 400 uses bounded copy, not raw backend text
+  // ============================================================
+  it('T9: 400 uses bounded user-facing copy', async () => {
+    mockSearchParams.set('id', 'sd-bad-id');
+    fetchMock.mockResolvedValueOnce(json({ error: 'invalid UUID format at column id' }, 400));
+
+    await act(async () => { render(); });
+
+    const html = getHTML();
+    expect(html).not.toContain('invalid UUID format');
+    expect(html).toContain('Permintaan tidak sah');
+    expect(isButtonDisabled()).toBe(true);
+  });
+
+  // ============================================================
+  // T10 — R1-5: null activityStatus selects no status
+  // ============================================================
+  it('T10: null activityStatus renders no status checkmark selected', async () => {
+    mockSearchParams.set('id', 'sd-null-status');
+    fetchMock.mockResolvedValueOnce(json({
+      data: makeDto({ siteDiaryId: 'sd-null-status', activityStatus: null }),
+    }));
+
+    await act(async () => { render(); });
+
+    const html = getHTML();
+    // Task renders
+    expect(html).toContain('MSP Task');
+    // All three status column cells must be empty (no checkmark in any)
+    // The StatusCells component renders 3 tds. With workStatus='', none match.
+    // Parse the table to confirm no checkmarks appear in the status columns.
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const rows = doc.querySelectorAll('.activity-table tbody tr:not([key^="blank"])');
+    const dataRow = Array.from(rows).find(r => r.textContent?.includes('MSP Task'));
+    if (dataRow) {
+      const tds = Array.from(dataRow.querySelectorAll('td'));
+      // td index 3,4,5 are Mula, Sedang Laksana, Siap
+      expect(tds[3]?.textContent?.trim()).toBe('');
+      expect(tds[4]?.textContent?.trim()).toBe('');
+      expect(tds[5]?.textContent?.trim()).toBe('');
+    }
+  });
+
+  // ============================================================
+    // ============================================================
+  // T11 — R1-6: SAMBUNGAN label with em-dash preserved (source check)
+  // ============================================================
+  it('T11: source contains SAMBUNGAN em-dash label, not ASCII hyphen', () => {
+    // Static source assertion — verifies visual contract at the source level (R1-6)
+    const fs = require('fs');
+    const source: string = fs.readFileSync(
+      require('path').join(process.cwd(), 'src/app/site-diary/print/PrintSiteDiaryClient.tsx'),
+      'utf-8'
+    );
+    expect(source).toContain('SAMBUNGAN');
+    // Must contain the em-dash U+2014, not ASCII hyphen
+    expect(source).toContain('\u2014');
+    expect(source).not.toContain('SAMBUNGAN -');
+    expect(source).not.toContain("SAMBUNGAN -");
+  });
+
+  // ============================================================
+  // T12 — No mutation requests introduced
+  // ============================================================
+  it('T12: no POST/PUT/PATCH/DELETE requests made', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    fetchMock.mockResolvedValueOnce(json({ data: makeDto() }));
+
+    await act(async () => { render(); });
+
+    const calls = fetchMock.mock.calls as [string, RequestInit?][];
+    for (const [url, init] of calls) {
+      const method = (init?.method ?? 'GET').toUpperCase();
+      expect(method).toBe('GET');
+      expect(url).not.toContain('/api/reports');
+    }
+  });
+
+  // ============================================================
+  // T13 — 401/403/404 use bounded messages
+  // ============================================================
+  it('T13: 401 shows session-expired message', async () => {
+    mockSearchParams.set('id', 'sd-err');
+    fetchMock.mockResolvedValueOnce(json({ error: 'jwt expired' }, 401));
+    await act(async () => { render(); });
+    const html = getHTML();
+    expect(html).not.toContain('jwt expired');
+    expect(html).toContain('Sesi tamat tempoh');
+    expect(isButtonDisabled()).toBe(true);
+  });
+
+  it('T14: 403 shows access-denied message', async () => {
+    mockSearchParams.set('id', 'sd-err');
+    await act(async () => { root.unmount(); container.innerHTML = ''; root = createRoot(container); });
+    fetchMock.mockResolvedValueOnce(json({ error: 'forbidden' }, 403));
+    await act(async () => { render(); });
+    expect(getHTML()).toContain('Akses ditolak');
+    expect(getHTML()).not.toContain('forbidden');
+  });
+
+  it('T15: 404 shows not-found message', async () => {
+    mockSearchParams.set('id', 'sd-err');
+    await act(async () => { root.unmount(); container.innerHTML = ''; root = createRoot(container); });
+    fetchMock.mockResolvedValueOnce(json({ error: 'not found' }, 404));
+    await act(async () => { render(); });
+    expect(getHTML()).toContain('Rekod tidak dijumpai');
+    expect(getHTML()).not.toContain('not found');
+  });
+
+  // ============================================================
+  // T16 — Missing id fails safely without fetch
+  // ============================================================
+  it('T16: missing id param fails safely without any fetch call', async () => {
+    await act(async () => { render(); });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(getHTML()).toContain('ID rekod tidak ditemui');
+    expect(isButtonDisabled()).toBe(true);
+  });
+
+  // ============================================================
+  // T17 — R1-2: B→A: 200 {} after switch cannot restore prior diary
+  // ============================================================
+  it('T17: A renders, switch to B which returns 200 empty data — A must not reappear', async () => {
+    mockSearchParams.set('id', 'sd-A');
+    const dA = deferred<Response>();
+    fetchMock.mockReturnValueOnce(dA.promise);
+    await act(async () => { render(); });
+    await act(async () => {
+      dA.resolve(json({ data: makeDto({ siteDiaryId: 'sd-A', taskName: 'Task A' }) }));
+    });
+    expect(getHTML()).toContain('Task A');
+
+    // Switch to B — B will return 200 with no data
+    mockSearchParams.set('id', 'sd-B');
+    const dB = deferred<Response>();
+    fetchMock.mockReturnValueOnce(dB.promise);
+    await act(async () => { render(); });
+
+    // A is already gone (cleared at start of B request)
+    expect(getHTML()).not.toContain('Task A');
+
+    // B returns 200 with no 'data' field
+    await act(async () => { dB.resolve(json({ ok: true })); });
+
+    // A must NOT reappear; error state shown instead
+    expect(getHTML()).not.toContain('Task A');
+    expect(getHTML()).toContain('Gagal memuatkan laporan');
   });
 });

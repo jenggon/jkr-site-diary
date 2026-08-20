@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SiteDiaryPrintDto } from '@/types/siteDiaryPrint';
-
 
 type Manpower = {
   trade_name: string;
@@ -138,9 +137,9 @@ function WeatherClock({ rainStart, rainEnd }: { rainStart: string | null; rainEn
 
 function StatusCells({ status }: { status: string }) {
   return <>
-    <td className="center">{status === 'Mula' ? '✓' : ''}</td>
-    <td className="center">{status === 'Sedang Laksana' ? '✓' : ''}</td>
-    <td className="center">{status === 'Siap' ? '✓' : ''}</td>
+    <td className="center">{status === 'Mula' ? '\u2713' : ''}</td>
+    <td className="center">{status === 'Sedang Laksana' ? '\u2713' : ''}</td>
+    <td className="center">{status === 'Siap' ? '\u2713' : ''}</td>
   </>;
 }
 
@@ -190,48 +189,107 @@ function WorkforceBlock({ contractor, nsc, contractorCapacity, nscCapacity }: { 
   </section>;
 }
 
+// R1-4: Bounded user-facing error messages — never expose arbitrary backend text
+function boundedErrorMessage(status: number, _raw: string | null): string {
+  if (status === 401) return 'Sesi tamat tempoh. Sila log masuk semula.';
+  if (status === 403) return 'Akses ditolak. Anda tidak mempunyai kebenaran untuk melihat rekod ini.';
+  if (status === 404) return 'Rekod tidak dijumpai.';
+  if (status === 400) return 'Permintaan tidak sah. ID rekod tidak boleh diproses.';
+  // 5xx and anything else
+  return 'Gagal memuatkan laporan. Sila cuba lagi.';
+}
+
+// R1-3: Validate the minimum envelope required — prevents silent crash on malformed success
+function validatePrintDto(data: unknown, requestedId: string): data is SiteDiaryPrintDto {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  if (typeof d['siteDiaryId'] !== 'string' || d['siteDiaryId'] === '') return false;
+  // R1-1: Response identity MUST match requested id
+  if (d['siteDiaryId'] !== requestedId) return false;
+  // printContext must be an object (would crash renderer immediately if absent)
+  if (!d['printContext'] || typeof d['printContext'] !== 'object') return false;
+  // manpower must be an array
+  if (!Array.isArray(d['manpower'])) return false;
+  return true;
+}
+
 export default function PrintSiteDiaryClient() {
   const searchParams = useSearchParams();
-  const id = searchParams?.get('id');
+  const id = searchParams?.get('id') ?? null;
 
   const [diary, setDiary] = useState<SiteDiaryPrintDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // R1-2: Track current owned request ID so stale resolutions cannot update state
+  const currentIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!id) {
+      currentIdRef.current = null;
+      setDiary(null);
       setError('ID rekod tidak ditemui');
       setLoading(false);
       return;
     }
 
-    let active = true;
+    // R1-2: Immediately claim ownership — clear stale diary and error before fetching
+    currentIdRef.current = id;
+    setDiary(null);
     setLoading(true);
     setError('');
+
+    let active = true;
+
     fetch(`/api/site-diary/${encodeURIComponent(id)}/print`)
       .then(async (response) => {
         if (!response.ok) {
           const body = await response.json().catch(() => null);
-          if (response.status === 401) throw new Error('401 Unauthorized');
-          if (response.status === 403) throw new Error('403 Forbidden');
-          if (response.status === 404) throw new Error('404 Not Found');
-          throw new Error(body?.error ?? 'Gagal memuat laporan');
+          const raw = body && typeof body === 'object' ? (body as Record<string, unknown>)['error'] as string | null : null;
+          // R1-4: Never expose raw backend error text
+          throw new Error(boundedErrorMessage(response.status, raw));
         }
         return response.json();
       })
-      .then((data) => { if (active && data.data) setDiary(data.data); })
-      .catch((err) => { if (active) setError(err instanceof Error ? err.message : 'Gagal memuat laporan'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .then((body) => {
+        if (!active) return;
+        // R1-2: Verify this resolution still belongs to the current request
+        if (currentIdRef.current !== id) return;
+        // R1-1 + R1-3: Validate identity bonding and minimum envelope
+        const data = body && typeof body === 'object' ? (body as Record<string, unknown>)['data'] : undefined;
+        if (!validatePrintDto(data, id)) {
+          setDiary(null);
+          setError('Gagal memuatkan laporan. Sila cuba lagi.');
+          return;
+        }
+        setDiary(data as SiteDiaryPrintDto);
+      })
+      .catch((err) => {
+        if (!active) return;
+        // R1-2: Only update error if this is still the current request
+        if (currentIdRef.current !== id) return;
+        setError(err instanceof Error ? err.message : 'Gagal memuatkan laporan. Sila cuba lagi.');
+      })
+      .finally(() => {
+        if (!active) return;
+        // R1-2: Only clear loading if this is still the current request
+        if (currentIdRef.current !== id) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const reports: DailyReport[] = useMemo(() => {
     if (!diary) return [];
-    
-    let workStatus = 'Sedang Laksana';
+
+    // R1-5: Map ONLY explicit canonical values — null means no status selected
+    let workStatus = '';
     if (diary.activityStatus === 'New') workStatus = 'Mula';
-    if (diary.activityStatus === 'In Progress') workStatus = 'Sedang Laksana';
-    if (diary.activityStatus === 'Completed') workStatus = 'Siap';
+    else if (diary.activityStatus === 'In Progress') workStatus = 'Sedang Laksana';
+    else if (diary.activityStatus === 'Completed') workStatus = 'Siap';
+    // null / unknown => workStatus stays '' => StatusCells renders no checkmark
 
     return [{
       id: diary.siteDiaryId,
@@ -273,7 +331,7 @@ export default function PrintSiteDiaryClient() {
   const nscChunks = chunk(remainingNsc, CONTINUATION_NSC_CAPACITY);
   const continuationCount = Math.max(activityChunks.length, contractorChunks.length, nscChunks.length);
   const totalPages = 1 + continuationCount;
-  
+
   const date = diary?.activityDate ?? '';
   const weather = diary?.printContext?.weatherCondition ?? '';
   const rainStart = diary?.printContext?.rainStartTime ?? null;
@@ -292,7 +350,7 @@ export default function PrintSiteDiaryClient() {
       <span className="status">{loading ? 'Memuat...' : (diary ? '1 aktiviti' : '')}</span>
     </div>
 
-    {error ? <div className="page empty-state">Ralat: {error}</div> : (!diary ? null : <>
+    {error ? <div className="page empty-state" data-testid="error-state">{error}</div> : (!diary ? null : <>
       <article className="page">
         <header className="jkr-header"><div className="logo-cell"><img src="/jkr-logo.svg" alt="JKR" /></div><div className="agency-cell">JABATAN KERJA RAYA<br/>MALAYSIA</div><div className="date-cell">TARIKH:<br/><strong>{formatDate(date)}</strong></div></header>
         <section className="weather-row"><WeatherClock rainStart={rainStart} rainEnd={rainEnd}/><div className="weather-fields"><div>CUACA: <span className="field-line">{weather}</span> (Nyatakan CUACA ELOK atau HUJAN)</div><div>WAKTU MULA HUJAN: <span className="field-line short">{timeText(rainStart)}</span> &nbsp; WAKTU TAMAT HUJAN: <span className="field-line short">{timeText(rainEnd)}</span></div><div>CATATAN: <span className="field-line">{notes}</span></div></div></section>
@@ -303,7 +361,7 @@ export default function PrintSiteDiaryClient() {
       </article>
 
       {Array.from({ length: continuationCount }, (_, index) => <article className="page continuation-page" key={`continuation-${index}`}>
-        <div className="continuation-label">SAMBUNGAN - {formatDate(date)}</div>
+        <div className="continuation-label">SAMBUNGAN — {formatDate(date)}</div>
         <ActivityTable rows={activityChunks[index] ?? []} capacity={CONTINUATION_ACTIVITY_CAPACITY} continuation/>
         <WorkforceBlock contractor={contractorChunks[index] ?? []} nsc={nscChunks[index] ?? []} contractorCapacity={CONTINUATION_CONTRACTOR_CAPACITY} nscCapacity={CONTINUATION_NSC_CAPACITY}/>
         <div className="page-number">{index + 2}/{totalPages}</div>
