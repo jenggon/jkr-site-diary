@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { SiteDiaryPrintDto } from '@/types/siteDiaryPrint';
 
 type Manpower = {
   trade_name: string;
@@ -135,9 +137,9 @@ function WeatherClock({ rainStart, rainEnd }: { rainStart: string | null; rainEn
 
 function StatusCells({ status }: { status: string }) {
   return <>
-    <td className="center">{status === 'Mula' ? '✓' : ''}</td>
-    <td className="center">{status === 'Sedang Laksana' ? '✓' : ''}</td>
-    <td className="center">{status === 'Siap' ? '✓' : ''}</td>
+    <td className="center">{status === 'Mula' ? '\u2713' : ''}</td>
+    <td className="center">{status === 'Sedang Laksana' ? '\u2713' : ''}</td>
+    <td className="center">{status === 'Siap' ? '\u2713' : ''}</td>
   </>;
 }
 
@@ -187,26 +189,150 @@ function WorkforceBlock({ contractor, nsc, contractorCapacity, nscCapacity }: { 
   </section>;
 }
 
+// R1-4: Bounded user-facing error messages — never expose arbitrary backend text
+function boundedErrorMessage(status: number, _raw: string | null): string {
+  if (status === 401) return 'Sesi tamat tempoh. Sila log masuk semula.';
+  if (status === 403) return 'Akses ditolak. Anda tidak mempunyai kebenaran untuk melihat rekod ini.';
+  if (status === 404) return 'Rekod tidak dijumpai.';
+  if (status === 400) return 'Permintaan tidak sah. ID rekod tidak boleh diproses.';
+  // 5xx and anything else
+  return 'Gagal memuatkan laporan. Sila cuba lagi.';
+}
+
+// R1-3: Validate the minimum envelope required — prevents silent crash on malformed success
+function validatePrintDto(data: unknown, requestedId: string): data is SiteDiaryPrintDto {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  if (typeof d['siteDiaryId'] !== 'string' || d['siteDiaryId'] === '') return false;
+  // R1-1: Response identity MUST match requested id
+  if (d['siteDiaryId'] !== requestedId) return false;
+  // R2-2: printContext minimum validation
+  const pc = d['printContext'];
+  if (!pc || typeof pc !== 'object' || Array.isArray(pc)) return false;
+  const printContext = pc as Record<string, unknown>;
+  if (printContext['contractorScope'] !== 'CONTRACTOR' && printContext['contractorScope'] !== 'NSC') return false;
+  if (typeof printContext['location'] !== 'string') return false;
+  if (printContext['workStartTime'] !== null && typeof printContext['workStartTime'] !== 'string') return false;
+  if (printContext['workEndTime'] !== null && typeof printContext['workEndTime'] !== 'string') return false;
+  if (printContext['weatherCondition'] !== null && typeof printContext['weatherCondition'] !== 'string') return false;
+  if (printContext['rainStartTime'] !== null && typeof printContext['rainStartTime'] !== 'string') return false;
+  if (printContext['rainEndTime'] !== null && typeof printContext['rainEndTime'] !== 'string') return false;
+
+  // manpower must be an array
+  if (!Array.isArray(d['manpower'])) return false;
+  return true;
+}
+
 export default function PrintSiteDiaryClient() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [reports, setReports] = useState<DailyReport[]>([]);
+  const searchParams = useSearchParams();
+  const id = searchParams?.get('id') ?? null;
+
+  const [diary, setDiary] = useState<SiteDiaryPrintDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // R1-2: Track current owned request ID so stale resolutions cannot update state
+  const currentIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    let active = true;
+    if (!id) {
+      currentIdRef.current = null;
+      setDiary(null);
+      setError('ID rekod tidak ditemui');
+      setLoading(false);
+      return;
+    }
+
+    // R1-2: Immediately claim ownership — clear stale diary and error before fetching
+    currentIdRef.current = id;
+    setDiary(null);
     setLoading(true);
     setError('');
-    fetch(`/api/reports?date=${encodeURIComponent(date)}`)
+
+    let active = true;
+
+    fetch(`/api/site-diary/${encodeURIComponent(id)}/print`)
       .then(async (response) => {
-        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? 'Gagal memuat laporan');
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          const raw = body && typeof body === 'object' ? (body as Record<string, unknown>)['error'] as string | null : null;
+          // R1-4: Never expose raw backend error text
+          if (active && currentIdRef.current === id) {
+            setError(boundedErrorMessage(response.status, raw));
+            setLoading(false);
+          }
+          return null; // Handled
+        }
         return response.json();
       })
-      .then((data) => { if (active) setReports(Array.isArray(data) ? data : []); })
-      .catch((err) => { if (active) setError(err instanceof Error ? err.message : 'Gagal memuat laporan'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [date]);
+      .then((body) => {
+        if (!body) return; // Handled in ok check
+        if (!active) return;
+        // R1-2: Verify this resolution still belongs to the current request
+        if (currentIdRef.current !== id) return;
+        // R1-1 + R1-3: Validate identity bonding and minimum envelope
+        const data = body && typeof body === 'object' ? (body as Record<string, unknown>)['data'] : undefined;
+        if (!validatePrintDto(data, id)) {
+          setDiary(null);
+          setError('Gagal memuatkan laporan. Sila cuba lagi.');
+          return;
+        }
+        setDiary(data as SiteDiaryPrintDto);
+      })
+      .catch(() => {
+        if (!active) return;
+        // R1-2: Only update error if this is still the current request
+        if (currentIdRef.current !== id) return;
+        // R2-1: Network error must be bounded, never expose raw throw string
+        setError('Gagal memuatkan laporan. Sila cuba lagi.');
+      })
+      .finally(() => {
+        if (!active) return;
+        // R1-2: Only clear loading if this is still the current request
+        if (currentIdRef.current !== id) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const reports: DailyReport[] = useMemo(() => {
+    if (!diary) return [];
+
+    // R1-5: Map ONLY explicit canonical values — null means no status selected
+    let workStatus = '';
+    if (diary.activityStatus === 'New') workStatus = 'Mula';
+    else if (diary.activityStatus === 'In Progress') workStatus = 'Sedang Laksana';
+    else if (diary.activityStatus === 'Completed') workStatus = 'Siap';
+    // null / unknown => workStatus stays '' => StatusCells renders no checkmark
+
+    return [{
+      id: diary.siteDiaryId,
+      site_diary_id: diary.siteDiaryId,
+      activity_id: diary.activityId,
+      source_type: diary.sourceType,
+      wbs: diary.wbs,
+      task_name: diary.taskName,
+      is_critical: diary.isCritical,
+      work_status: workStatus,
+      activity_date: diary.activityDate,
+      location: diary.printContext.location,
+      work_start_time: diary.printContext.workStartTime,
+      work_end_time: diary.printContext.workEndTime,
+      weather_condition: diary.printContext.weatherCondition ?? null,
+      rain_start_time: diary.printContext.rainStartTime,
+      rain_end_time: diary.printContext.rainEndTime,
+      contractor_scope: diary.printContext.contractorScope,
+      manpower: diary.manpower.map(m => ({
+        trade_name: m.tradeName,
+        bumi_count: m.bumiCount,
+        non_bumi_count: m.nonBumiCount,
+        foreign_count: m.foreignCount,
+      })),
+      notes: diary.notes,
+    }];
+  }, [diary]);
 
   const sorted = useMemo(() => [...reports].sort((a, b) => priorityRank(a) - priorityRank(b)), [reports]);
   const contractor = useMemo(() => aggregateWorkforce(reports, 'CONTRACTOR'), [reports]);
@@ -221,10 +347,12 @@ export default function PrintSiteDiaryClient() {
   const nscChunks = chunk(remainingNsc, CONTINUATION_NSC_CAPACITY);
   const continuationCount = Math.max(activityChunks.length, contractorChunks.length, nscChunks.length);
   const totalPages = 1 + continuationCount;
-  const weather = reports.find((row) => row.weather_condition)?.weather_condition ?? '';
-  const rainStart = reports.find((row) => row.rain_start_time)?.rain_start_time ?? null;
-  const rainEnd = reports.find((row) => row.rain_end_time)?.rain_end_time ?? null;
-  const notes = [...new Set(reports.map((row) => row.notes).filter(Boolean))].join(' | ');
+
+  const date = diary?.activityDate ?? '';
+  const weather = diary?.printContext?.weatherCondition ?? '';
+  const rainStart = diary?.printContext?.rainStartTime ?? null;
+  const rainEnd = diary?.printContext?.rainEndTime ?? null;
+  const notes = diary?.notes ?? '';
 
   return <main className="print-shell">
     <style jsx global>{`
@@ -234,12 +362,11 @@ export default function PrintSiteDiaryClient() {
 
     <div className="toolbar">
       <strong>JKR Site Diary</strong>
-      <label>Tarikh <input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-      <button type="button" onClick={() => window.print()} disabled={loading || reports.length === 0}>Cetak / Simpan PDF</button>
-      <span className="status">{loading ? 'Memuat...' : `${reports.length} aktiviti`}</span>
+      <button type="button" onClick={() => window.print()} disabled={loading || !diary}>Cetak / Simpan PDF</button>
+      <span className="status">{loading ? 'Memuat...' : (diary ? '1 aktiviti' : '')}</span>
     </div>
 
-    {error ? <div className="page empty-state">Ralat: {error}</div> : <>
+    {error ? <div className="page empty-state" data-testid="error-state">{error}</div> : (!diary ? null : <>
       <article className="page">
         <header className="jkr-header"><div className="logo-cell"><img src="/jkr-logo.svg" alt="JKR" /></div><div className="agency-cell">JABATAN KERJA RAYA<br/>MALAYSIA</div><div className="date-cell">TARIKH:<br/><strong>{formatDate(date)}</strong></div></header>
         <section className="weather-row"><WeatherClock rainStart={rainStart} rainEnd={rainEnd}/><div className="weather-fields"><div>CUACA: <span className="field-line">{weather}</span> (Nyatakan CUACA ELOK atau HUJAN)</div><div>WAKTU MULA HUJAN: <span className="field-line short">{timeText(rainStart)}</span> &nbsp; WAKTU TAMAT HUJAN: <span className="field-line short">{timeText(rainEnd)}</span></div><div>CATATAN: <span className="field-line">{notes}</span></div></div></section>
@@ -255,6 +382,6 @@ export default function PrintSiteDiaryClient() {
         <WorkforceBlock contractor={contractorChunks[index] ?? []} nsc={nscChunks[index] ?? []} contractorCapacity={CONTINUATION_CONTRACTOR_CAPACITY} nscCapacity={CONTINUATION_NSC_CAPACITY}/>
         <div className="page-number">{index + 2}/{totalPages}</div>
       </article>)}
-    </>}
+    </>)}
   </main>;
 }
