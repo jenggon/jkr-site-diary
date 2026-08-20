@@ -431,4 +431,76 @@ describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
     expect(getHTML()).not.toContain('Task A');
     expect(getHTML()).toContain('Gagal memuatkan laporan');
   });
+
+  // ============================================================
+  // T18 ?" R2-1: Network error must be bounded
+  // ============================================================
+  it('T18: fetch network rejection with sensitive internal detail is bounded', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    fetchMock.mockRejectedValueOnce(new Error('sensitive internal network detail proxy timeout 504'));
+    await act(async () => { render(); });
+
+    const html = getHTML();
+    expect(html).not.toContain('sensitive internal network detail');
+    expect(html).not.toContain('proxy timeout');
+    expect(html).toContain('Gagal memuatkan laporan. Sila cuba lagi.');
+    expect(isButtonDisabled()).toBe(true);
+  });
+
+  // ============================================================
+  // T19 ?" R2-2: printContext validation (Array)
+  // ============================================================
+  it('T19: printContext as array is rejected', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    const invalidDto = makeDto();
+    (invalidDto as any).printContext = [];
+    fetchMock.mockResolvedValueOnce(json({ data: invalidDto }));
+
+    await act(async () => { render(); });
+    expect(getHTML()).not.toContain('MSP Task');
+    expect(getHTML()).toContain('Gagal memuatkan laporan');
+    expect(isButtonDisabled()).toBe(true);
+  });
+
+  // ============================================================
+  // T20 ?" R2-2: printContext validation (Empty object missing fields)
+  // ============================================================
+  it('T20: printContext as empty object missing required fields is rejected', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    const invalidDto = makeDto();
+    (invalidDto as any).printContext = {};
+    fetchMock.mockResolvedValueOnce(json({ data: invalidDto }));
+
+    await act(async () => { render(); });
+    expect(getHTML()).not.toContain('MSP Task');
+    expect(getHTML()).toContain('Gagal memuatkan laporan');
+  });
+
+  // ============================================================
+  // T21 ?" R2-2: printContext validation (Invalid contractorScope)
+  // ============================================================
+  it('T21: invalid contractorScope is rejected', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    const invalidDto = makeDto();
+    (invalidDto as any).printContext.contractorScope = 'INVALID_SCOPE';
+    fetchMock.mockResolvedValueOnce(json({ data: invalidDto }));
+
+    await act(async () => { render(); });
+    expect(getHTML()).not.toContain('MSP Task');
+    expect(getHTML()).toContain('Gagal memuatkan laporan');
+  });
+
+  // ============================================================
+  // T22 ?" R2-2: printContext validation (Valid Canonical Renders)
+  // ============================================================
+  it('T22: valid canonical printContext still renders unchanged', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    fetchMock.mockResolvedValueOnce(json({ data: makeDto() }));
+
+    await act(async () => { render(); });
+    expect(getHTML()).toContain('MSP Task');
+    expect(getHTML()).toContain('ELOK');
+    expect(getHTML()).not.toContain('Gagal memuatkan laporan');
+    expect(isButtonDisabled()).toBe(false);
+  });
 });

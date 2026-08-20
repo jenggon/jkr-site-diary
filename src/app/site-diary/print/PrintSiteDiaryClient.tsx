@@ -206,8 +206,18 @@ function validatePrintDto(data: unknown, requestedId: string): data is SiteDiary
   if (typeof d['siteDiaryId'] !== 'string' || d['siteDiaryId'] === '') return false;
   // R1-1: Response identity MUST match requested id
   if (d['siteDiaryId'] !== requestedId) return false;
-  // printContext must be an object (would crash renderer immediately if absent)
-  if (!d['printContext'] || typeof d['printContext'] !== 'object') return false;
+  // R2-2: printContext minimum validation
+  const pc = d['printContext'];
+  if (!pc || typeof pc !== 'object' || Array.isArray(pc)) return false;
+  const printContext = pc as Record<string, unknown>;
+  if (printContext['contractorScope'] !== 'CONTRACTOR' && printContext['contractorScope'] !== 'NSC') return false;
+  if (typeof printContext['location'] !== 'string') return false;
+  if (printContext['workStartTime'] !== null && typeof printContext['workStartTime'] !== 'string') return false;
+  if (printContext['workEndTime'] !== null && typeof printContext['workEndTime'] !== 'string') return false;
+  if (printContext['weatherCondition'] !== null && typeof printContext['weatherCondition'] !== 'string') return false;
+  if (printContext['rainStartTime'] !== null && typeof printContext['rainStartTime'] !== 'string') return false;
+  if (printContext['rainEndTime'] !== null && typeof printContext['rainEndTime'] !== 'string') return false;
+
   // manpower must be an array
   if (!Array.isArray(d['manpower'])) return false;
   return true;
@@ -246,11 +256,16 @@ export default function PrintSiteDiaryClient() {
           const body = await response.json().catch(() => null);
           const raw = body && typeof body === 'object' ? (body as Record<string, unknown>)['error'] as string | null : null;
           // R1-4: Never expose raw backend error text
-          throw new Error(boundedErrorMessage(response.status, raw));
+          if (active && currentIdRef.current === id) {
+            setError(boundedErrorMessage(response.status, raw));
+            setLoading(false);
+          }
+          return null; // Handled
         }
         return response.json();
       })
       .then((body) => {
+        if (!body) return; // Handled in ok check
         if (!active) return;
         // R1-2: Verify this resolution still belongs to the current request
         if (currentIdRef.current !== id) return;
@@ -263,11 +278,12 @@ export default function PrintSiteDiaryClient() {
         }
         setDiary(data as SiteDiaryPrintDto);
       })
-      .catch((err) => {
+      .catch(() => {
         if (!active) return;
         // R1-2: Only update error if this is still the current request
         if (currentIdRef.current !== id) return;
-        setError(err instanceof Error ? err.message : 'Gagal memuatkan laporan. Sila cuba lagi.');
+        // R2-1: Network error must be bounded, never expose raw throw string
+        setError('Gagal memuatkan laporan. Sila cuba lagi.');
       })
       .finally(() => {
         if (!active) return;
