@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 export interface ProgrammeOption {
@@ -17,6 +17,7 @@ export interface DailyEntryContextType {
   programmeName: string | null;
   programmeCode: string | null;
   revisionId: string | null;
+  revisionState: 'IDLE' | 'RESOLVING' | 'RESOLVED' | 'UNAVAILABLE' | 'ERROR';
   startDate: string | null;
   finishDate: string | null;
   availableProgrammes: ProgrammeOption[];
@@ -50,10 +51,35 @@ export default function DailyEntryShell({
   const [programmeName, setProgrammeName] = useState<string | null>(null);
   const [programmeCode, setProgrammeCode] = useState<string | null>(null);
   const [revisionId, setRevisionId] = useState<string | null>(null);
+  const [revisionState, setRevisionState] = useState<DailyEntryContextType['revisionState']>('IDLE');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [finishDate, setFinishDate] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const programmeIdRef = useRef<string | null>(initialProgrammeId ?? null);
+  const detailRequestRef = useRef<{ generation: number; programmeId: string; controller: AbortController } | null>(null);
+  const detailGenerationRef = useRef(0);
+
+  const invalidateProgrammeDetails = useCallback(() => {
+    detailRequestRef.current?.controller.abort();
+    detailRequestRef.current = null;
+    detailGenerationRef.current += 1;
+    setRevisionId(null);
+    setRevisionState('IDLE');
+    setStartDate(null);
+    setFinishDate(null);
+    setError(null);
+  }, []);
+
+  const changeProgramme = useCallback((nextProgrammeId: string | null) => {
+    if (programmeIdRef.current !== nextProgrammeId) invalidateProgrammeDetails();
+    programmeIdRef.current = nextProgrammeId;
+    setProgrammeId(nextProgrammeId);
+    if (!nextProgrammeId) {
+      setProgrammeName(null);
+      setProgrammeCode(null);
+    }
+  }, [invalidateProgrammeDetails]);
 
   // 1. Fetch available active programmes via canonical GET /api/programme
   const loadProgrammes = useCallback(async () => {
@@ -85,25 +111,19 @@ export default function DailyEntryShell({
       // - 1 programme: auto-select that single programme
       // - >1 programmes: only keep if existing selection is valid; NEVER silently pick first
       if (options.length === 0) {
-        setProgrammeId(null);
-        setProgrammeName(null);
-        setProgrammeCode(null);
-        setRevisionId(null);
+        changeProgramme(null);
       } else if (options.length === 1) {
         const single = options[0];
         if (single) {
-          setProgrammeId(single.id);
+          changeProgramme(single.id);
           setProgrammeName(single.name);
           setProgrammeCode(single.code);
         }
       } else {
-        // Multiple programmes exist
-        setProgrammeId((prev) => {
-          if (prev && options.some((opt) => opt.id === prev)) {
-            return prev;
-          }
-          return null; // Require explicit user selection
-        });
+        const currentProgrammeId = programmeIdRef.current;
+        if (!currentProgrammeId || !options.some((option) => option.id === currentProgrammeId)) {
+          changeProgramme(null); // Require explicit user selection
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ralat ketika memuatkan program';
@@ -111,26 +131,47 @@ export default function DailyEntryShell({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [changeProgramme]);
 
   // 2. Once programmeId is explicitly established, resolve its summary & revision
   const loadProgrammeDetails = useCallback(async (targetId: string) => {
+    detailRequestRef.current?.controller.abort();
+    const request = {
+      generation: ++detailGenerationRef.current,
+      programmeId: targetId,
+      controller: new AbortController(),
+    };
+    detailRequestRef.current = request;
+    const ownsRequest = () => detailRequestRef.current === request
+      && request.generation === detailGenerationRef.current
+      && programmeIdRef.current === request.programmeId;
+
     setLoading(true);
+    setRevisionId(null);
+    setRevisionState('RESOLVING');
+    setStartDate(null);
+    setFinishDate(null);
     setError(null);
     try {
       // Fetch summary explicitly with programmeId (NEVER without programmeId)
-      const summaryRes = await fetch(`/api/project-summary?programmeId=${encodeURIComponent(targetId)}`);
+      const summaryRes = await fetch(`/api/project-summary?programmeId=${encodeURIComponent(targetId)}`, {
+        signal: request.controller.signal,
+      });
+      if (!ownsRequest()) return;
       if (!summaryRes.ok) {
         const errJson = await summaryRes.json().catch(() => null);
         throw new Error(errJson?.error || 'Gagal memuatkan ringkasan projek');
       }
 
       const summaryData = await summaryRes.json();
+      if (!ownsRequest()) return;
       if (!summaryData) {
         throw new Error('Maklumat ringkasan projek tidak sah');
       }
 
-      setRevisionId(summaryData.revision_id ?? null);
+      const resolvedRevisionId = summaryData.revision_id ?? null;
+      setRevisionId(resolvedRevisionId);
+      setRevisionState(resolvedRevisionId ? 'RESOLVED' : 'UNAVAILABLE');
       setStartDate(summaryData.start_date ?? null);
       setFinishDate(summaryData.finish_date ?? null);
       if (summaryData.task_name) {
@@ -138,19 +179,29 @@ export default function DailyEntryShell({
       }
 
       // Enrich with canonical programme details
-      const progRes = await fetch(`/api/programme/${encodeURIComponent(targetId)}`);
+      const progRes = await fetch(`/api/programme/${encodeURIComponent(targetId)}`, {
+        signal: request.controller.signal,
+      });
+      if (!ownsRequest()) return;
       if (progRes.ok) {
         const progJson = await progRes.json();
+        if (!ownsRequest()) return;
         if (progJson.data) {
           if (progJson.data.programmeCode) setProgrammeCode(progJson.data.programmeCode);
           if (progJson.data.programmeName) setProgrammeName(progJson.data.programmeName);
         }
       }
     } catch (err: unknown) {
+      if (!ownsRequest() || (err instanceof Error && err.name === 'AbortError')) return;
       const msg = err instanceof Error ? err.message : 'Ralat ketika memuatkan perincian program';
+      setRevisionId(null);
+      setRevisionState('ERROR');
       setError(msg);
     } finally {
-      setLoading(false);
+      if (ownsRequest()) {
+        detailRequestRef.current = null;
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -160,14 +211,19 @@ export default function DailyEntryShell({
 
   useEffect(() => {
     if (programmeId) {
-      loadProgrammeDetails(programmeId);
+      void loadProgrammeDetails(programmeId);
+    } else {
+      invalidateProgrammeDetails();
     }
-  }, [programmeId, loadProgrammeDetails]);
+    return () => {
+      detailRequestRef.current?.controller.abort();
+    };
+  }, [programmeId, invalidateProgrammeDetails, loadProgrammeDetails]);
 
   const handleSelectProgramme = (selectedId: string) => {
     const matched = availableProgrammes.find((p) => p.id === selectedId);
     if (matched) {
-      setProgrammeId(matched.id);
+      changeProgramme(matched.id);
       setProgrammeName(matched.name);
       setProgrammeCode(matched.code);
     }
@@ -179,10 +235,11 @@ export default function DailyEntryShell({
     <DailyEntryContext.Provider
       value={{
         programmeId,
-        setProgrammeId,
+        setProgrammeId: changeProgramme,
         programmeName,
         programmeCode,
         revisionId,
+        revisionState,
         startDate,
         finishDate,
         availableProgrammes,
@@ -244,7 +301,7 @@ export default function DailyEntryShell({
                   </span>
                   {availableProgrammes.length > 1 && (
                     <button
-                      onClick={() => setProgrammeId(null)}
+                      onClick={() => changeProgramme(null)}
                       className="text-[10px] text-zinc-400 hover:text-blue-400 underline transition-colors"
                       title="Pilih projek lain"
                     >
@@ -270,7 +327,11 @@ export default function DailyEntryShell({
                     Semakan Sah
                   </span>
                   <span className="text-xs font-mono text-zinc-400">
-                    {revisionId ? 'Semakan Semasa' : 'Tiada Semakan'}
+                    {revisionState === 'RESOLVING'
+                      ? 'Memuat Semakan'
+                      : revisionId
+                        ? 'Semakan Semasa'
+                        : 'Tiada Semakan'}
                   </span>
                 </div>
               </div>
