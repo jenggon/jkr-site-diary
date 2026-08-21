@@ -41,9 +41,9 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).toContain('min-h-screen');
     expect(html).toContain('w-full');
 
-    // Verify print navigation link
-    expect(html).toContain('/site-diary/print');
-    expect(html).toContain('Cetak / PDF');
+    // F2.6-B02: Print is exact-record contextual and cannot be a generic shell link.
+    expect(html).not.toContain('href="/site-diary/print"');
+    expect(html).not.toContain('Cetak / PDF');
 
     // Verify user avatar / initials
     expect(html).toContain('SU');

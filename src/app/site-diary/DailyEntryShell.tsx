@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
 export interface ProgrammeOption {
@@ -211,30 +210,8 @@ export default function DailyEntryShell({
               </div>
             </div>
 
-            {/* Print action & user logout */}
+            {/* User logout */}
             <div className="flex items-center gap-2">
-              <Link
-                href="/site-diary/print"
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700 transition-colors"
-                title="Buka pratonton cetakan JKR Page 1"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                  />
-                </svg>
-                <span>Cetak / PDF</span>
-              </Link>
-
               {user && (
                 <div className="flex items-center gap-2">
                   <div
