@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { SiteDiary, SiteDiaryManpower } from '@/types/siteDiary';
 import { SiteDiaryManagementProjection, SiteDiaryManagementRevision } from '@/types/siteDiaryManagement';
 import DiaryHistoryTimeline from './DiaryHistoryTimeline';
@@ -138,6 +139,9 @@ export default function DiaryDetail({ projection, programmeId, onBack, onEdit }:
   if (!detail || !revision) return null;
 
   const historical = !editable;
+  const printableSiteDiaryId = detail.site_diary_id === projection.siteDiaryId && detail.site_diary_id
+    ? detail.site_diary_id
+    : null;
   const printContext = detail.print_context;
   const workforce = detail.manpower ?? [];
   const totals = workforce.reduce((sum, row) => ({ bumi: sum.bumi + row.bumi_count, nonBumi: sum.nonBumi + row.non_bumi_count, foreign: sum.foreign + row.foreign_count }), { bumi: 0, nonBumi: 0, foreign: 0 });
@@ -149,6 +153,9 @@ export default function DiaryDetail({ projection, programmeId, onBack, onEdit }:
     <section><h3 className="font-bold">Tenaga Kerja</h3>{workforce.length === 0 ? <p className="mt-2 text-sm text-zinc-400">Tiada rekod tenaga kerja.</p> : <div className="mt-2 space-y-2">{workforce.map((row, index) => <div key={`${row.trade_name}-${index}`} className="rounded-xl bg-zinc-950 p-3 text-sm"><strong>{display(row.trade_name)}</strong><p className="text-zinc-400">Bumiputera {row.bumi_count} · Bukan Bumiputera {row.non_bumi_count} · Bukan Warganegara {row.foreign_count} · Jumlah {workforceTotal(row)}</p></div>)}<p className="text-sm font-bold">Jumlah: {totals.bumi + totals.nonBumi + totals.foreign} ({totals.bumi} / {totals.nonBumi} / {totals.foreign})</p></div>}</section>
     <section><h3 className="font-bold">Metadata</h3><dl className="mt-2 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-zinc-500">Dihantar</dt><dd>{display(detail.submitted_at)}</dd></div><div><dt className="text-zinc-500">Dikemaskini</dt><dd>{display(detail.updated_at ?? detail.submitted_at)}</dd></div></dl></section>
     <DiaryHistoryTimeline siteDiaryId={detail.site_diary_id} />
-    {editable && <button type="button" onClick={beginEdit} disabled={checkingEdit} className="min-h-[44px] w-full rounded-xl bg-blue-600 px-4 font-bold text-white disabled:opacity-50">{checkingEdit ? 'Menyemak Kuasa...' : 'Edit Rekod'}</button>}
+    <div className="grid gap-2 sm:grid-cols-2">
+      {printableSiteDiaryId && <Link href={`/site-diary/print?id=${encodeURIComponent(printableSiteDiaryId)}`} className="flex min-h-[44px] items-center justify-center rounded-xl bg-emerald-700 px-4 font-bold text-white">Cetak Buku Harian Tapak</Link>}
+      {editable && <button type="button" onClick={beginEdit} disabled={checkingEdit} className="min-h-[44px] rounded-xl bg-blue-600 px-4 font-bold text-white disabled:opacity-50">{checkingEdit ? 'Menyemak Kuasa...' : 'Edit Rekod'}</button>}
+    </div>
   </article>;
 }

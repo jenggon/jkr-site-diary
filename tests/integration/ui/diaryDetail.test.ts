@@ -54,6 +54,10 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     await act(async () => button.click());
   }
 
+  function printLink(): HTMLAnchorElement | null {
+    return [...container.querySelectorAll('a')].find((item) => item.textContent?.includes('Cetak Buku Harian Tapak')) ?? null;
+  }
+
   it('renders canonical current evidence and revalidates exact edit handoff', async () => {
     global.fetch = vi.fn(async (input) => String(input).includes('/site-diary/') ? json({ data: detail() }) : json({ data: [currentRevision] }));
     await render();
@@ -62,12 +66,13 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     expect(container.textContent).toContain('Sejarah Perubahan');
     expect(container.textContent).toContain('Jumlah 6');
     expect(container.textContent).toContain('Edit Rekod');
+    expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary-A');
     await click('Edit Rekod');
     expect(onEdit).toHaveBeenCalledTimes(1);
     expect(onEdit).toHaveBeenCalledWith('diary-A');
   });
 
-  it('renders historical and legacy evidence structurally read-only with no print or mutation control', async () => {
+  it('renders historical evidence read-only with an exact historical print handoff', async () => {
     const historyProjection = projection({ revisionId: 'revision-history', revisionNumber: 1, revisionTitle: 'Tender Asal', revisionStatus: 'Superseded', isCurrentRevision: false, isReadOnly: true, activityTitle: null, sourceType: null, sourceReference: null });
     global.fetch = vi.fn(async (input) => String(input).includes('/site-diary/')
       ? json({ data: detail({ revision_id: 'revision-history', manpower: [], notes: '', print_context: null }) })
@@ -78,8 +83,20 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     expect(container.textContent).toContain('Tiada rekod tenaga kerja');
     expect(container.textContent).toContain('Tidak tersedia');
     expect(container.textContent).not.toContain('Edit Rekod');
-    expect(container.textContent).not.toContain('Cetak');
+    expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary-A');
     expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  it('does not expose a print handoff before a canonical exact ID is validated', async () => {
+    const pending = deferred<Response>();
+    global.fetch = vi.fn((input) => String(input).includes('/site-diary/')
+      ? pending.promise
+      : Promise.resolve(json({ data: [currentRevision] })));
+
+    await render(projection({ siteDiaryId: '' }));
+
+    expect(printLink()).toBeNull();
+    expect(container.textContent).toContain('Memuatkan butiran rekod');
   });
 
   it('fails closed for identity mismatch and supports 401/network retry', async () => {
@@ -108,10 +125,27 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     await render();
     await render(projection({ siteDiaryId: 'diary-B', activityId: 'activity-B', activityTitle: 'Aktiviti B' }));
     expect(container.textContent).toContain('BUKTI B');
+    expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary-B');
     await act(async () => requestA.resolve(json({ data: detail({ notes: 'BUKTI A LAMBAT' }) })));
     expect(container.textContent).toContain('BUKTI B');
     expect(container.textContent).not.toContain('BUKTI A LAMBAT');
     expect(container.textContent).not.toContain('Memuatkan butiran');
+    expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary-B');
+  });
+
+  it('uses only the canonical encoded diary ID and performs no print mutation', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/site-diary/')
+      ? json({ data: detail({ site_diary_id: 'diary/A?exact', activity_id: 'activity-other', activity_date: '1999-01-01' }) })
+      : json({ data: [currentRevision] }));
+    global.fetch = fetchMock;
+    await render(projection({ siteDiaryId: 'diary/A?exact', activityId: 'activity-other', activityDate: '2099-12-31' }));
+
+    expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary%2FA%3Fexact');
+    expect(printLink()?.getAttribute('href')).not.toContain('activity-other');
+    expect(printLink()?.getAttribute('href')).not.toContain('1999-01-01');
+    for (const call of fetchMock.mock.calls as unknown as Array<[RequestInfo | URL, RequestInit?]>) {
+      expect((call[1]?.method ?? 'GET').toUpperCase()).toBe('GET');
+    }
   });
 
   it('ignores a stale A network error after B has become authoritative', async () => {
