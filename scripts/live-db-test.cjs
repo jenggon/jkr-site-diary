@@ -81,65 +81,45 @@ async function runLiveTests() {
 
     // Test Approval queue authority
     const p1Queue = await clientP1.rpc('f24_get_site_diary_approval_queue', { p_programme_id: '11111111-1111-1111-1111-111111111111' });
-    if (p1Queue.error && p1Queue.error.message.includes('permission denied for schema private')) {
-        console.log('DEFECT CAUGHT: f24_get_site_diary_approval_queue (P1) failed with permission denied for schema private (SECURITY INVOKER defect)');
-    } else {
-        assert.ok(p1Queue.error || p1Queue.data.length === 0, `P1 should not see approval queue items, got error: ${p1Queue.error?.message}`);
+    if (p1Queue.error && p1Queue.error.message.includes('permission denied')) {
+        assert.fail('P1 queue read hit schema defect instead of domain denial: ' + p1Queue.error.message);
     }
+    assert.ok(p1Queue.error || (p1Queue.data && p1Queue.data.length === 0), `P1 should not see approval queue items, got error: ${p1Queue.error?.message}`);
 
     const p2Queue = await clientP2.rpc('f24_get_site_diary_approval_queue', { p_programme_id: '11111111-1111-1111-1111-111111111111' });
-    if (p2Queue.error && p2Queue.error.message.includes('permission denied for schema private')) {
-        console.log('DEFECT CAUGHT: f24_get_site_diary_approval_queue (P2) failed with permission denied for schema private (SECURITY INVOKER defect)');
-    } else {
-        assert.ok(!p2Queue.error && p2Queue.data.length > 0, `P2 should be able to read approval queue, got error: ${p2Queue.error?.message} and length: ${p2Queue.data?.length}`);
-    }
-    console.log('PASS: Approval queue authority verified (Defect documented)');
+    assert.ok(!p2Queue.error && p2Queue.data && p2Queue.data.length > 0, `P2 should be able to read approval queue, got error: ${p2Queue.error?.message}`);
+    console.log('PASS: Approval queue authority verified');
 
     // Test Exact Approval review authority
     const p1Review = await clientP1.rpc('f24_get_site_diary_approval_review', { p_approval_id: '66666666-6666-6666-6666-666666666661' });
-    if (p1Review.error && p1Review.error.message.includes('permission denied for schema private')) {
-        console.log('DEFECT CAUGHT: f24_get_site_diary_approval_review (P1) failed with permission denied for schema private (SECURITY INVOKER defect)');
-    } else {
-        assert.ok(p1Review.error || p1Review.data.length === 0, `P1 should not be able to read approval review details, got error: ${p1Review.error?.message}`);
+    if (p1Review.error && p1Review.error.message.includes('permission denied')) {
+        assert.fail('P1 review read hit schema defect instead of domain denial: ' + p1Review.error.message);
     }
+    assert.ok(p1Review.error || (p1Review.data && p1Review.data.length === 0), `P1 should not be able to read approval review details, got error: ${p1Review.error?.message}`);
 
     const p2Review = await clientP2.rpc('f24_get_site_diary_approval_review', { p_approval_id: '66666666-6666-6666-6666-666666666661' });
-    if (p2Review.error && p2Review.error.message.includes('permission denied for schema private')) {
-        console.log('DEFECT CAUGHT: f24_get_site_diary_approval_review (P2) failed with permission denied for schema private (SECURITY INVOKER defect)');
-    } else {
-        assert.ok(!p2Review.error && p2Review.data.length > 0, `P2 should be able to read approval review details, got error: ${p2Review.error?.message} and length: ${p2Review.data?.length}`);
-    }
-    console.log('PASS: Exact Approval review authority verified (Defect documented)');
+    assert.ok(!p2Review.error && p2Review.data && p2Review.data.length > 0, `P2 should be able to read approval review details, got error: ${p2Review.error?.message}`);
+    console.log('PASS: Exact Approval review authority verified');
 
     // Test Exact Print read authority
     const p3Print = await clientP3.rpc('f25_get_site_diary_print_read', { p_site_diary_id: '55555555-5555-5555-5555-555555555551' });
-    if (p3Print.error && p3Print.error.message.includes('permission denied for schema private')) {
-        console.log('DEFECT CAUGHT: f25_get_site_diary_print_read (P3) failed with permission denied for schema private (SECURITY INVOKER defect)');
-    } else {
-        assert.ok(p3Print.error || !p3Print.data || p3Print.data.length === 0, 'P3 should not be able to read print data');
+    if (p3Print.error && p3Print.error.message.includes('permission denied')) {
+        assert.fail('P3 print read hit schema defect instead of domain denial: ' + p3Print.error.message);
     }
+    assert.ok(p3Print.error || !p3Print.data || p3Print.data.length === 0, 'P3 should not be able to read print data');
 
     const p1Print = await clientP1.rpc('f25_get_site_diary_print_read', { p_site_diary_id: '55555555-5555-5555-5555-555555555551' });
-    if (p1Print.error && p1Print.error.message.includes('permission denied for schema private')) {
-        console.log('DEFECT CAUGHT: f25_get_site_diary_print_read (P1) failed with permission denied for schema private (SECURITY INVOKER defect)');
-    } else {
-        assert.ok(!p1Print.error && p1Print.data, 'P1 should be able to read print data');
-    }
-    console.log('PASS: Exact Print read authority verified (Defect documented)');
+    assert.ok(!p1Print.error && p1Print.data, `P1 should be able to read print data, got error: ${p1Print.error?.message}`);
+    console.log('PASS: Exact Print read authority verified');
 
     // Test Historical exact Print preserves historical revision/siteDiary identity
     const p1HistPrint = await clientP1.rpc('f25_get_site_diary_print_read', { p_site_diary_id: '55555555-5555-5555-5555-555555555552' });
-    if (p1HistPrint.error && p1HistPrint.error.message.includes('permission denied for schema private')) {
-        console.log('DEFECT CAUGHT: f25_get_site_diary_print_read (P1 Historical) failed with permission denied for schema private (SECURITY INVOKER defect)');
-    } else {
-        assert.ok(!p1HistPrint.error && p1HistPrint.data, 'Historical print should succeed');
-        // Ensure the data points to the historical revision
-        const histData = p1HistPrint.data;
-        if (histData) {
-            assert.strictEqual(histData.revision_id, '33333333-3333-3333-3333-333333333333', 'Must preserve historical revision ID');
-        }
-    }
-    console.log('PASS: Historical Print identity preservation verified (Defect documented)');
+    assert.ok(!p1HistPrint.error && p1HistPrint.data, `Historical print should succeed, got error: ${p1HistPrint.error?.message}`);
+    
+    // Ensure the data points to the historical revision
+    const histData = p1HistPrint.data;
+    assert.strictEqual(histData.revision_id, '33333333-3333-3333-3333-333333333333', 'Must preserve historical revision ID');
+    console.log('PASS: Historical Print identity preservation verified');
 
     // Test P2 Approval authorization pass (must succeed without error when passed correctly)
     const p2ApproveValid = await clientP2.rpc('a27_update_approval_atomic', {
