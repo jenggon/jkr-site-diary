@@ -1,16 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DailyEntryForm from './DailyEntryForm';
 import DiaryManagementList from './DiaryManagementList';
 import ApprovalQueue from './ApprovalQueue';
 import ApprovalReview from './ApprovalReview';
+import { useDailyEntryContext } from './DailyEntryShell';
 
 type WorkspaceTab = 'NEW' | 'OPEN' | 'RECORDS' | 'APPROVALS';
 
 export default function SiteDiaryWorkspace() {
+  const { programmeId } = useDailyEntryContext();
   const [tab, setTab] = useState<WorkspaceTab>('RECORDS');
-  const [reviewContext, setReviewContext] = useState<{siteDiaryId: string, approvalId: string} | null>(null);
+  const [reviewContext, setReviewContext] = useState<{
+    programmeId: string;
+    siteDiaryId: string;
+    approvalId: string;
+  } | null>(null);
 
   const tabs: Array<{ id: WorkspaceTab; label: string }> = [
     { id: 'NEW', label: 'Laporan Baharu' },
@@ -19,7 +25,11 @@ export default function SiteDiaryWorkspace() {
     { id: 'APPROVALS', label: 'Kelulusan' },
   ];
 
-  if (reviewContext) {
+  useEffect(() => {
+    setReviewContext(null);
+  }, [programmeId]);
+
+  if (reviewContext?.programmeId === programmeId) {
     return (
       <ApprovalReview
         siteDiaryId={reviewContext.siteDiaryId}
@@ -32,7 +42,7 @@ export default function SiteDiaryWorkspace() {
 
   return (
     <div className="space-y-4">
-      <nav aria-label="Navigasi Buku Harian Tapak" className="grid grid-cols-4 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
+      <nav aria-label="Navigasi Buku Harian Tapak" className="grid grid-cols-2 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900 p-1 sm:grid-cols-4">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -49,17 +59,21 @@ export default function SiteDiaryWorkspace() {
         ))}
       </nav>
 
-      {tab === 'RECORDS' ? (
-        <DiaryManagementList />
-      ) : tab === 'APPROVALS' ? (
-        <ApprovalQueue onSelectReview={(siteDiaryId, approvalId) => setReviewContext({siteDiaryId, approvalId})} />
-      ) : (
-        <DailyEntryForm
-          key={tab}
-          initialTab={tab === 'OPEN' ? 'OPEN_ACTIVITIES' : 'NEW_ACTIVITY'}
-          hideModeNavigation
-        />
-      )}
+      <div key={programmeId ?? 'no-programme'} data-programme-context={programmeId ?? ''}>
+        {tab === 'RECORDS' ? (
+          <DiaryManagementList />
+        ) : tab === 'APPROVALS' ? (
+          <ApprovalQueue onSelectReview={(siteDiaryId, approvalId) => {
+            if (programmeId) setReviewContext({ programmeId, siteDiaryId, approvalId });
+          }} />
+        ) : (
+          <DailyEntryForm
+            key={tab}
+            initialTab={tab === 'OPEN' ? 'OPEN_ACTIVITIES' : 'NEW_ACTIVITY'}
+            hideModeNavigation
+          />
+        )}
+      </div>
     </div>
   );
 }
