@@ -403,6 +403,23 @@ describe('mapRawRowToPrintDto Fail Closed Behavior', () => {
     expect(dto.sourceType).toBe('MSP');
     expect(dto.wbs).toBe('1.1');
     expect(dto.revisionTitle).toBe('Rev 1');
+    expect(dto.activityStatus).toBe(ActivityStatus.InProgress);
+  });
+
+  it('preserves null canonical Activity status without substituting Site Diary status', () => {
+    const row = {
+      ...baseRawRow,
+      status: ActivityStatus.InProgress,
+      activity: {
+        ...baseRawRow.activity!,
+        status: null,
+      },
+    } as RawPrintDiaryRow;
+
+    const dto = mapRawRowToPrintDto(row);
+
+    expect(dto.diaryStatus).toBe(ActivityStatus.InProgress);
+    expect(dto.activityStatus).toBeNull();
   });
 
   it('maps valid VO successfully', () => {
