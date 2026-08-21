@@ -1,9 +1,13 @@
+// @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import React from 'react';
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import DailyEntryFeedback from '@/app/site-diary/DailyEntryFeedback';
 import { submitDailyEntry, SubmitDailyEntryParams } from '@/app/site-diary/DailyEntryForm';
+
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => {
   let calls: Array<{ url: string; method: string; body: any }>;
@@ -284,5 +288,60 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
       })
     );
     expect(successHtml).toContain('aria-live="polite"');
+  });
+
+  it('17. Mounted feedback exposes only an exact encoded ID and never prints automatically', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: 'sd/exact?1',
+      isEditMode: false,
+    })));
+
+    const link = container.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('/site-diary/print?id=sd%2Fexact%3F1');
+    expect(printSpy).not.toHaveBeenCalled();
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it('18. Feedback without a canonical ID preserves success status without a print action', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: null,
+      isEditMode: false,
+    })));
+
+    expect(container.querySelector('[role="status"]')).toBeTruthy();
+    expect(container.querySelector('a[href^="/site-diary/print"]')).toBeNull();
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it('19. Handoff components retain the sole exact route and no direct print or legacy API behavior', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const sources = [
+      'src/app/site-diary/DiaryDetail.tsx',
+      'src/app/site-diary/DailyEntryFeedback.tsx',
+    ].map(file => fs.readFileSync(path.join(process.cwd(), file), 'utf-8')).join('\n');
+
+    expect(sources).toContain('/site-diary/print?id=');
+    expect(sources).not.toContain('/api/reports');
+    expect(sources).not.toContain('window.print');
+    expect(sources).not.toContain('activityDate}');
+    expect(sources).not.toContain('activityId}');
   });
 });
