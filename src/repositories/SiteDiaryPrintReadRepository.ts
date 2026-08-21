@@ -258,7 +258,7 @@ export function mapRawRowToPrintDto(row: RawPrintDiaryRow): SiteDiaryPrintDto {
     isHistorical,
     activityDate: row.activity_date,
     diaryStatus: row.status,
-    activityStatus: activity.status ?? row.status ?? null,
+    activityStatus: activity.status ?? null,
     sourceType,
     wbs,
     taskName,
