@@ -185,6 +185,11 @@ BEGIN
     INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
     VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999992', v_re_id, true, now())
     ON CONFLICT DO NOTHING;
+
+    -- P1 = SITE_SUPERVISOR in Programme B
+    INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
+    VALUES (gen_random_uuid(), '22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999991', v_ss_id, true, now())
+    ON CONFLICT DO NOTHING;
     -- P3 = no membership in either programme
 END;
 $$;
