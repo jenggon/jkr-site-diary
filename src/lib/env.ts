@@ -14,7 +14,13 @@ export const envSchema = z.object({
 export type EnvConfig = Readonly<z.infer<typeof envSchema>>;
 
 export function validateEnv(customEnv?: Record<string, string | undefined>): EnvConfig {
-  const targetEnv = customEnv ?? process.env;
+  const targetEnv = customEnv ?? {
+    NODE_ENV: process.env.NODE_ENV,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    LOG_LEVEL: process.env.LOG_LEVEL,
+  };
   const result = envSchema.safeParse(targetEnv);
 
   if (!result.success) {
