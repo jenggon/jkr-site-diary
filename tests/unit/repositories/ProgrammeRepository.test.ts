@@ -53,6 +53,73 @@ describe('ProgrammeRepository', () => {
     expect(isFailure(result)).toBe(true);
   });
 
+  it('translates application Active to the exact Approved database filter', async () => {
+    const approvedRow = mapper.toRow(mockProgramme);
+    let receivedFilter: Record<string, unknown> | undefined;
+    const mockAdapter: IDatabaseAdapter = {
+      selectOne: async () => Success(null),
+      selectMany: async <T>(_table: string, filter?: Record<string, unknown>) => {
+        receivedFilter = filter;
+        return Success([approvedRow] as unknown as T[]);
+      },
+      insert: async <T>() => Success({} as T),
+      update: async <T>() => Success({} as T),
+      exists: async () => Success(false),
+    };
+
+    const repo = new ProgrammeRepository(mockAdapter, mapper);
+    const result = await repo.findAll({ status: 'Active' });
+
+    expect(receivedFilter).toEqual({ status: 'Approved' });
+    expect(receivedFilter).not.toEqual({ status: 'Active' });
+    expect(isSuccess(result)).toBe(true);
+    if (isSuccess(result)) {
+      expect(result.value).toHaveLength(1);
+      expect(result.value[0]?.status).toBe('Active');
+    }
+  });
+
+  it('excludes Draft rows from application Active discovery', async () => {
+    const approvedRow = mapper.toRow(mockProgramme);
+    const draftRow = { ...approvedRow, programme_id: 'p-draft', status: 'Draft' as const };
+    const rows = [approvedRow, draftRow];
+    const mockAdapter: IDatabaseAdapter = {
+      selectOne: async () => Success(null),
+      selectMany: async <T>(_table: string, filter?: Record<string, unknown>) =>
+        Success(rows.filter((row) => row.status === filter?.status) as unknown as T[]),
+      insert: async <T>() => Success({} as T),
+      update: async <T>() => Success({} as T),
+      exists: async () => Success(false),
+    };
+
+    const repo = new ProgrammeRepository(mockAdapter, mapper);
+    const result = await repo.findAll({ status: 'Active' });
+
+    expect(isSuccess(result)).toBe(true);
+    if (isSuccess(result)) {
+      expect(result.value.map((programme) => programme.programmeId)).toEqual(['p1']);
+    }
+  });
+
+  it('preserves Archived as the exact Archived database filter', async () => {
+    let receivedFilter: Record<string, unknown> | undefined;
+    const mockAdapter: IDatabaseAdapter = {
+      selectOne: async () => Success(null),
+      selectMany: async <T>(_table: string, filter?: Record<string, unknown>) => {
+        receivedFilter = filter;
+        return Success([] as T[]);
+      },
+      insert: async <T>() => Success({} as T),
+      update: async <T>() => Success({} as T),
+      exists: async () => Success(false),
+    };
+
+    const repo = new ProgrammeRepository(mockAdapter, mapper);
+    await repo.findAll({ status: 'Archived' });
+
+    expect(receivedFilter).toEqual({ status: 'Archived' });
+  });
+
   it('should create new programme entity', async () => {
     const mockRow = mapper.toRow(mockProgramme);
     const mockAdapter: IDatabaseAdapter = {

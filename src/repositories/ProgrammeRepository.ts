@@ -42,7 +42,8 @@ export class ProgrammeRepository implements IProgrammeRepository {
     limit?: number | undefined;
     offset?: number | undefined;
   }): Promise<Result<Programme[], BaseAppError>> {
-    const filter = params?.status !== undefined ? { status: params.status } : undefined;
+    const databaseStatus = params?.status === 'Active' ? 'Approved' : params?.status;
+    const filter = databaseStatus !== undefined ? { status: databaseStatus } : undefined;
     const options: IDatabaseAdapterOptions = {
       orderBy: 'created_at',
       ascending: false,
