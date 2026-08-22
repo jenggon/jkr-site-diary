@@ -31,7 +31,7 @@ async function runLiveTests() {
 
     // --- P3 UNAUTHORIZED PERSONA ---
     console.log('\n[P3 Unauthorized Persona]');
-    const clientP3 = await createClientForPersona('unauthorized@jkr.gov.my');
+    const clientP3 = await createClientForPersona('unauthorized@external.com');
     console.log('PASS: P3 Authentication succeeded');
 
     // Test P3 - unauthorized operations
