@@ -72,7 +72,7 @@ async function runLiveTests() {
         p_payload: { approval_status: 'Approved', approval_comment: 'Legitimate approval' },
         p_actor_id: '99999999-9999-9999-9999-999999999992',
         p_audit_id: '20000000-0000-0000-0000-000000000000',
-        p_expected_sd_last_modified_at: '2026-08-11T00:00:00.000Z'
+        p_expected_sd_last_modified_at: '2026-08-21T00:00:00.000Z'
     });
 
     assert.ok(p2ApproveStale.error, 'P2 stale update must fail');
@@ -113,12 +113,12 @@ async function runLiveTests() {
     console.log('PASS: Exact Print read authority verified');
 
     // Test Historical exact Print preserves historical revision/siteDiary identity
-    const p1HistPrint = await clientP1.rpc('f25_get_site_diary_print_read', { p_site_diary_id: '55555555-5555-5555-5555-555555555552' });
+    const p1HistPrint = await clientP1.rpc('f25_get_site_diary_print_read', { p_site_diary_id: '55555555-5555-5555-5555-555555555553' });
     assert.ok(!p1HistPrint.error && p1HistPrint.data, `Historical print should succeed, got error: ${p1HistPrint.error?.message}`);
     
     // Ensure the data points to the historical revision
     const histData = p1HistPrint.data;
-    assert.strictEqual(histData.revision_id, '33333333-3333-3333-3333-333333333333', 'Must preserve historical revision ID');
+    assert.strictEqual(histData.revision_id, '77777777-7777-7777-7777-777777777777', 'Must preserve historical revision ID');
     console.log('PASS: Historical Print identity preservation verified');
 
     // Test P2 Approval authorization pass (must succeed without error when passed correctly)
@@ -127,7 +127,7 @@ async function runLiveTests() {
         p_payload: { approval_status: 'Approved', approval_comment: 'Legitimate approval' },
         p_actor_id: '99999999-9999-9999-9999-999999999992',
         p_audit_id: '20000000-0000-0000-0000-000000000000',
-        p_expected_sd_last_modified_at: '2026-08-11T12:00:00.000Z'
+        p_expected_sd_last_modified_at: '2026-08-21T12:00:00.000Z'
     });
 
     assert.ok(!p2ApproveValid.error, `P2 valid update must succeed, got: ${p2ApproveValid.error?.message}`);

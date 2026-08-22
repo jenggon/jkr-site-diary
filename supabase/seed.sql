@@ -1,126 +1,365 @@
--- UAT Fixture Data
-DO $$ 
+-- F2.7-C01 Synthetic Test Fixture
+-- Minimal fixture for local live security proof only.
+-- NOT intended for production. NOT for develop branch.
+-- Establishes three test personas and minimal domain records.
+
+-- ============================================================
+-- 1. GoTrue Auth Users (local Supabase only — 127.0.0.1)
+-- ============================================================
+
+-- P1 — Site Supervisor (submitter role)
+INSERT INTO auth.users (
+    id, email, encrypted_password, email_confirmed_at,
+    created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+    aud, role, instance_id, confirmation_token, recovery_token,
+    email_change_token_new, email_change
+) VALUES (
+    '99999999-9999-9999-9999-999999999991',
+    'submitter@jkr.gov.my',
+    crypt('password123', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}',
+    '{}', 'authenticated', 'authenticated',
+    '00000000-0000-0000-0000-000000000000', '', '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+    id, provider_id, user_id, identity_data, provider,
+    created_at, updated_at, last_sign_in_at
+) VALUES (
+    gen_random_uuid(),
+    '99999999-9999-9999-9999-999999999991',
+    '99999999-9999-9999-9999-999999999991',
+    '{"sub":"99999999-9999-9999-9999-999999999991","email":"submitter@jkr.gov.my"}',
+    'email', now(), now(), now()
+) ON CONFLICT DO NOTHING;
+
+-- P2 — Resident Engineer (reviewer role)
+INSERT INTO auth.users (
+    id, email, encrypted_password, email_confirmed_at,
+    created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+    aud, role, instance_id, confirmation_token, recovery_token,
+    email_change_token_new, email_change
+) VALUES (
+    '99999999-9999-9999-9999-999999999992',
+    'reviewer@jkr.gov.my',
+    crypt('password123', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}',
+    '{}', 'authenticated', 'authenticated',
+    '00000000-0000-0000-0000-000000000000', '', '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+    id, provider_id, user_id, identity_data, provider,
+    created_at, updated_at, last_sign_in_at
+) VALUES (
+    gen_random_uuid(),
+    '99999999-9999-9999-9999-999999999992',
+    '99999999-9999-9999-9999-999999999992',
+    '{"sub":"99999999-9999-9999-9999-999999999992","email":"reviewer@jkr.gov.my"}',
+    'email', now(), now(), now()
+) ON CONFLICT DO NOTHING;
+
+-- P3 — Unauthorized
+INSERT INTO auth.users (
+    id, email, encrypted_password, email_confirmed_at,
+    created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+    aud, role, instance_id, confirmation_token, recovery_token,
+    email_change_token_new, email_change
+) VALUES (
+    '99999999-9999-9999-9999-999999999993',
+    'unauthorized@external.com',
+    crypt('password123', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}',
+    '{}', 'authenticated', 'authenticated',
+    '00000000-0000-0000-0000-000000000000', '', '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+    id, provider_id, user_id, identity_data, provider,
+    created_at, updated_at, last_sign_in_at
+) VALUES (
+    gen_random_uuid(),
+    '99999999-9999-9999-9999-999999999993',
+    '99999999-9999-9999-9999-999999999993',
+    '{"sub":"99999999-9999-9999-9999-999999999993","email":"unauthorized@external.com"}',
+    'email', now(), now(), now()
+) ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 2. User Profiles
+-- ============================================================
+INSERT INTO public.user_profile (user_id, full_name, is_active) VALUES
+    ('99999999-9999-9999-9999-999999999991', 'C01 Submitter', true),
+    ('99999999-9999-9999-9999-999999999992', 'C01 Reviewer',  true),
+    ('99999999-9999-9999-9999-999999999993', 'C01 Unauth',    true)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 3. Programme
+-- ============================================================
+INSERT INTO public.programme (
+    programme_id, programme_code, programme_name, status,
+    created_by, created_at, updated_at
+) VALUES (
+    '11111111-1111-1111-1111-111111111111',
+    'C01-TEST', 'C01 Test Programme', 'Approved',
+    '99999999-9999-9999-9999-999999999991',
+    now(), now()
+) ON CONFLICT DO NOTHING;
+
+-- Programme B (for cross-programme negative test)
+INSERT INTO public.programme (
+    programme_id, programme_code, programme_name, status,
+    created_by, created_at, updated_at
+) VALUES (
+    '22222222-2222-2222-2222-222222222222',
+    'C01-PROG-B', 'C01 Programme B', 'Approved',
+    '99999999-9999-9999-9999-999999999991',
+    now(), now()
+) ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 4. Programme Revisions
+-- ============================================================
+-- Historical superseded revision for exact historical Print proof.
+INSERT INTO public.programme_revision (
+    revision_id, programme_id, revision_no, revision_name,
+    status, created_by, created_at
+) VALUES (
+    '77777777-7777-7777-7777-777777777777',
+    '11111111-1111-1111-1111-111111111111',
+    1, 'Historical Rev 1', 'Approved',
+    '99999999-9999-9999-9999-999999999991',
+    '2026-08-01T00:00:00.000Z'
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.programme_revision (
+    revision_id, programme_id, revision_no, revision_name,
+    status, created_by, created_at
+) VALUES (
+    '33333333-3333-3333-3333-333333333333',
+    '11111111-1111-1111-1111-111111111111',
+    2, 'Rev 2 Current', 'Approved',
+    '99999999-9999-9999-9999-999999999991',
+    now()
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.programme_revision (
+    revision_id, programme_id, revision_no, revision_name,
+    status, created_by, created_at
+) VALUES (
+    '44444444-4444-4444-4444-444444444444',
+    '22222222-2222-2222-2222-222222222222',
+    1, 'Prog B Rev 1', 'Approved',
+    '99999999-9999-9999-9999-999999999991',
+    now()
+) ON CONFLICT DO NOTHING;
+
+-- Programme A temporarily points to its old approved revision so its immutable
+-- historical diary can be seeded through the normal revision-safety trigger.
+UPDATE public.programme
+    SET current_revision_id = '77777777-7777-7777-7777-777777777777'
+    WHERE programme_id = '11111111-1111-1111-1111-111111111111';
+
+UPDATE public.programme
+    SET current_revision_id = '44444444-4444-4444-4444-444444444444'
+    WHERE programme_id = '22222222-2222-2222-2222-222222222222';
+
+-- ============================================================
+-- 5. Roles & Programme Memberships
+-- ============================================================
+DO $$
 DECLARE
-    v_prog_id uuid := '11111111-1111-1111-1111-111111111111';
-    v_rev_cur uuid := '22222222-2222-2222-2222-222222222222';
-    v_rev_hist uuid := '33333333-3333-3333-3333-333333333333';
-    
-    v_act_msp uuid := '44444444-4444-4444-4444-444444444441';
-    v_act_hist uuid := '44444444-4444-4444-4444-444444444443';
-
-    v_sd_cur uuid := '55555555-5555-5555-5555-555555555551';
-    v_sd_hist uuid := '55555555-5555-5555-5555-555555555552';
-    
-    v_p1_user_id uuid := '99999999-9999-9999-9999-999999999991';
-    v_p2_user_id uuid := '99999999-9999-9999-9999-999999999992';
-    v_p3_user_id uuid := '99999999-9999-9999-9999-999999999993';
-
-    v_role_ss uuid;
-    v_role_re uuid;
+    v_ss_id  uuid := (SELECT role_id FROM public.role WHERE role_code = 'SITE_SUPERVISOR');
+    v_re_id  uuid := (SELECT role_id FROM public.role WHERE role_code = 'RESIDENT_ENGINEER');
 BEGIN
-    SELECT role_id INTO v_role_ss FROM public.role WHERE role_code = 'SITE_SUPERVISOR';
-    SELECT role_id INTO v_role_re FROM public.role WHERE role_code = 'RESIDENT_ENGINEER';
-
-    INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
-    VALUES 
-        ('00000000-0000-0000-0000-000000000000', v_p1_user_id, 'authenticated', 'authenticated', 'submitter@jkr.gov.my', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
-        ('00000000-0000-0000-0000-000000000000', v_p2_user_id, 'authenticated', 'authenticated', 'reviewer@jkr.gov.my', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
-        ('00000000-0000-0000-0000-000000000000', v_p3_user_id, 'authenticated', 'authenticated', 'unauthorized@jkr.gov.my', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '')
-    ON CONFLICT (id) DO NOTHING;
-
-    INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at) VALUES
-        (gen_random_uuid(), v_p1_user_id, format('{"sub":"%s","email":"%s"}', v_p1_user_id::text, 'submitter@jkr.gov.my')::jsonb, 'email', v_p1_user_id::text, now(), now(), now()),
-        (gen_random_uuid(), v_p2_user_id, format('{"sub":"%s","email":"%s"}', v_p2_user_id::text, 'reviewer@jkr.gov.my')::jsonb, 'email', v_p2_user_id::text, now(), now(), now()),
-        (gen_random_uuid(), v_p3_user_id, format('{"sub":"%s","email":"%s"}', v_p3_user_id::text, 'unauthorized@jkr.gov.my')::jsonb, 'email', v_p3_user_id::text, now(), now(), now())
+    -- P1 = SITE_SUPERVISOR in Programme A
+    INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
+    VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999991', v_ss_id, true, now())
     ON CONFLICT DO NOTHING;
 
-    INSERT INTO public.user_profile (user_id, full_name, is_active) VALUES 
-        (v_p1_user_id, 'UAT Submitter (P1)', true),
-        (v_p2_user_id, 'UAT Reviewer (P2)', true),
-        (v_p3_user_id, 'UAT Unauthorized (P3)', true)
-    ON CONFLICT (user_id) DO NOTHING;
-
-    INSERT INTO public.programme (programme_id, programme_code, programme_name, created_by) 
-    VALUES (v_prog_id, 'UAT-PROG-A', 'UAT Synthetic Programme A', v_p1_user_id)
-    ON CONFLICT (programme_id) DO NOTHING;
-
-    INSERT INTO public.programme_membership (programme_id, user_id, role_id, is_active) VALUES
-        (v_prog_id, v_p1_user_id, v_role_ss, true),
-        (v_prog_id, v_p2_user_id, v_role_re, true)
-    ON CONFLICT (programme_id, user_id) DO NOTHING;
-
-    -- 1. Insert historical revision as Approved initially
-    INSERT INTO public.programme_revision (revision_id, programme_id, revision_no, revision_name, status, created_by) VALUES
-        (v_rev_hist, v_prog_id, 1, 'Historical Revision', 'Approved', v_p1_user_id)
-    ON CONFLICT (revision_id) DO NOTHING;
-
-    -- 2. Make it current
-    UPDATE public.programme SET current_revision_id = v_rev_hist WHERE programme_id = v_prog_id;
-
-    -- 3. Insert historical tasks/activities/site_diaries
-    INSERT INTO public.task (task_id, programme_id, revision_id, task_uid, task_name, created_by) VALUES
-        ('77777777-7777-7777-7777-777777777771', v_prog_id, v_rev_hist, 1, 'Historical Task', v_p1_user_id)
-    ON CONFLICT (task_id) DO NOTHING;
-
-    INSERT INTO public.activity (activity_id, programme_id, revision_id, task_id, subtask, activity_date, notes, submitted_by, source_type) VALUES
-        (v_act_hist, v_prog_id, v_rev_hist, '77777777-7777-7777-7777-777777777771', 'Subtask H', '2026-08-01', 'Hist act notes', v_p1_user_id, 'MSP')
-    ON CONFLICT (activity_id) DO NOTHING;
-
-    INSERT INTO public.site_diary (site_diary_id, programme_id, activity_id, revision_id, activity_date, notes, status, submitted_by) VALUES
-        (v_sd_hist, v_prog_id, v_act_hist, v_rev_hist, '2026-08-01', 'Historical notes', 'In Progress', v_p1_user_id)
-    ON CONFLICT (site_diary_id) DO NOTHING;
-
-    -- 4. Insert current revision as Approved
-    INSERT INTO public.programme_revision (revision_id, programme_id, revision_no, revision_name, status, created_by) VALUES
-        (v_rev_cur, v_prog_id, 2, 'Current Active Revision', 'Approved', v_p1_user_id)
-    ON CONFLICT (revision_id) DO NOTHING;
-
-    -- 5. Make it current
-    UPDATE public.programme SET current_revision_id = v_rev_cur WHERE programme_id = v_prog_id;
-
-    -- 6. Archive historical revision
-    UPDATE public.programme_revision SET status = 'Archived' WHERE revision_id = v_rev_hist;
-
-    -- 7. Insert current tasks/activities/site_diaries
-    INSERT INTO public.task (task_id, programme_id, revision_id, task_uid, task_name, created_by) VALUES
-        ('77777777-7777-7777-7777-777777777772', v_prog_id, v_rev_cur, 2, 'Current Task', v_p1_user_id)
-    ON CONFLICT (task_id) DO NOTHING;
-
-    INSERT INTO public.activity (activity_id, programme_id, revision_id, task_id, subtask, activity_date, notes, submitted_by, source_type) VALUES
-        (v_act_msp, v_prog_id, v_rev_cur, '77777777-7777-7777-7777-777777777772', 'Subtask C', '2026-08-10', 'Cur act notes', v_p1_user_id, 'MSP')
-    ON CONFLICT (activity_id) DO NOTHING;
-
-    INSERT INTO public.site_diary (site_diary_id, programme_id, activity_id, revision_id, activity_date, notes, status, submitted_by) VALUES
-        (v_sd_cur, v_prog_id, v_act_msp, v_rev_cur, '2026-08-10', 'Current notes', 'In Progress', v_p1_user_id)
-    ON CONFLICT (site_diary_id) DO NOTHING;
-
-    INSERT INTO public.site_diary (site_diary_id, programme_id, activity_id, revision_id, activity_date, notes, status, submitted_by, submitted_at, updated_at) VALUES
-        ('55555555-5555-5555-5555-555555555553', v_prog_id, v_act_msp, v_rev_cur, '2026-08-11', 'Pending Approval', 'In Progress', v_p1_user_id, '2026-08-11T12:00:00Z', '2026-08-11T12:00:00Z')
+    -- P2 = RESIDENT_ENGINEER in Programme A
+    INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
+    VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999992', v_re_id, true, now())
     ON CONFLICT DO NOTHING;
-    INSERT INTO public.approval (approval_id, site_diary_id, programme_id, activity_id, revision_id, approval_status, requested_by) VALUES
-        ('66666666-6666-6666-6666-666666666661', '55555555-5555-5555-5555-555555555553', v_prog_id, v_act_msp, v_rev_cur, 'Pending', v_p1_user_id)
-    ON CONFLICT DO NOTHING;
+    -- P3 = no membership in either programme
+END;
+$$;
 
-    INSERT INTO public.site_diary (site_diary_id, programme_id, activity_id, revision_id, activity_date, notes, status, submitted_by) VALUES
-        ('55555555-5555-5555-5555-555555555554', v_prog_id, v_act_msp, v_rev_cur, '2026-08-12', 'Returned Diary', 'In Progress', v_p1_user_id)
-    ON CONFLICT DO NOTHING;
-    INSERT INTO public.approval (approval_id, site_diary_id, programme_id, activity_id, revision_id, approval_status, requested_by, approved_by, approval_comment) VALUES
-        ('66666666-6666-6666-6666-666666666662', '55555555-5555-5555-5555-555555555554', v_prog_id, v_act_msp, v_rev_cur, 'Returned', v_p1_user_id, v_p2_user_id, 'Please add more workforce details')
-    ON CONFLICT DO NOTHING;
-    
-    INSERT INTO public.site_diary (site_diary_id, programme_id, activity_id, revision_id, activity_date, notes, status, submitted_by) VALUES
-        ('55555555-5555-5555-5555-555555555555', v_prog_id, v_act_msp, v_rev_cur, '2026-08-13', 'Rejected Diary', 'In Progress', v_p1_user_id)
-    ON CONFLICT DO NOTHING;
-    INSERT INTO public.approval (approval_id, site_diary_id, programme_id, activity_id, revision_id, approval_status, requested_by, approved_by, approval_comment) VALUES
-        ('66666666-6666-6666-6666-666666666663', '55555555-5555-5555-5555-555555555555', v_prog_id, v_act_msp, v_rev_cur, 'Rejected', v_p1_user_id, v_p2_user_id, 'Duplicate record')
-    ON CONFLICT DO NOTHING;
+-- ============================================================
+-- 6. Task
+-- ============================================================
+INSERT INTO public.task (
+    task_id, programme_id, revision_id, task_name, task_uid,
+    wbs, outline_number, is_critical, created_at, created_by
+) VALUES (
+    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+    '11111111-1111-1111-1111-111111111111',
+    '77777777-7777-7777-7777-777777777777',
+    'C01 Historical Task', 1, '1', '1', false,
+    '2026-08-01T00:00:00.000Z', '99999999-9999-9999-9999-999999999991'
+) ON CONFLICT DO NOTHING;
 
-    INSERT INTO public.site_diary (site_diary_id, programme_id, activity_id, revision_id, activity_date, notes, status, submitted_by) VALUES
-        ('55555555-5555-5555-5555-555555555556', v_prog_id, v_act_msp, v_rev_cur, '2026-08-14', 'Approved Diary', 'In Progress', v_p1_user_id)
-    ON CONFLICT DO NOTHING;
-    INSERT INTO public.approval (approval_id, site_diary_id, programme_id, activity_id, revision_id, approval_status, requested_by, approved_by, approval_comment) VALUES
-        ('66666666-6666-6666-6666-666666666664', '55555555-5555-5555-5555-555555555556', v_prog_id, v_act_msp, v_rev_cur, 'Approved', v_p1_user_id, v_p2_user_id, NULL)
-    ON CONFLICT DO NOTHING;
-    
-END $$;
-SET session_replication_role = 'origin';
+INSERT INTO public.task (
+    task_id, programme_id, revision_id, task_name, task_uid,
+    wbs, outline_number, is_critical, created_at, created_by
+) VALUES (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    'C01 Test Task', 2, '1', '1', false, now(),
+    '99999999-9999-9999-9999-999999999991'
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.task (
+    task_id, programme_id, revision_id, task_name, task_uid,
+    wbs, outline_number, is_critical, created_at, created_by
+) VALUES (
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    '22222222-2222-2222-2222-222222222222',
+    '44444444-4444-4444-4444-444444444444',
+    'Prog B Task', 1, '1', '1', false, now(),
+    '99999999-9999-9999-9999-999999999991'
+) ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 7. Activities
+-- ============================================================
+INSERT INTO public.activity (
+    activity_id, programme_id, revision_id, task_id,
+    source_type, subtask, subtask_display_name, activity_date,
+    status, notes, submitted_by, created_at, updated_at
+) VALUES (
+    'ffffffff-ffff-ffff-ffff-ffffffffffff',
+    '11111111-1111-1111-1111-111111111111',
+    '77777777-7777-7777-7777-777777777777',
+    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+    'MSP', 'Historical Concrete Works', 'Historical Concrete Works', '2026-08-01',
+    'Completed', 'Historical C01 fixture', '99999999-9999-9999-9999-999999999991',
+    '2026-08-01T00:00:00.000Z', '2026-08-01T00:00:00.000Z'
+) ON CONFLICT DO NOTHING;
+
+-- Create historical evidence while that approved revision is still current.
+INSERT INTO public.site_diary (
+    site_diary_id, programme_id, revision_id, activity_id,
+    activity_date, status, notes, submitted_by, submitted_at, updated_at
+) VALUES (
+    '55555555-5555-5555-5555-555555555553',
+    '11111111-1111-1111-1111-111111111111',
+    '77777777-7777-7777-7777-777777777777',
+    'ffffffff-ffff-ffff-ffff-ffffffffffff',
+    '2026-08-01', 'Completed', 'Historical C01 diary',
+    '99999999-9999-9999-9999-999999999991',
+    '2026-08-01T12:00:00.000Z',
+    '2026-08-01T12:00:00.000Z'
+) ON CONFLICT DO NOTHING;
+
+-- Complete the legitimate revision transition only after historical evidence
+-- exists. Subsequent operational fixtures use the latest approved revision.
+UPDATE public.programme
+    SET current_revision_id = '33333333-3333-3333-3333-333333333333'
+    WHERE programme_id = '11111111-1111-1111-1111-111111111111';
+UPDATE public.programme_revision
+    SET status = 'Superseded'
+    WHERE revision_id = '77777777-7777-7777-7777-777777777777';
+
+INSERT INTO public.activity (
+    activity_id, programme_id, revision_id, task_id,
+    source_type, subtask, subtask_display_name, activity_date,
+    status, notes, submitted_by, created_at, updated_at
+) VALUES (
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'MSP', 'Concrete Works', 'Concrete Works', CURRENT_DATE - 1,
+    'In Progress', 'Current C01 fixture', '99999999-9999-9999-9999-999999999991',
+    now(), now()
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.activity (
+    activity_id, programme_id, revision_id, task_id,
+    source_type, subtask, subtask_display_name, activity_date,
+    status, notes, submitted_by, created_at, updated_at
+) VALUES (
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    '22222222-2222-2222-2222-222222222222',
+    '44444444-4444-4444-4444-444444444444',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    'MSP', 'Prog B Activity', 'Prog B Activity', CURRENT_DATE - 2,
+    'In Progress', 'Cross-programme C01 fixture', '99999999-9999-9999-9999-999999999991',
+    now(), now()
+) ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 8. Site Diaries
+-- ============================================================
+INSERT INTO public.site_diary (
+    site_diary_id, programme_id, revision_id, activity_id,
+    activity_date, status, notes, submitted_by, submitted_at, updated_at
+) VALUES (
+    '55555555-5555-5555-5555-555555555551',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    CURRENT_DATE - 1, 'In Progress', 'Current C01 diary',
+    '99999999-9999-9999-9999-999999999991',
+    '2026-08-21T12:00:00.000Z',
+    '2026-08-21T12:00:00.000Z'
+) ON CONFLICT DO NOTHING;
+
+-- Programme B Site Diary (cross-programme negative test)
+INSERT INTO public.site_diary (
+    site_diary_id, programme_id, revision_id, activity_id,
+    activity_date, status, notes, submitted_by, submitted_at, updated_at
+) VALUES (
+    '55555555-5555-5555-5555-555555555552',
+    '22222222-2222-2222-2222-222222222222',
+    '44444444-4444-4444-4444-444444444444',
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    CURRENT_DATE - 2, 'In Progress', 'Cross-programme C01 diary',
+    '99999999-9999-9999-9999-999999999991',
+    '2026-08-20T12:00:00.000Z',
+    '2026-08-20T12:00:00.000Z'
+) ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 9. Approval (for approval queue and review tests)
+-- ============================================================
+INSERT INTO public.approval (
+    approval_id, programme_id, revision_id, activity_id, site_diary_id,
+    approval_level, approval_status, requested_by, requested_at,
+    created_at, updated_at
+) VALUES (
+    '66666666-6666-6666-6666-666666666661',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '55555555-5555-5555-5555-555555555551',
+    1, 'Pending',
+    '99999999-9999-9999-9999-999999999991',
+    '2026-08-21T12:00:00.000Z',
+    '2026-08-21T12:00:00.000Z',
+    NULL
+) ON CONFLICT DO NOTHING;
+
+-- Programme B Approval (cross-programme negative test)
+INSERT INTO public.approval (
+    approval_id, programme_id, revision_id, activity_id, site_diary_id,
+    approval_level, approval_status, requested_by, requested_at,
+    created_at, updated_at
+) VALUES (
+    '66666666-6666-6666-6666-666666666662',
+    '22222222-2222-2222-2222-222222222222',
+    '44444444-4444-4444-4444-444444444444',
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    '55555555-5555-5555-5555-555555555552',
+    1, 'Pending',
+    '99999999-9999-9999-9999-999999999991',
+    '2026-08-20T12:00:00.000Z',
+    '2026-08-20T12:00:00.000Z',
+    NULL
+) ON CONFLICT DO NOTHING;
