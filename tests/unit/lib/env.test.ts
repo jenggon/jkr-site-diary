@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { validateEnv, isDevelopment, isProduction, isTest } from '@/lib/env';
 
@@ -49,6 +51,20 @@ describe('env', () => {
     expect(validated.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe('explicit-anon-key');
   });
 
+  it('3a. accepts any non-empty anon key without replacing it with the placeholder', () => {
+    const unusualButValidKey = 'not-a-jwt::still-non-empty';
+    const validated = validateEnv({ NEXT_PUBLIC_SUPABASE_ANON_KEY: unusualButValidKey });
+
+    expect(validated.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe(unusualButValidKey);
+    expect(validated.NEXT_PUBLIC_SUPABASE_ANON_KEY).not.toBe('placeholder-anon-key');
+  });
+
+  it('3b. rejects an empty anon key under the existing non-empty string contract', () => {
+    expect(() => validateEnv({ NEXT_PUBLIC_SUPABASE_ANON_KEY: '' })).toThrow(
+      /Environment validation failed/
+    );
+  });
+
   it('4. browser-safe configuration does not fall through to placeholders when valid values exist', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://real.supabase.co');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'real-anon');
@@ -67,6 +83,25 @@ describe('env', () => {
     // Prove it is omitted when not provided
     const noServiceRole = validateEnv({});
     expect(noServiceRole.SUPABASE_SERVICE_ROLE_KEY).toBeUndefined();
+  });
+
+  it('5a. public-only customEnv construction cannot inherit a host service-role secret', () => {
+    const syntheticSecret = 'synthetic-service-role-sentinel';
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', syntheticSecret);
+
+    const publicConfig = validateEnv({
+      NEXT_PUBLIC_SUPABASE_URL: 'https://public-only.supabase.co',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-anon-key',
+    });
+
+    expect(publicConfig).not.toHaveProperty('SUPABASE_SERVICE_ROLE_KEY');
+    expect(JSON.stringify(publicConfig)).not.toContain(syntheticSecret);
+  });
+
+  it('5b. source contract does not create a public service-role environment variable', () => {
+    const envSource = readFileSync(resolve(process.cwd(), 'src/lib/env.ts'), 'utf8');
+
+    expect(envSource).not.toContain('NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY');
   });
 
   it('6. malformed required public env still follows intended validation behavior', () => {
