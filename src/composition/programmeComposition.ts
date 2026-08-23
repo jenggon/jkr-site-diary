@@ -11,6 +11,7 @@ import { ActivityRepository } from '@/repositories/activityRepository';
 import { IDomainEventPublisher, IDomainEvent } from '@/events/IDomainEventPublisher';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
 import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
+import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
 import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
 
 export interface CreateProgrammeServiceOptions {
@@ -25,7 +26,12 @@ export interface CreateProgrammeServiceOptions {
  * Registers OpenActivityTerminationHandler with SyncDomainEventPublisher.
  */
 export function createProgrammeService(options?: CreateProgrammeServiceOptions): IProgrammeService {
-  const programmeRepo = new ProgrammeRepository();
+  const authenticatedClient = options?.accessToken
+    ? getSupabaseAuthenticatedClient(options.accessToken)
+    : undefined;
+  const programmeRepo = authenticatedClient
+    ? new ProgrammeRepository(new SupabaseDatabaseAdapter(authenticatedClient))
+    : new ProgrammeRepository();
   const revisionRepo = new ProgrammeRevisionRepository();
   const txManager = new DatabaseTransactionManager();
   const clock = new SystemClock();
@@ -38,7 +44,9 @@ export function createProgrammeService(options?: CreateProgrammeServiceOptions):
       activityRepository: activityRepo,
       logger,
     });
-    syncPublisher.subscribe('PROGRAMME_REVISION_APPROVED', (evt: IDomainEvent) => terminationHandler.handle(evt));
+    syncPublisher.subscribe('PROGRAMME_REVISION_APPROVED', (evt: IDomainEvent) =>
+      terminationHandler.handle(evt),
+    );
     publisher = syncPublisher;
   }
 
@@ -49,6 +57,8 @@ export function createProgrammeService(options?: CreateProgrammeServiceOptions):
     clock,
     logger,
     eventPublisher: publisher,
-    ...(options?.accessToken ? { atomicRepository: new ResidualAtomicRepository(getSupabaseAuthenticatedClient(options.accessToken)) } : {}),
+    ...(authenticatedClient
+      ? { atomicRepository: new ResidualAtomicRepository(authenticatedClient) }
+      : {}),
   });
 }
