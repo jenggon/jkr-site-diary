@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger';
 import { NoopDomainEventPublisher } from '@/events/NoopDomainEventPublisher';
 import { ResidualAtomicRepository } from '@/repositories/atomic/ResidualAtomicRepository';
 import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
+import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
 
 /**
  * Composition Root factory for Open Activities Engine services.
@@ -17,9 +18,17 @@ import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
  * Creates zero global singleton instances.
  */
 export function createOpenActivityService(accessToken?: string): IOpenActivityService {
-  const activityRepo = new ActivityRepository();
+  const authenticatedClient = accessToken ? getSupabaseAuthenticatedClient(accessToken) : undefined;
+  const authenticatedAdapter = authenticatedClient
+    ? new SupabaseDatabaseAdapter(authenticatedClient)
+    : undefined;
+  const activityRepo = authenticatedAdapter
+    ? new ActivityRepository(authenticatedAdapter)
+    : new ActivityRepository();
   const logRepo = new ActivityLogRepository();
-  const revisionRepo = new ProgrammeRevisionRepository();
+  const revisionRepo = authenticatedAdapter
+    ? new ProgrammeRevisionRepository(authenticatedAdapter)
+    : new ProgrammeRevisionRepository();
   const txManager = new DatabaseTransactionManager();
   const clock = new SystemClock();
   const eventPublisher = new NoopDomainEventPublisher();
@@ -35,6 +44,8 @@ export function createOpenActivityService(accessToken?: string): IOpenActivitySe
     // revision lifecycle validity on every mutation path in production.
     revisionRepository: revisionRepo,
     taskRepository: taskRepository,
-    ...(accessToken ? { atomicRepository: new ResidualAtomicRepository(getSupabaseAuthenticatedClient(accessToken)) } : {}),
+    ...(authenticatedClient
+      ? { atomicRepository: new ResidualAtomicRepository(authenticatedClient) }
+      : {}),
   });
 }
