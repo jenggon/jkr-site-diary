@@ -1,0 +1,104 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GET } from '@/app/api/programme/[programmeId]/route';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { createProgrammeService } from '@/composition/programmeComposition';
+import { Failure, Success } from '@/lib/result';
+import { InfrastructureError } from '@/lib/errors';
+import { IProgrammeService } from '@/services/IProgrammeService';
+
+vi.mock('@/app/api/_shared/identity', () => ({
+  extractIdentity: vi.fn(),
+  extractVerifiedIdentity: vi.fn(),
+}));
+
+vi.mock('@/composition/programmeComposition', () => ({
+  createProgrammeService: vi.fn(),
+}));
+
+const context = (programmeId: string) => ({ params: Promise.resolve({ programmeId }) });
+
+describe('GET /api/programme/[programmeId]', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('uses verified identity and passes the caller access token to Programme composition', async () => {
+    vi.mocked(extractVerifiedIdentity).mockResolvedValue({
+      actorId: 'member-1',
+      accessToken: 'verified-token',
+    });
+    const service = {
+      getProgramme: vi.fn().mockResolvedValue(Success(null)),
+    };
+    vi.mocked(createProgrammeService).mockReturnValue(service as unknown as IProgrammeService);
+    const request = new Request('http://localhost/api/programme/programme-a', {
+      headers: { Authorization: 'Bearer verified-token' },
+    });
+
+    const response = await GET(request, context('programme-a'));
+
+    expect(extractVerifiedIdentity).toHaveBeenCalledWith(request);
+    expect(createProgrammeService).toHaveBeenCalledWith({ accessToken: 'verified-token' });
+    expect(service.getProgramme).toHaveBeenCalledWith('programme-a');
+    expect(response.status).toBe(404);
+  });
+
+  it('returns 401 and does not compose a service for an anonymous caller', async () => {
+    vi.mocked(extractVerifiedIdentity).mockResolvedValue(null);
+
+    const response = await GET(
+      new Request('http://localhost/api/programme/programme-a'),
+      context('programme-a'),
+    );
+
+    expect(response.status).toBe(401);
+    expect(createProgrammeService).not.toHaveBeenCalled();
+  });
+
+  it('returns the member-visible Programme without changing its DTO shape', async () => {
+    vi.mocked(extractVerifiedIdentity).mockResolvedValue({
+      actorId: 'member-1',
+      accessToken: 'verified-token',
+    });
+    const programme = { programmeId: 'programme-a', programmeName: 'Programme A' };
+    vi.mocked(createProgrammeService).mockReturnValue({
+      getProgramme: vi.fn().mockResolvedValue(Success(programme)),
+    } as unknown as IProgrammeService);
+
+    const response = await GET(
+      new Request('http://localhost/api/programme/programme-a'),
+      context('programme-a'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ data: programme });
+  });
+
+  it('does not expose raw database errors', async () => {
+    vi.mocked(extractVerifiedIdentity).mockResolvedValue({
+      actorId: 'member-1',
+      accessToken: 'verified-token',
+    });
+    vi.mocked(createProgrammeService).mockReturnValue({
+      getProgramme: vi
+        .fn()
+        .mockResolvedValue(
+          Failure(
+            new InfrastructureError(
+              'Database error [42501]: permission denied for table programme',
+            ),
+          ),
+        ),
+    } as unknown as IProgrammeService);
+
+    const response = await GET(
+      new Request('http://localhost/api/programme/foreign-programme'),
+      context('foreign-programme'),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({ error: 'Failed to retrieve programme' });
+    expect(JSON.stringify(body)).not.toMatch(/42501|permission denied|Database error/i);
+  });
+});

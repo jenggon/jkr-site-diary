@@ -10,7 +10,9 @@ describe('A26 route architecture', () => {
   it.each(activeRoutes)('%s delegates without direct Supabase access', (route) => {
     const source = readFileSync(resolve(root, 'src/app/api', route, 'route.ts'), 'utf8');
     expect(source).not.toMatch(/supabase|\.from\s*\(/i);
-    expect(source).toContain('a26QueryService');
+    expect(source).toContain('extractVerifiedIdentity');
+    expect(source).toContain('createA26QueryService');
+    expect(source).not.toMatch(/\bimport\s*\{\s*a26QueryService\s*\}/);
   });
 
   it.each(deletedRoutes)('%s orphan route no longer exists', (route) => {

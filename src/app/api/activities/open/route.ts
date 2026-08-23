@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createOpenActivityService } from '@/composition/activityComposition';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isFailure } from '@/lib/result';
 import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
 
 export async function GET(request: Request) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json(
         { error: 'Unauthorized: Missing or invalid identity' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -20,25 +20,22 @@ export async function GET(request: Request) {
     if (!programmeId || programmeId.trim() === '') {
       return NextResponse.json(
         { error: 'Validation failed: programmeId is required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const openActivityService = createOpenActivityService();
+    const openActivityService = createOpenActivityService(identity.accessToken);
     const result = await openActivityService.getOpenActivities(programmeId);
 
     if (isFailure(result)) {
       return NextResponse.json(
-        { error: result.error.message },
-        { status: mapErrorToHttpStatus(result.error) }
+        { error: 'Failed to fetch open activities' },
+        { status: mapErrorToHttpStatus(result.error) },
       );
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to fetch open activities' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Failed to fetch open activities' }, { status: 500 });
   }
 }

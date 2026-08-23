@@ -3,12 +3,14 @@ import { GET as getOpenActivities } from '@/app/api/activities/open/route';
 import { Success, Failure } from '@/lib/result';
 import { UnknownError } from '@/lib/errors';
 import { ActivityStatus } from '@/types/activity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { createOpenActivityService } from '@/composition/activityComposition';
 
 vi.mock('@/app/api/_shared/identity', () => ({
-  extractIdentity: vi.fn(async (req) => {
+  extractVerifiedIdentity: vi.fn(async (req) => {
     const auth = req.headers?.get?.('authorization');
     if (!auth || auth === 'invalid') return null;
-    return 'verified-actor-123';
+    return { actorId: 'verified-actor-123', accessToken: auth };
   }),
 }));
 
@@ -44,7 +46,10 @@ describe('GET /api/activities/open', () => {
   });
 
   it('returns 401 if token is invalid', async () => {
-    const req = createMockRequest('http://localhost/api/activities/open?programmeId=prog-1', 'invalid');
+    const req = createMockRequest(
+      'http://localhost/api/activities/open?programmeId=prog-1',
+      'invalid',
+    );
     const res = await getOpenActivities(req);
     expect(res.status).toBe(401);
   });
@@ -62,12 +67,17 @@ describe('GET /api/activities/open', () => {
     ];
     mockService.getOpenActivities.mockResolvedValue(Success(mockData));
 
-    const req = createMockRequest('http://localhost/api/activities/open?programmeId=prog-1', 'valid-token');
+    const req = createMockRequest(
+      'http://localhost/api/activities/open?programmeId=prog-1',
+      'valid-token',
+    );
     const res = await getOpenActivities(req);
-    
+
     expect(res.status).toBe(200);
+    expect(extractVerifiedIdentity).toHaveBeenCalledWith(req);
+    expect(createOpenActivityService).toHaveBeenCalledWith('valid-token');
     expect(mockService.getOpenActivities).toHaveBeenCalledWith('prog-1');
-    
+
     const body = await res.json();
     expect(body.data).toEqual(mockData);
   });
@@ -75,11 +85,15 @@ describe('GET /api/activities/open', () => {
   it('handles service errors', async () => {
     mockService.getOpenActivities.mockResolvedValue(Failure(new UnknownError('DB error')));
 
-    const req = createMockRequest('http://localhost/api/activities/open?programmeId=prog-1', 'valid-token');
+    const req = createMockRequest(
+      'http://localhost/api/activities/open?programmeId=prog-1',
+      'valid-token',
+    );
     const res = await getOpenActivities(req);
-    
+
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.error).toBe('DB error');
+    expect(body.error).toBe('Failed to fetch open activities');
+    expect(JSON.stringify(body)).not.toMatch(/DB error|42501|permission denied/i);
   });
 });
