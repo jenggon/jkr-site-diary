@@ -1,160 +1,232 @@
-import { test, expect, Page } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 
 test.describe('F2.7-B02-A Real Browser Core Acceptance', () => {
+  test.setTimeout(90_000);
 
-  // Increase timeout because first Next.js dev compile is slow
-  test.setTimeout(90000);
-
-  const USER = {
-    email: 'submitter@jkr.gov.my',
-    password: 'password123'
+  const PROGRAMME_A = {
+    id: '11111111-1111-1111-1111-111111111111',
+    name: 'C01 Test Programme',
+    activity: 'Concrete Works',
   };
+  const PROGRAMME_B = {
+    id: '22222222-2222-2222-2222-222222222222',
+    name: 'C01 Programme B',
+    activity: 'Prog B Activity',
+  };
+  const USERS = {
+    submitter: { email: 'submitter@jkr.gov.my', password: 'password123' },
+    unauthorized: { email: 'unauthorized@external.com', password: 'password123' },
+  };
+  const TABS = ['Laporan Baharu', 'Aktiviti Terbuka', 'Rekod / Sejarah', 'Kelulusan'] as const;
 
-  async function login(page: Page) {
+  async function login(page: Page, user = USERS.submitter) {
     await page.goto('/login');
-    await page.fill('input#email', USER.email);
-    await page.fill('input#password', USER.password);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/site-diary', { timeout: 30000 });
-  }
+    await page.getByLabel('Alamat Emel').fill(user.email);
+    await page.getByLabel('Kata Laluan').fill(user.password);
 
-  test('Canonical landing proof', async ({ page }) => {
-    await login(page);
-    expect(page.url()).toContain('/site-diary');
-    await expect(page.locator('main')).toBeVisible();
-    
-    // Legacy root absence (checking if we are in the canonical workspace)
-    const tabsNav = page.locator('nav[aria-label="Navigasi Buku Harian Tapak"]');
-    await expect(tabsNav).toBeVisible();
-  });
-
-  test('Workspace tab proof', async ({ page }) => {
-    await login(page);
-
-    // Select Programme A if prompt exists
-    const selectBtn = page.getByRole('button', { name: /UAT Synthetic Programme A/i });
-    if (await selectBtn.isVisible()) {
-      await selectBtn.click();
-    }
-
-    const tabsNav = page.locator('nav[aria-label="Navigasi Buku Harian Tapak"]');
-    await expect(tabsNav).toBeVisible();
-
-    const tabs = [
-      { name: 'Laporan Baharu', id: 'NEW' },
-      { name: 'Aktiviti Terbuka', id: 'OPEN' },
-      { name: 'Rekod / Sejarah', id: 'RECORDS' },
-      { name: 'Kelulusan', id: 'APPROVALS' }
-    ];
-
-    for (const tab of tabs) {
-      const tabButton = page.getByRole('tab', { name: tab.name, exact: true });
-      await expect(tabButton).toBeVisible();
-      
-      // Click the tab
-      await tabButton.click();
-      
-      // Verify exactly one tab is active
-      await expect(tabButton).toHaveAttribute('aria-selected', 'true');
-      
-      // Check other tabs are not selected
-      for (const otherTab of tabs) {
-        if (otherTab.id !== tab.id) {
-          const otherTabButton = page.getByRole('tab', { name: otherTab.name, exact: true });
-          await expect(otherTabButton).toHaveAttribute('aria-selected', 'false');
-        }
-      }
-    }
-  });
-
-  test('Programme A -> B switch ownership', async ({ page }) => {
-    await login(page);
-
-    // Enter Programme A
-    const progABtn = page.getByRole('button', { name: /UAT Synthetic Programme A/i });
-    if (await progABtn.isVisible()) {
-      await progABtn.click();
-    }
-
-    // Go to "Aktiviti Terbuka"
-    await page.getByRole('tab', { name: 'Aktiviti Terbuka' }).click();
-
-    // Verify Programme A content exists. For example, Programme A has "Concrete Works"
-    await expect(page.getByText('Concrete Works', { exact: false }).first()).toBeVisible();
-
-    // Switch to Programme B
-    await page.getByRole('button', { name: 'Tukar Projek' }).click();
-    await page.getByRole('button', { name: /C01 Programme B/i }).click();
-
-    // Verify we are still on 'Aktiviti Terbuka' tab (or wait for load)
-    await expect(page.getByRole('tab', { name: 'Aktiviti Terbuka' })).toHaveAttribute('aria-selected', 'true');
-
-    // Verify Programme A entity state is gone and B is visible
-    await expect(page.getByText('Concrete Works', { exact: false }).first()).not.toBeVisible();
-    await expect(page.getByText('Prog B Activity', { exact: false }).first()).toBeVisible();
-  });
-
-  test('Stale async browser behavior', async ({ page }) => {
-    await login(page);
-
-    // Enter Programme A
-    const progABtn = page.getByRole('button', { name: /UAT Synthetic Programme A/i });
-    if (await progABtn.isVisible()) {
-      await progABtn.click();
-    }
-
-    // Switch to Aktiviti Terbuka
-    await page.getByRole('tab', { name: 'Aktiviti Terbuka' }).click();
-
-    // We will intercept the NEXT network request that queries open activities
-    let delayedA = false;
-    await page.route('**/api/activities/open*', async (route, request) => {
-      if (request.url().includes('11111111-1111-1111-1111-111111111111')) {
-        delayedA = true;
-        setTimeout(() => route.continue(), 3000);
-      } else {
-        route.continue();
-      }
+    const goTrueResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        response.request().method() === 'POST' &&
+        url.pathname === '/auth/v1/token' &&
+        url.searchParams.get('grant_type') === 'password'
+      );
     });
 
-    // To trigger the request, we can switch back to NEW and then to OPEN again,
-    // or just assume the switch to Programme B happens while A is loading.
-    // Let's force a reload of OPEN tab data by switching to NEW and back to OPEN
-    await page.getByRole('tab', { name: 'Laporan Baharu' }).click();
-    await page.getByRole('tab', { name: 'Aktiviti Terbuka' }).click();
+    await page.getByRole('button', { name: 'Log Masuk Sekarang' }).click();
+    const response = await goTrueResponse;
+    expect(response.status()).toBe(200);
+    expect(new URL(response.url()).origin).toBe('http://127.0.0.1:54321');
+    await page.waitForURL((url) => url.pathname === '/site-diary', { timeout: 30_000 });
+  }
 
-    // Immediately switch to Programme B while A is still loading
-    await page.getByRole('button', { name: 'Tukar Projek' }).click();
-    await page.getByRole('button', { name: /C01 Programme B/i }).click();
+  async function selectProgramme(page: Page, programmeName: string) {
+    const button = page.getByRole('button', { name: new RegExp(programmeName, 'i') });
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect(page.getByRole('heading', { name: programmeName, exact: true })).toBeVisible();
+  }
 
-    // Wait for the delay to finish
-    await page.waitForTimeout(3500);
+  async function openActivities(page: Page) {
+    const tab = page.getByRole('tab', { name: 'Aktiviti Terbuka', exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+  }
 
-    // Ensure we are in B and A did not bleed in
-    await expect(page.getByText('Prog B Activity', { exact: false }).first()).toBeVisible();
-    await expect(page.getByText('Concrete Works', { exact: false }).first()).not.toBeVisible();
-    expect(delayedA).toBeTruthy();
-  });
+  async function expectNoHorizontalOverflow(page: Page) {
+    const dimensions = await page.evaluate(() => ({
+      bodyClientWidth: document.body.clientWidth,
+      bodyScrollWidth: document.body.scrollWidth,
+      rootClientWidth: document.documentElement.clientWidth,
+      rootScrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.bodyScrollWidth).toBeLessThanOrEqual(dimensions.bodyClientWidth);
+    expect(dimensions.rootScrollWidth).toBeLessThanOrEqual(dimensions.rootClientWidth);
+  }
 
-  test('Mobile Responsive', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  async function expectTabsReachable(page: Page, minimumHeight?: number) {
+    const tabList = page.getByRole('navigation', { name: 'Navigasi Buku Harian Tapak' });
+    await expect(tabList).toBeVisible();
+    await expect(tabList.getByRole('tab')).toHaveCount(TABS.length);
+
+    for (const tabName of TABS) {
+      const tab = page.getByRole('tab', { name: tabName, exact: true });
+      await expect(tab).toBeVisible();
+      if (minimumHeight) {
+        const box = await tab.boundingBox();
+        expect(box, `${tabName} must have a measurable touch target`).not.toBeNull();
+        expect(box!.height, `${tabName} touch target height`).toBeGreaterThanOrEqual(minimumHeight);
+      }
+    }
+  }
+
+  test('real GoTrue login reaches the canonical Programme-aware workspace', async ({ page }) => {
     await login(page);
 
-    const progABtn = page.getByRole('button', { name: /UAT Synthetic Programme A/i });
-    if (await progABtn.isVisible()) {
-      await progABtn.click();
+    expect(new URL(page.url()).pathname).toBe('/site-diary');
+    await expect(page.getByRole('heading', { name: 'Pilih Projek / Program Tapak' })).toBeVisible();
+    await expect(page.getByText('Terdapat 2 projek aktif.')).toBeVisible();
+    await expect(page.getByRole('button', { name: /C01 Test Programme/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /C01 Programme B/i })).toBeVisible();
+
+    await selectProgramme(page, PROGRAMME_A.name);
+    await expectTabsReachable(page);
+  });
+
+  test('workspace exposes exactly four contextual tabs with one owner', async ({ page }) => {
+    await login(page);
+    await selectProgramme(page, PROGRAMME_A.name);
+    const workspaceTabs = page.getByRole('navigation', { name: 'Navigasi Buku Harian Tapak' });
+
+    for (const tabName of TABS) {
+      const tab = workspaceTabs.getByRole('tab', { name: tabName, exact: true });
+      await tab.click();
+      await expect(tab).toHaveAttribute('aria-selected', 'true');
+      await expect(workspaceTabs.getByRole('tab', { selected: true })).toHaveCount(1);
     }
 
-    const tabsNav = page.locator('nav[aria-label="Navigasi Buku Harian Tapak"]');
-    await expect(tabsNav).toBeVisible();
-    
-    // Check all tabs are reachable and visible without destructive overflow
-    const newTab = page.getByRole('tab', { name: 'Laporan Baharu' });
-    await expect(newTab).toBeVisible();
-    
-    // The viewport width is 390. Let's check bounding box is within limits
-    const box = await newTab.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(40); // practical touch accessibility
-    expect(box?.height).toBeGreaterThanOrEqual(40);
+    await expect(page.getByRole('tab', { name: /Print/i })).toHaveCount(0);
+  });
+
+  test('P1 legitimately switches Programme A to B without cross-Programme state', async ({
+    page,
+  }) => {
+    await login(page);
+    await selectProgramme(page, PROGRAMME_A.name);
+    await openActivities(page);
+    await expect(page.getByText(PROGRAMME_A.activity, { exact: false }).first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Tukar Projek' }).click();
+    await selectProgramme(page, PROGRAMME_B.name);
+    await openActivities(page);
+
+    await expect(page.getByText(PROGRAMME_B.activity, { exact: false }).first()).toBeVisible();
+    await expect(page.getByText(PROGRAMME_A.activity, { exact: false })).toHaveCount(0);
+  });
+
+  test('a delayed Programme A response cannot re-own the Programme B UI', async ({ page }) => {
+    await login(page);
+    await selectProgramme(page, PROGRAMME_A.name);
+
+    let interceptedA = false;
+    let completedA = false;
+    let signalInterceptedA!: () => void;
+    let releaseA!: () => void;
+    const interceptedAPromise = new Promise<void>((resolve) => {
+      signalInterceptedA = resolve;
+    });
+    const releaseAPromise = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
+
+    await page.route('**/api/activities/open?*', async (route, request) => {
+      const url = new URL(request.url());
+      if (
+        url.pathname === '/api/activities/open' &&
+        url.searchParams.get('programmeId') === PROGRAMME_A.id
+      ) {
+        interceptedA = true;
+        const upstreamResponse = await route.fetch();
+        signalInterceptedA();
+        await releaseAPromise;
+        await route.fulfill({ response: upstreamResponse });
+        completedA = true;
+        return;
+      }
+      await route.continue();
+    });
+
+    await openActivities(page);
+    await interceptedAPromise;
+    expect(interceptedA).toBe(true);
+
+    await page.getByRole('button', { name: 'Tukar Projek' }).click();
+    await selectProgramme(page, PROGRAMME_B.name);
+    await openActivities(page);
+    await expect(page.getByText(PROGRAMME_B.activity, { exact: false }).first()).toBeVisible();
+
+    releaseA();
+    await expect.poll(() => completedA).toBe(true);
+    await expect(page.getByText(PROGRAMME_B.activity, { exact: false }).first()).toBeVisible();
+    await expect(page.getByText(PROGRAMME_A.activity, { exact: false })).toHaveCount(0);
+  });
+
+  test('P3 inactive membership grants no Programme discovery', async ({ page }) => {
+    const browserRequests: string[] = [];
+    page.on('request', (request) => browserRequests.push(request.url()));
+
+    const programmeResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/programme' && url.searchParams.get('status') === 'Active';
+    });
+    await login(page, USERS.unauthorized);
+    const programmeResponse = await programmeResponsePromise;
+    expect(programmeResponse.status()).toBe(200);
+    expect(await programmeResponse.json()).toMatchObject({ data: [] });
+
+    await expect(page.getByRole('heading', { name: 'Tiada Projek Aktif Ditemui' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /C01 Test Programme/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /C01 Programme B/i })).toHaveCount(0);
+    expect(browserRequests.some((url) => url.includes('/rest/v1/programme_membership'))).toBe(
+      false,
+    );
+  });
+
+  test('mobile 390x844 keeps Programme switching, tabs, and content usable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await selectProgramme(page, PROGRAMME_A.name);
+
+    await expectTabsReachable(page, 44);
+    await expectNoHorizontalOverflow(page);
+    await page.getByRole('tab', { name: 'Kelulusan', exact: true }).click();
+    await expect(page.getByRole('tab', { name: 'Kelulusan', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+
+    const switchButton = page.getByRole('button', { name: 'Tukar Projek' });
+    await expect(switchButton).toBeVisible();
+    const switchBox = await switchButton.boundingBox();
+    expect(switchBox).not.toBeNull();
+    expect(switchBox!.height).toBeGreaterThanOrEqual(44);
+    await switchButton.click();
+    await expect(page.getByRole('button', { name: /C01 Programme B/i })).toBeVisible();
+  });
+
+  test('desktop 1440x900 keeps Programme switching, tabs, and content usable', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page);
+    await selectProgramme(page, PROGRAMME_A.name);
+
+    await expectTabsReachable(page);
+    await expectNoHorizontalOverflow(page);
+    await page.getByRole('tab', { name: 'Rekod / Sejarah', exact: true }).click();
+    await expect(page.getByRole('tab', { name: 'Rekod / Sejarah', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await page.getByRole('button', { name: 'Tukar Projek' }).click();
+    await expect(page.getByRole('button', { name: /C01 Programme B/i })).toBeVisible();
   });
 });
