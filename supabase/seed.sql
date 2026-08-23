@@ -185,7 +185,10 @@ BEGIN
     INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
     VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999992', v_re_id, true, now())
     ON CONFLICT DO NOTHING;
-    -- P3 = no membership in either programme
+    -- P3 = inactive membership in Programme B (must grant no discovery)
+    INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
+    VALUES ('c0400000-0000-4000-8000-000000000103', '22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999993', v_re_id, false, now())
+    ON CONFLICT (programme_id, user_id) DO UPDATE SET is_active = false;
 END;
 $$;
 
