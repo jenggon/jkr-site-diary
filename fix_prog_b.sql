@@ -1,0 +1,1 @@
+﻿UPDATE public.programme_membership SET role_id = (SELECT role_id FROM public.role WHERE role_code = 'SITE_SUPERVISOR') WHERE programme_id = '22222222-2222-2222-2222-222222222222' AND user_id = '99999999-9999-9999-9999-999999999991';

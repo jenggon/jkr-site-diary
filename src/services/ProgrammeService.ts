@@ -192,6 +192,7 @@ export class ProgrammeService implements IProgrammeService {
 
       return this.programmeRepo.update(updatedProgramme);
     } catch (err: unknown) {
+      if (err instanceof BaseAppError) return Failure(err);
       return Failure(new UnknownError(err instanceof Error ? err.message : 'Update failed', { cause: err }));
     }
   }

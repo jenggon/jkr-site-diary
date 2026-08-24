@@ -151,4 +151,40 @@ describe('PATCH /api/programme/[programmeId]', () => {
     });
     expect(response.status).toBe(200);
   });
+
+  it('redacts unexpected DB errors and returns a safe HTTP 500', async () => {
+    vi.mocked(extractVerifiedIdentity).mockResolvedValue({
+      actorId: 'member-1',
+      accessToken: 'verified-token',
+    });
+    const service = {
+      updateProgramme: vi.fn().mockResolvedValue(
+        Failure(new InfrastructureError('Database error [PT999]: obscure PostgREST trace')),
+      ),
+    };
+    vi.mocked(createProgrammeService).mockReturnValue(service as unknown as IProgrammeService);
+    
+    const request = new Request('http://localhost/api/programme/programme-a', {
+      method: 'PATCH',
+      body: JSON.stringify({ programmeName: 'Updated' }),
+      headers: { Authorization: 'Bearer verified-token' },
+    });
+    const context = (programmeId: string) => ({ params: Promise.resolve({ programmeId }) });
+    const response = await (await import('@/app/api/programme/[programmeId]/route')).PATCH(request, context('programme-a'));
+    
+    const body = await response.json();
+    expect(response.status).toBe(500);
+    expect(body).toEqual({ error: 'Failed to update programme' });
+    expect(JSON.stringify(body)).not.toMatch(/PT999|PostgREST|obscure/i);
+  });
+
+  it('maps PROGRAMME_NOT_FOUND to HTTP 404', async () => {
+    vi.mocked(extractVerifiedIdentity).mockResolvedValue({ actorId: 'member-1', accessToken: 'token' });
+    const service = { updateProgramme: vi.fn().mockResolvedValue(Failure({ errorCode: 'PROGRAMME_NOT_FOUND' })) };
+    vi.mocked(createProgrammeService).mockReturnValue(service as unknown as IProgrammeService);
+    const request = new Request('http://localhost/api/programme/programme-a', { method: 'PATCH', body: JSON.stringify({ programmeName: 'Updated' }) });
+    const context = (programmeId: string) => ({ params: Promise.resolve({ programmeId }) });
+    const response = await (await import('@/app/api/programme/[programmeId]/route')).PATCH(request, context('programme-a'));
+    expect(response.status).toBe(404);
+  });
 });
