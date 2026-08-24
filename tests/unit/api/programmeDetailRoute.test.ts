@@ -163,7 +163,7 @@ describe('PATCH /api/programme/[programmeId]', () => {
       ),
     };
     vi.mocked(createProgrammeService).mockReturnValue(service as unknown as IProgrammeService);
-    
+
     const request = new Request('http://localhost/api/programme/programme-a', {
       method: 'PATCH',
       body: JSON.stringify({ programmeName: 'Updated' }),
@@ -171,7 +171,7 @@ describe('PATCH /api/programme/[programmeId]', () => {
     });
     const context = (programmeId: string) => ({ params: Promise.resolve({ programmeId }) });
     const response = await (await import('@/app/api/programme/[programmeId]/route')).PATCH(request, context('programme-a'));
-    
+
     const body = await response.json();
     expect(response.status).toBe(500);
     expect(body).toEqual({ error: 'Failed to update programme' });
@@ -186,5 +186,20 @@ describe('PATCH /api/programme/[programmeId]', () => {
     const context = (programmeId: string) => ({ params: Promise.resolve({ programmeId }) });
     const response = await (await import('@/app/api/programme/[programmeId]/route')).PATCH(request, context('programme-a'));
     expect(response.status).toBe(404);
+  });
+
+  it('maps PROGRAMME_VALIDATION_FAILED to HTTP 400 safely', async () => {
+    vi.mocked(extractVerifiedIdentity).mockResolvedValue({ actorId: 'member-1', accessToken: 'token' });
+    const validationError = { errorCode: 'PROGRAMME_VALIDATION_FAILED', message: 'Internal DB validation message [PT400]: C06_COMPLETION_BEFORE_START' };
+    const service = { updateProgramme: vi.fn().mockResolvedValue(Failure(validationError)) };
+    vi.mocked(createProgrammeService).mockReturnValue(service as unknown as IProgrammeService);
+    const request = new Request('http://localhost/api/programme/programme-a', { method: 'PATCH', body: JSON.stringify({ programmeName: 'Updated' }) });
+    const context = (programmeId: string) => ({ params: Promise.resolve({ programmeId }) });
+    const response = await (await import('@/app/api/programme/[programmeId]/route')).PATCH(request, context('programme-a'));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toEqual({ error: 'Validation failed' });
+    expect(JSON.stringify(body)).not.toMatch(/PT400|C06_COMPLETION_BEFORE_START/i);
   });
 });

@@ -100,7 +100,7 @@ export async function PATCH(request: Request, context: RouteParams) {
     if (result.error.errorCode === 'PROGRAMME_ARCHIVED' || result.error.errorCode === 'PROGRAMME_LOCKED') {
       return NextResponse.json({ error: 'Programme cannot be updated in its current state' }, { status: 409 });
     }
-    if (result.error.errorCode === 'PROGRAMME_VALIDATION_ERROR') {
+    if (result.error.errorCode === 'PROGRAMME_VALIDATION_FAILED') {
       return NextResponse.json({ error: 'Validation failed' }, { status: 400 });
     }
     

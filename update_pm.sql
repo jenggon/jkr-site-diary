@@ -1,1 +1,0 @@
-﻿UPDATE public.programme_membership SET role_id = (SELECT role_id FROM public.role WHERE role_code = 'PROJECT_MANAGER') WHERE programme_id = '11111111-1111-1111-1111-111111111111' AND user_id = '99999999-9999-9999-9999-999999999991';
