@@ -1,30 +1,18 @@
 import { NextResponse } from 'next/server';
-import { extractIdentity, extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
-
-type RouteParams = {
-  params: Promise<{ programmeId: string }>;
-};
 
 /**
  * GET /api/programme/[programmeId]
  * Retrieves a Programme by ID via Composition Root.
  */
-export async function GET(request: Request, context: RouteParams) {
+export async function GET(request: Request, { params }: { params: Promise<{ programmeId: string }> }) {
   try {
+    const { programmeId } = await params;
     const identity = await extractVerifiedIdentity(request);
     if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { programmeId } = await context.params;
-
-    if (!programmeId || typeof programmeId !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing or invalid route parameter: programmeId' },
-        { status: 400 }
-      );
     }
 
     const service = createProgrammeService({ accessToken: identity.accessToken });
@@ -37,12 +25,8 @@ export async function GET(request: Request, context: RouteParams) {
       return NextResponse.json({ data: result.value }, { status: 200 });
     }
 
-    const notFound = result.error.errorCode === 'PROGRAMME_NOT_FOUND';
-    return NextResponse.json(
-      { error: notFound ? 'Programme not found' : 'Failed to retrieve programme' },
-      { status: notFound ? 404 : 500 },
-    );
-  } catch {
+    return NextResponse.json({ error: 'Failed to retrieve programme' }, { status: 500 });
+  } catch (error) {
     return NextResponse.json({ error: 'Failed to retrieve programme' }, { status: 500 });
   }
 }
@@ -51,32 +35,25 @@ export async function GET(request: Request, context: RouteParams) {
  * PATCH /api/programme/[programmeId]
  * Updates an existing Programme via Composition Root.
  */
-export async function PATCH(request: Request, context: RouteParams) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ programmeId: string }> }) {
   try {
-    const { programmeId } = await context.params;
-
-    if (!programmeId || typeof programmeId !== 'string') {
+    const { programmeId } = await params;
+    let body;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: 'Missing or invalid route parameter: programmeId' },
-        { status: 400 },
-      );
-    }
-
-    const body = await request.json();
-
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { error: 'Invalid payload: Request body must be a valid JSON object' },
+        { error: 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const service = createProgrammeService();
+    const service = createProgrammeService({ accessToken: identity.accessToken });
     const result = await service.updateProgramme({
       programmeId,
       programmeName: body.programme_name ?? body.programmeName,
@@ -86,7 +63,7 @@ export async function PATCH(request: Request, context: RouteParams) {
       contractStartDate: body.contract_start_date ?? body.contractStartDate,
       contractCompletionDate: body.contract_completion_date ?? body.contractCompletionDate,
       defectLiabilityEnd: body.defect_liability_end ?? body.defectLiabilityEnd,
-      updatedBy: actorId,
+      updatedBy: identity.actorId,
     });
 
     if (isSuccess(result)) {

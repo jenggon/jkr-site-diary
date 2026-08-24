@@ -9,6 +9,7 @@ import { SiteDiary } from '@/types/siteDiary';
 import { ProgrammeRowMapper } from '@/repositories/mappers/ProgrammeRowMapper';
 import { ProgrammeRow, ProgrammeRevisionRow } from '@/repositories/types/programmeRow';
 import { SiteDiaryStaleEditError, SiteDiarySealedError } from '@/errors/siteDiaryErrors';
+import { ProgrammeNotFoundError, ProgrammeArchivedError, ProgrammeLockedError } from '@/errors/programmeErrors';
 
 export class ResidualAtomicRepository {
   private readonly programmeMapper = new ProgrammeRowMapper();
@@ -89,6 +90,23 @@ export class ResidualAtomicRepository {
 
   archiveProgramme(programmeId: string, actorId: string): Promise<Programme> {
     return this.rpc('a27_archive_programme', { p_programme_id: programmeId, p_actor_id: actorId });
+  }
+
+  updateProgramme(programmeId: string, payload: Record<string, unknown>, actorId: string): Promise<Programme> {
+    return this.rpc('c06_update_programme_atomic', { p_programme_id: programmeId, p_payload: payload, p_actor_id: actorId, p_audit_id: generateUuid() })
+      .then((row: unknown) => this.programmeMapper.toDomain(row as ProgrammeRow))
+      .catch((error: unknown) => {
+        if (error && typeof error === 'object' && 'code' in error) {
+           const errObj = error as { code: string; message?: string };
+           const errCode = errObj.code;
+           if (errCode === 'PT404' || errCode === 'PT403') throw new ProgrammeNotFoundError('Programme not found');
+           if (errCode === 'PT409') {
+              if (errObj.message === 'C06_PROGRAMME_ARCHIVED') throw new ProgrammeArchivedError('Cannot update archived programme');
+              if (errObj.message === 'C06_PROGRAMME_LOCKED') throw new ProgrammeLockedError('Cannot update locked programme');
+           }
+        }
+        throw error;
+      });
   }
 
   updateTask(taskId: string, payload: Record<string, unknown>, actorId: string): Promise<Task> {
