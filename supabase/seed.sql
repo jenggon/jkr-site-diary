@@ -185,6 +185,11 @@ BEGIN
     INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
     VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999992', v_re_id, true, now())
     ON CONFLICT DO NOTHING;
+    -- P1 = SITE_SUPERVISOR in Programme B
+    INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
+    VALUES (gen_random_uuid(), '22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999991', v_ss_id, true, now())
+    ON CONFLICT DO NOTHING;
+
     -- P3 = inactive membership in Programme B (must grant no discovery)
     INSERT INTO public.programme_membership (membership_id, programme_id, user_id, role_id, is_active, created_at)
     VALUES ('c0400000-0000-4000-8000-000000000103', '22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999993', v_re_id, false, now())
@@ -208,23 +213,63 @@ INSERT INTO public.task (
 
 INSERT INTO public.task (
     task_id, programme_id, revision_id, task_name, task_uid,
-    wbs, outline_number, is_critical, created_at, created_by
+    wbs, outline_number, outline_level, is_summary,
+    planned_start, planned_finish, is_critical, created_at, created_by
 ) VALUES (
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'c02a0000-0000-4000-8000-000000000101',
     '11111111-1111-1111-1111-111111111111',
     '33333333-3333-3333-3333-333333333333',
-    'C01 Test Task', 2, '1', '1', false, now(),
+    'C01 Test Programme', 1, '0', '0', 1, true,
+    CURRENT_DATE - 30, CURRENT_DATE + 180, false, now(),
     '99999999-9999-9999-9999-999999999991'
 ) ON CONFLICT DO NOTHING;
 
 INSERT INTO public.task (
     task_id, programme_id, revision_id, task_name, task_uid,
-    wbs, outline_number, is_critical, created_at, created_by
+    wbs, outline_number, outline_level, is_summary,
+    is_critical, created_at, created_by
+) VALUES (
+    'c02a0000-0000-4000-8000-000000000102',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    'C01 Main Building', 3, '1', '1', 4, true, false, now(),
+    '99999999-9999-9999-9999-999999999991'
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.task (
+    task_id, programme_id, revision_id, task_name, task_uid,
+    wbs, outline_number, outline_level, is_summary,
+    is_critical, created_at, created_by
+) VALUES (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    'C01 Test Task', 2, '1.1', '1.1', 5, false, false, now(),
+    '99999999-9999-9999-9999-999999999991'
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.task (
+    task_id, programme_id, revision_id, task_name, task_uid,
+    wbs, outline_number, outline_level, is_summary,
+    planned_start, planned_finish, is_critical, created_at, created_by
+) VALUES (
+    'c02a0000-0000-4000-8000-000000000201',
+    '22222222-2222-2222-2222-222222222222',
+    '44444444-4444-4444-4444-444444444444',
+    'C01 Programme B', 2, '0', '0', 1, true,
+    CURRENT_DATE - 20, CURRENT_DATE + 120, false, now(),
+    '99999999-9999-9999-9999-999999999991'
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.task (
+    task_id, programme_id, revision_id, task_name, task_uid,
+    wbs, outline_number, outline_level, is_summary,
+    is_critical, created_at, created_by
 ) VALUES (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     '22222222-2222-2222-2222-222222222222',
     '44444444-4444-4444-4444-444444444444',
-    'Prog B Task', 1, '1', '1', false, now(),
+    'Prog B Task', 1, '1.1', '1.1', 5, false, false, now(),
     '99999999-9999-9999-9999-999999999991'
 ) ON CONFLICT DO NOTHING;
 

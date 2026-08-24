@@ -50,6 +50,7 @@ export default function SiteDiaryWorkspace() {
             role="tab"
             aria-selected={tab === item.id}
             onClick={() => setTab(item.id)}
+            style={{ minHeight: 44 }}
             className={`min-h-[44px] rounded-xl px-2 py-2 text-xs font-bold transition-colors ${
               tab === item.id ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
