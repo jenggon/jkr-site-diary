@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { taskService } from '@/services/taskService';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { createTaskReadRepository } from '@/composition/taskReadComposition';
 
 type RouteParams = {
   params: Promise<{ revisionId: string }>;
@@ -11,6 +12,11 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { revisionId } = await context.params;
 
     if (!revisionId || typeof revisionId !== 'string') {
@@ -20,12 +26,14 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const tasks = await taskService.getTasksByRevision(revisionId);
+    const tasks = await createTaskReadRepository(identity.accessToken).getTasksByRevision(
+      revisionId
+    );
 
     return NextResponse.json({ data: tasks }, { status: 200 });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve tasks by revision' },
+      { error: 'Failed to retrieve tasks by revision' },
       { status: 500 }
     );
   }
