@@ -302,6 +302,7 @@ export default function DailyEntryShell({
                   {availableProgrammes.length > 1 && (
                     <button
                       onClick={() => changeProgramme(null)}
+                      style={{ minHeight: 44 }}
                       className="text-[10px] text-zinc-400 hover:text-blue-400 underline transition-colors"
                       title="Pilih projek lain"
                     >
