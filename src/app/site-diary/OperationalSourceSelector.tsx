@@ -352,7 +352,7 @@ export default function OperationalSourceSelector({
             <button
               type="button"
               onClick={() => handleTabChange('MSP')}
-              className={`py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+              className={`min-h-[44px] py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
                 activeTab === 'MSP'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
@@ -367,7 +367,7 @@ export default function OperationalSourceSelector({
             <button
               type="button"
               onClick={() => handleTabChange('VO')}
-              className={`py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+              className={`min-h-[44px] py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
                 activeTab === 'VO'
                   ? 'bg-amber-600 text-white shadow-md'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
