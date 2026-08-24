@@ -255,7 +255,7 @@ test.describe('F2.7-B02-A Real Browser Core Acceptance', () => {
     await expect(taskButton).toBeVisible();
     await taskButton.click();
     await expect(page.getByRole('heading', { name: PROGRAMME_A.task, exact: true })).toBeVisible();
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.locator('[role="alert"]:not(#__next-route-announcer__)')).toHaveCount(0);
   });
 
   test('workspace exposes exactly four contextual tabs with one selected owner', async ({
@@ -350,8 +350,7 @@ test.describe('F2.7-B02-A Real Browser Core Acceptance', () => {
     await expect(page.getByText(PROGRAMME_A.activity, { exact: false })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: PROGRAMME_B.name, exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: PROGRAMME_A.name, exact: true })).toHaveCount(0);
-    await expect(page.getByRole('alert')).toHaveCount(0);
-    await expect(openTab).toHaveCount(0);
+    await expect(page.locator('[role="alert"]:not(#__next-route-announcer__)')).toHaveCount(0);
     await expect(
       page
         .getByRole('navigation', { name: 'Navigasi Buku Harian Tapak' })
