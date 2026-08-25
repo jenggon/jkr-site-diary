@@ -226,6 +226,14 @@ export default function PrintSiteDiaryClient() {
       return;
     }
 
+    if (!session?.access_token) {
+      currentIdRef.current = null;
+      setDiary(null);
+      setError('Sesi tamat tempoh. Sila log masuk semula.');
+      setLoading(false);
+      return;
+    }
+
     // R1-2: Immediately claim ownership — clear stale diary and error before fetching
     currentIdRef.current = id;
     setDiary(null);
@@ -234,10 +242,9 @@ export default function PrintSiteDiaryClient() {
 
     let active = true;
 
-    const headers: HeadersInit = {};
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
-    }
+    const headers: HeadersInit = {
+      Authorization: `Bearer ${session.access_token}`,
+    };
 
     fetch(`/api/site-diary/${encodeURIComponent(id)}/print`, { headers })
       .then(async (response) => {
