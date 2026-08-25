@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SiteDiaryPrintDto } from '@/types/siteDiaryPrint';
+import { useAuth } from '@/context/AuthContext';
 import {
   CONTINUATION_CONTRACTOR_CAPACITY,
   CONTINUATION_NSC_CAPACITY,
@@ -204,6 +205,7 @@ function validatePrintDto(data: unknown, requestedId: string): data is SiteDiary
 }
 
 export default function PrintSiteDiaryClient() {
+  const { loading: authLoading, session } = useAuth();
   const searchParams = useSearchParams();
   const id = searchParams?.get('id') ?? null;
 
@@ -214,6 +216,8 @@ export default function PrintSiteDiaryClient() {
   const currentIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!id) {
       currentIdRef.current = null;
       setDiary(null);
@@ -230,7 +234,12 @@ export default function PrintSiteDiaryClient() {
 
     let active = true;
 
-    fetch(`/api/site-diary/${encodeURIComponent(id)}/print`)
+    const headers: HeadersInit = {};
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    fetch(`/api/site-diary/${encodeURIComponent(id)}/print`, { headers })
       .then(async (response) => {
         if (!response.ok) {
           const body = await response.json().catch(() => null);
@@ -275,7 +284,7 @@ export default function PrintSiteDiaryClient() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, authLoading, session?.access_token]);
 
   const reports: DailyReport[] = useMemo(() => {
     if (!diary) return [];

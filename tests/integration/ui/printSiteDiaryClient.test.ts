@@ -26,6 +26,14 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({
+    loading: false,
+    session: { access_token: 'mock-token' },
+    user: { id: 'mock-user' }
+  })
+}));
+
 // ============================================================
 // Test helpers
 // ============================================================
@@ -108,7 +116,7 @@ describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
     await act(async () => { render(); });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-exact/print');
+    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-exact/print', expect.anything());
     expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/reports'));
 
     await act(async () => { d.resolve(json({ data: makeDto() })); });
@@ -531,7 +539,7 @@ describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
     await act(async () => { render(); });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-historical/print');
+    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-historical/print', expect.anything());
     expect(getHTML()).not.toContain('/api/reports');
     expect(getHTML()).toContain('Historical exact task');
     expect(getHTML()).toContain('HIST-7.2');

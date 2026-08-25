@@ -411,3 +411,22 @@ INSERT INTO public.approval (
     '2026-08-20T12:00:00.000Z',
     NULL
 ) ON CONFLICT DO NOTHING;
+
+-- Insert overflow manpower for testing Print/PDF Continuation
+INSERT INTO public.workforce (
+    programme_id, revision_id, activity_id, site_diary_id,
+    trade_id, trade_name, bumiputera_count, non_bumiputera_count, foreign_count
+)
+SELECT
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '55555555-5555-5555-5555-555555555551',
+    trade_id,
+    trade_name,
+    5, 0, 2
+FROM public.trade_library LIMIT 10;
+
+UPDATE public.site_diary
+SET manpower = '[{"trade_name": "Tukang Besi", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Tukang Kayu", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Tukang Paip", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Tukang Elektrik", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Buruh", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Pemandu", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Kerani", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Jurutera", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Penyelia", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}, {"trade_name": "Pengurus", "bumi_count": 5, "non_bumi_count": 0, "foreign_count": 2}]'::jsonb
+WHERE site_diary_id = '55555555-5555-5555-5555-555555555551';
