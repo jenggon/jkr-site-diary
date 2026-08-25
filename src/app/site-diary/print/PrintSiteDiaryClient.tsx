@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SiteDiaryPrintDto } from '@/types/siteDiaryPrint';
+import { useAuth } from '@/context/AuthContext';
 import {
   CONTINUATION_CONTRACTOR_CAPACITY,
   CONTINUATION_NSC_CAPACITY,
@@ -204,6 +205,7 @@ function validatePrintDto(data: unknown, requestedId: string): data is SiteDiary
 }
 
 export default function PrintSiteDiaryClient() {
+  const { loading: authLoading, session } = useAuth();
   const searchParams = useSearchParams();
   const id = searchParams?.get('id') ?? null;
 
@@ -214,10 +216,20 @@ export default function PrintSiteDiaryClient() {
   const currentIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!id) {
       currentIdRef.current = null;
       setDiary(null);
       setError('ID rekod tidak ditemui');
+      setLoading(false);
+      return;
+    }
+
+    if (!session?.access_token) {
+      currentIdRef.current = null;
+      setDiary(null);
+      setError('Sesi tamat tempoh. Sila log masuk semula.');
       setLoading(false);
       return;
     }
@@ -230,7 +242,11 @@ export default function PrintSiteDiaryClient() {
 
     let active = true;
 
-    fetch(`/api/site-diary/${encodeURIComponent(id)}/print`)
+    const headers: HeadersInit = {
+      Authorization: `Bearer ${session.access_token}`,
+    };
+
+    fetch(`/api/site-diary/${encodeURIComponent(id)}/print`, { headers })
       .then(async (response) => {
         if (!response.ok) {
           const body = await response.json().catch(() => null);
@@ -275,7 +291,7 @@ export default function PrintSiteDiaryClient() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, authLoading, session?.access_token]);
 
   const reports: DailyReport[] = useMemo(() => {
     if (!diary) return [];
@@ -332,7 +348,7 @@ export default function PrintSiteDiaryClient() {
   return <main className="print-shell">
     <style jsx global>{`
       *{box-sizing:border-box} body{margin:0;background:#d4d4d4;color:#000;font-family:Arial,Helvetica,sans-serif}.print-shell{padding:20px}.toolbar{position:sticky;top:0;z-index:10;margin:0 auto 16px;max-width:210mm;display:flex;gap:10px;align-items:center;background:#18181b;color:white;padding:10px 14px;border-radius:10px}.toolbar button,.toolbar input{font:inherit;padding:7px 10px}.page{width:210mm;min-height:297mm;margin:0 auto 18px;background:white;padding:14mm 16mm 11mm;page-break-after:always;position:relative}.page:last-child{page-break-after:auto}.jkr-header{display:grid;grid-template-columns:27% 48% 25%;height:25mm;border:1.4px solid #000}.jkr-header>div{border-right:1.4px solid #000}.jkr-header>div:last-child{border-right:0}.logo-cell{display:flex;align-items:center;justify-content:center}.logo-cell img{width:30mm;height:20mm;object-fit:contain}.agency-cell{display:flex;align-items:center;justify-content:center;text-align:center;font-size:15pt;line-height:1.15}.date-cell{padding:5px;font-size:11pt}.weather-row{display:grid;grid-template-columns:45mm 1fr;gap:7mm;align-items:center;padding:4mm 4mm 2mm}.weather-clock{width:34mm;height:34mm}.weather-fields{font-size:10pt;line-height:1.8}.field-line{display:inline-block;min-width:42mm;border-bottom:1px solid #000;padding:0 2mm}.field-line.short{min-width:28mm}.section-block{border:1.4px solid #000;border-bottom:0}.section-title{font-size:9.5pt;font-weight:700;padding:2mm;border-bottom:1.4px solid #000}.section-block table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.5pt}.section-block th,.section-block td{border-right:1px solid #000;border-bottom:1px solid #000;padding:1mm 1.2mm;vertical-align:middle;height:6mm}.section-block th:last-child,.section-block td:last-child{border-right:0}.activity-table th:nth-child(1){width:6%}.activity-table th:nth-child(2){width:10%}.activity-table th:nth-child(3){width:22%}.activity-table th:nth-child(7){width:18%}.activity-table th:nth-child(8),.activity-table th:nth-child(9){width:11%}.center{text-align:center}.workforce-table th:nth-child(1){width:6%}.workforce-table th:nth-child(2){width:55%}.group-row td{font-weight:700;text-align:left}.total-label{text-align:right;font-weight:700}.footer-note{font-size:7.5pt;margin-top:2mm;line-height:1.35}.page-number{text-align:center;font-size:9pt;margin-top:3mm}.continuation-page{padding-top:12mm}.continuation-label{text-align:right;font-size:9pt;font-weight:700;margin-bottom:2mm}.empty-state{padding:18mm;text-align:center}.status{margin-left:auto;font-size:9pt;color:#d4d4d8}
-      @media print{body{background:white}.print-shell{padding:0}.toolbar{display:none}.page{margin:0;width:210mm;min-height:297mm;box-shadow:none}@page{size:A4 portrait;margin:0}}
+      @media print{body{background:white}.print-shell{padding:0}.toolbar{display:none}.page{margin:0;width:210mm;min-height:297mm;box-shadow:none}.section-block th,.section-block td{height:3.5mm;padding:.25mm .65mm;font-size:7pt;line-height:1.05;overflow-wrap:anywhere;word-break:break-word}@page{size:A4 portrait;margin:0}}
     `}</style>
 
     <div className="toolbar">

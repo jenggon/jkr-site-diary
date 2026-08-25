@@ -272,6 +272,16 @@ INSERT INTO public.task (
     'Prog B Task', 1, '1.1', '1.1', 5, false, false, now(),
     '99999999-9999-9999-9999-999999999991'
 ) ON CONFLICT DO NOTHING;
+-- F2.7-B02-B isolated RFC-valid acceptance tasks.
+INSERT INTO public.task (
+    task_id, programme_id, revision_id, task_name, task_uid,
+    wbs, outline_number, is_critical, created_at, created_by
+) VALUES
+    ('b02b1000-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Pemasangan tetulang rasuk utama Blok Pentadbiran', 27001, 'B02B.SINGLE.PAGE.001.LONG-WBS', '8.1', true, now(), '99999999-9999-9999-9999-999999999991'),
+    ('b02b1000-0000-4000-8000-000000000002', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Penuangan konkrit papak podium dan pemeriksaan kemasan permukaan', 27002, 'B02B.OVERFLOW.002.LONG-WBS', '8.2', false, now(), '99999999-9999-9999-9999-999999999991'),
+    ('b02b1000-0000-4000-8000-000000000003', '11111111-1111-1111-1111-111111111111', '77777777-7777-7777-7777-777777777777', 'Kerja konkrit aras sejarah untuk pengesahan cetakan tepat', 27003, 'B02B.HISTORICAL.EXACT.003', '7.3', false, '2026-08-02T00:00:00.000Z', '99999999-9999-9999-9999-999999999991'),
+    ('b02b1000-0000-4000-8000-000000000004', '22222222-2222-2222-2222-222222222222', '44444444-4444-4444-4444-444444444444', 'Rekod asing Program B untuk bukti tidak boleh disenaraikan', 27004, 'B02B.FOREIGN.004', '9.1', false, now(), '99999999-9999-9999-9999-999999999991')
+ON CONFLICT DO NOTHING;
 
 -- ============================================================
 -- 7. Activities
@@ -305,6 +315,31 @@ INSERT INTO public.site_diary (
     '2026-08-01T12:00:00.000Z'
 ) ON CONFLICT DO NOTHING;
 
+-- Historical B02-B evidence is created while Revision 1 is still authorised.
+INSERT INTO public.activity (
+    activity_id, programme_id, revision_id, task_id, source_type,
+    subtask, subtask_display_name, activity_date, status, notes,
+    submitted_by, created_at, updated_at
+) VALUES (
+    'b02b2000-0000-4000-8000-000000000003', '11111111-1111-1111-1111-111111111111',
+    '77777777-7777-7777-7777-777777777777', 'b02b1000-0000-4000-8000-000000000003',
+    'MSP', 'Historical exact concrete activity', 'Historical exact concrete activity',
+    '2026-08-02', 'Completed', 'B02-B historical activity fixture',
+    '99999999-9999-9999-9999-999999999991', '2026-08-02T00:00:00.000Z', '2026-08-02T00:00:00.000Z'
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO public.site_diary (
+    site_diary_id, programme_id, revision_id, activity_id, activity_date,
+    status, notes, print_context, manpower, submitted_by, submitted_at, updated_at
+) VALUES (
+    'b02b3000-0000-4000-8000-000000000003', '11111111-1111-1111-1111-111111111111',
+    '77777777-7777-7777-7777-777777777777', 'b02b2000-0000-4000-8000-000000000003',
+    '2026-08-02', 'Completed', 'Catatan sejarah tepat kekal pada semakan asal.',
+    '{"location":"Aras 3, Blok Sejarah","work_start_time":"07:30","work_end_time":"16:30","weather_condition":"MENDUNG","rain_start_time":"12:00","rain_end_time":"13:00","contractor_scope":"CONTRACTOR"}'::jsonb,
+    '[{"trade_name":"Tukang Konkrit Sejarah","bumi_count":2,"non_bumi_count":1,"foreign_count":0}]'::jsonb,
+    '99999999-9999-9999-9999-999999999991', '2026-08-02T12:00:00.000Z', '2026-08-02T12:00:00.000Z'
+) ON CONFLICT DO NOTHING;
+
 -- Complete the legitimate revision transition only after historical evidence
 -- exists. Subsequent operational fixtures use the latest approved revision.
 UPDATE public.programme
@@ -327,6 +362,17 @@ INSERT INTO public.activity (
     'In Progress', 'Current C01 fixture', '99999999-9999-9999-9999-999999999991',
     now(), now()
 ) ON CONFLICT DO NOTHING;
+
+-- Current and foreign B02-B activities are isolated from the C01 fixtures.
+INSERT INTO public.activity (
+    activity_id, programme_id, revision_id, task_id, source_type,
+    subtask, subtask_display_name, activity_date, status, notes,
+    submitted_by, created_at, updated_at
+) VALUES
+    ('b02b2000-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'b02b1000-0000-4000-8000-000000000001', 'MSP', 'Single page reinforcement activity', 'Single page reinforcement activity', '2026-08-22', 'New', 'B02-B current single-page activity', '99999999-9999-9999-9999-999999999991', now(), now()),
+    ('b02b2000-0000-4000-8000-000000000002', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'b02b1000-0000-4000-8000-000000000002', 'MSP', 'Overflow concrete activity', 'Overflow concrete activity', '2026-08-23', 'In Progress', 'B02-B current overflow activity', '99999999-9999-9999-9999-999999999991', now(), now()),
+    ('b02b2000-0000-4000-8000-000000000004', '22222222-2222-2222-2222-222222222222', '44444444-4444-4444-4444-444444444444', 'b02b1000-0000-4000-8000-000000000004', 'MSP', 'Foreign Programme B activity', 'Foreign Programme B activity', '2026-08-22', 'Completed', 'B02-B foreign record activity', '99999999-9999-9999-9999-999999999991', now(), now())
+ON CONFLICT DO NOTHING;
 
 INSERT INTO public.activity (
     activity_id, programme_id, revision_id, task_id,
@@ -373,6 +419,17 @@ INSERT INTO public.site_diary (
     '2026-08-20T12:00:00.000Z',
     '2026-08-20T12:00:00.000Z'
 ) ON CONFLICT DO NOTHING;
+
+-- Isolated B02-B acceptance diaries: single-page NSC, Contractor overflow,
+-- and a Programme B foreign record. One diary owns one workforce scope.
+INSERT INTO public.site_diary (
+    site_diary_id, programme_id, revision_id, activity_id, activity_date,
+    status, notes, print_context, manpower, submitted_by, submitted_at, updated_at
+) VALUES
+    ('b02b3000-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'b02b2000-0000-4000-8000-000000000001', '2026-08-22', 'New', 'Pemeriksaan tetulang selesai; ruang kerja selamat dan teratur.', '{"location":"Aras 2, Zon Timur, Blok Pentadbiran Utama","work_start_time":"08:15","work_end_time":"17:05","weather_condition":"HUJAN","rain_start_time":"10:30","rain_end_time":"11:45","contractor_scope":"NSC"}'::jsonb, '[{"trade_name":"Tukang Besi NSC","bumi_count":3,"non_bumi_count":1,"foreign_count":0},{"trade_name":"Penyelia Keselamatan NSC","bumi_count":1,"non_bumi_count":0,"foreign_count":0}]'::jsonb, '99999999-9999-9999-9999-999999999991', '2026-08-22T18:00:00.000Z', '2026-08-22T18:00:00.000Z'),
+    ('b02b3000-0000-4000-8000-000000000002', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'b02b2000-0000-4000-8000-000000000002', '2026-08-23', 'In Progress', 'Penuangan berperingkat diteruskan mengikut kaedah kerja diluluskan; pemeriksaan mutu setiap zon direkodkan.', '{"location":"Podium Utama, Grid A1 hingga H8, Laluan Logistik Timur","work_start_time":"07:00","work_end_time":"19:15","weather_condition":"ELOK","rain_start_time":null,"rain_end_time":null,"contractor_scope":"CONTRACTOR"}'::jsonb, '[{"trade_name":"Jurutera Tapak Kontraktor Utama","bumi_count":1,"non_bumi_count":0,"foreign_count":0},{"trade_name":"Penyelia Penuangan Konkrit","bumi_count":2,"non_bumi_count":0,"foreign_count":0},{"trade_name":"Tukang Konkrit Kemasan Permukaan","bumi_count":4,"non_bumi_count":1,"foreign_count":2},{"trade_name":"Tukang Besi Tetulang Podium","bumi_count":5,"non_bumi_count":0,"foreign_count":1},{"trade_name":"Tukang Kayu Acuan Papak","bumi_count":4,"non_bumi_count":1,"foreign_count":2},{"trade_name":"Operator Pam Konkrit Bergerak","bumi_count":1,"non_bumi_count":0,"foreign_count":1},{"trade_name":"Pemandu Lori Bancuhan Konkrit","bumi_count":2,"non_bumi_count":0,"foreign_count":3},{"trade_name":"Pegawai Keselamatan dan Kesihatan","bumi_count":1,"non_bumi_count":0,"foreign_count":0},{"trade_name":"Juruukur Aras dan Penjajaran","bumi_count":2,"non_bumi_count":1,"foreign_count":0},{"trade_name":"Pekerja Am Pembersihan Tapak","bumi_count":3,"non_bumi_count":1,"foreign_count":2}]'::jsonb, '99999999-9999-9999-9999-999999999991', '2026-08-23T20:00:00.000Z', '2026-08-23T20:00:00.000Z'),
+    ('b02b3000-0000-4000-8000-000000000004', '22222222-2222-2222-2222-222222222222', '44444444-4444-4444-4444-444444444444', 'b02b2000-0000-4000-8000-000000000004', '2026-08-22', 'Completed', 'B02-B foreign Programme B record.', '{"location":"Program B","work_start_time":"08:00","work_end_time":"17:00","weather_condition":"ELOK","rain_start_time":null,"rain_end_time":null,"contractor_scope":"CONTRACTOR"}'::jsonb, '[]'::jsonb, '99999999-9999-9999-9999-999999999991', '2026-08-22T18:00:00.000Z', '2026-08-22T18:00:00.000Z')
+ON CONFLICT DO NOTHING;
 
 -- ============================================================
 -- 9. Approval (for approval queue and review tests)

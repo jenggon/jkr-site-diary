@@ -19,11 +19,16 @@ function deferred<T>() {
 }
 
 let mockSearchParams = new Map<string, string>();
+let mockAuth: { loading: boolean; session: { access_token: string } | null };
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: (key: string) => mockSearchParams.get(key) || null,
   }),
+}));
+
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => mockAuth,
 }));
 
 // ============================================================
@@ -82,6 +87,7 @@ describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
     root = createRoot(container);
     fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(() => {}));
     mockSearchParams = new Map();
+    mockAuth = { loading: false, session: { access_token: 'mock-token' } };
   });
 
   afterEach(() => {
@@ -108,13 +114,66 @@ describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
     await act(async () => { render(); });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-exact/print');
+    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-exact/print', {
+      headers: { Authorization: 'Bearer mock-token' },
+    });
     expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/reports'));
 
     await act(async () => { d.resolve(json({ data: makeDto() })); });
     expect(getHTML()).toContain('MSP Task');
     expect(getHTML()).toContain('Block A');
     expect(getHTML()).toContain('CONCRETOR');
+  });
+
+  it('T1a: waits for auth readiness, then fetches once with the resolved bearer token', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    mockAuth = { loading: true, session: null };
+    await act(async () => { render(); });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const response = deferred<Response>();
+    fetchMock.mockReturnValueOnce(response.promise);
+    mockAuth = { loading: false, session: { access_token: 'resolved-token' } };
+    await act(async () => { render(); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-exact/print', {
+      headers: { Authorization: 'Bearer resolved-token' },
+    });
+    await act(async () => { response.resolve(json({ data: makeDto() })); });
+    expect(getHTML()).toContain('MSP Task');
+  });
+
+  it('T1b: a stale response for the prior token cannot overwrite current-token state', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    mockAuth = { loading: false, session: { access_token: 'token-A' } };
+    const responseA = deferred<Response>();
+    fetchMock.mockReturnValueOnce(responseA.promise);
+    await act(async () => { render(); });
+
+    mockAuth = { loading: false, session: { access_token: 'token-B' } };
+    const responseB = deferred<Response>();
+    fetchMock.mockReturnValueOnce(responseB.promise);
+    await act(async () => { render(); });
+    await act(async () => { responseB.resolve(json({ data: makeDto({ taskName: 'Token B Task' }) })); });
+    expect(getHTML()).toContain('Token B Task');
+    await act(async () => { responseA.resolve(json({ data: makeDto({ taskName: 'Token A Task' }) })); });
+    expect(getHTML()).toContain('Token B Task');
+    expect(getHTML()).not.toContain('Token A Task');
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/site-diary/sd-exact/print', {
+      headers: { Authorization: 'Bearer token-A' },
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/site-diary/sd-exact/print', {
+      headers: { Authorization: 'Bearer token-B' },
+    });
+  });
+
+  it('T1c: a resolved missing session fails safely without fetching', async () => {
+    mockSearchParams.set('id', 'sd-exact');
+    mockAuth = { loading: false, session: null };
+    await act(async () => { render(); });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(getHTML()).toContain('Sesi tamat tempoh');
+    expect(isButtonDisabled()).toBe(true);
   });
 
   // ============================================================
@@ -531,7 +590,7 @@ describe('F2.5-B02-R1 Print Site Diary Hardened Renderer', () => {
     await act(async () => { render(); });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-historical/print');
+    expect(fetchMock).toHaveBeenCalledWith('/api/site-diary/sd-historical/print', expect.anything());
     expect(getHTML()).not.toContain('/api/reports');
     expect(getHTML()).toContain('Historical exact task');
     expect(getHTML()).toContain('HIST-7.2');
