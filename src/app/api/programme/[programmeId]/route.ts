@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { extractIdentity, extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { createProgrammeService } from '@/composition/programmeComposition';
 import { isSuccess } from '@/lib/result';
 
@@ -71,12 +71,12 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const service = createProgrammeService();
+    const service = createProgrammeService({ accessToken: identity.accessToken });
     const result = await service.updateProgramme({
       programmeId,
       programmeName: body.programme_name ?? body.programmeName,
@@ -86,19 +86,29 @@ export async function PATCH(request: Request, context: RouteParams) {
       contractStartDate: body.contract_start_date ?? body.contractStartDate,
       contractCompletionDate: body.contract_completion_date ?? body.contractCompletionDate,
       defectLiabilityEnd: body.defect_liability_end ?? body.defectLiabilityEnd,
-      updatedBy: actorId,
+      updatedBy: identity.actorId,
     });
 
     if (isSuccess(result)) {
       return NextResponse.json({ data: result.value }, { status: 200 });
     }
 
-    return NextResponse.json(
-      { error: result.error.message },
-      { status: result.error.errorCode === 'PROGRAMME_NOT_FOUND' ? 404 : 400 }
-    );
+    // Explicit safe HTTP/domain mapping for errors, never expose arbitrary message
+    if (result.error.errorCode === 'PROGRAMME_NOT_FOUND') {
+      return NextResponse.json({ error: 'Programme not found' }, { status: 404 });
+    }
+    if (result.error.errorCode === 'PROGRAMME_ARCHIVED' || result.error.errorCode === 'PROGRAMME_LOCKED') {
+      return NextResponse.json({ error: 'Programme cannot be updated in its current state' }, { status: 409 });
+    }
+    if (result.error.errorCode === 'PROGRAMME_VALIDATION_FAILED') {
+      return NextResponse.json({ error: 'Validation failed' }, { status: 400 });
+    }
+    
+    // Everything else is a generic 500
+    return NextResponse.json({ error: 'Failed to update programme' }, { status: 500 });
+
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Failed to update programme';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    // Unexpected error: HTTP 500 { error: 'Failed to update programme' }
+    return NextResponse.json({ error: 'Failed to update programme' }, { status: 500 });
   }
 }

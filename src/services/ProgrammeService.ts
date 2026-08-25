@@ -176,8 +176,23 @@ export class ProgrammeService implements IProgrammeService {
         updatedBy: cmd.updatedBy,
       };
 
+      if (this.atomicRepo) {
+        const payload: Record<string, unknown> = {};
+        if (cmd.programmeName !== undefined) payload.programme_name = cmd.programmeName;
+        if (cmd.employerName !== undefined) payload.employer_name = cmd.employerName;
+        if (cmd.contractorName !== undefined) payload.contractor_name = cmd.contractorName;
+        if (cmd.supervisingOfficer !== undefined) payload.supervising_officer = cmd.supervisingOfficer;
+        if (cmd.contractStartDate !== undefined) payload.contract_start_date = cmd.contractStartDate;
+        if (cmd.contractCompletionDate !== undefined) payload.contract_completion_date = cmd.contractCompletionDate;
+        if (cmd.defectLiabilityEnd !== undefined) payload.defect_liability_end = cmd.defectLiabilityEnd;
+
+        const updated = await this.atomicRepo.updateProgramme(cmd.programmeId, payload, cmd.updatedBy);
+        return Success(updated);
+      }
+
       return this.programmeRepo.update(updatedProgramme);
     } catch (err: unknown) {
+      if (err instanceof BaseAppError) return Failure(err);
       return Failure(new UnknownError(err instanceof Error ? err.message : 'Update failed', { cause: err }));
     }
   }

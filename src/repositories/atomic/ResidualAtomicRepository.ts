@@ -9,6 +9,7 @@ import { SiteDiary } from '@/types/siteDiary';
 import { ProgrammeRowMapper } from '@/repositories/mappers/ProgrammeRowMapper';
 import { ProgrammeRow, ProgrammeRevisionRow } from '@/repositories/types/programmeRow';
 import { SiteDiaryStaleEditError, SiteDiarySealedError } from '@/errors/siteDiaryErrors';
+import { ProgrammeNotFoundError, ProgrammeArchivedError, ProgrammeLockedError, ProgrammeValidationError } from '@/errors/programmeErrors';
 
 export class ResidualAtomicRepository {
   private readonly programmeMapper = new ProgrammeRowMapper();
@@ -89,6 +90,35 @@ export class ResidualAtomicRepository {
 
   archiveProgramme(programmeId: string, actorId: string): Promise<Programme> {
     return this.rpc('a27_archive_programme', { p_programme_id: programmeId, p_actor_id: actorId });
+  }
+
+  async updateProgramme(programmeId: string, payload: Record<string, unknown>, actorId: string): Promise<Programme> {
+    const { data, error } = await this.client.rpc('c06_update_programme_atomic', {
+      p_programme_id: programmeId,
+      p_payload: payload,
+      p_actor_id: actorId,
+      p_audit_id: generateUuid()
+    });
+
+    if (error) {
+      if (error.code === 'PT403' || error.code === 'PT404') {
+        throw new ProgrammeNotFoundError('Programme not found');
+      }
+      if (error.code === 'PT409') {
+        if (error.message === 'C06_PROGRAMME_ARCHIVED') {
+          throw new ProgrammeArchivedError('Cannot update archived programme');
+        }
+        if (error.message === 'C06_PROGRAMME_LOCKED') {
+          throw new ProgrammeLockedError('Cannot update locked programme');
+        }
+      }
+      if (error.code === 'PT400') {
+         throw new ProgrammeValidationError(`Programme update failed: ${error.message}`);
+      }
+      throw new Error('Programme update failed'); // safe generic message for all other db errors
+    }
+
+    return this.programmeMapper.toDomain(data as ProgrammeRow);
   }
 
   updateTask(taskId: string, payload: Record<string, unknown>, actorId: string): Promise<Task> {
