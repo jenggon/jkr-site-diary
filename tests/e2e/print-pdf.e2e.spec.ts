@@ -30,6 +30,9 @@ test.describe('F2.7-B02-B Print/PDF Acceptance', () => {
   });
 
   async function login(page: Page, user: { email: string; password: string } = USERS.submitter) {
+    await page.goto('/');
+    await page.evaluate(() => window.localStorage.clear());
+    await page.context().clearCookies();
     await page.goto('/login');
     await page.getByLabel('Alamat Emel').fill(user.email);
     await page.getByLabel('Kata Laluan').fill(user.password);
@@ -206,7 +209,7 @@ test.describe('F2.7-B02-B Print/PDF Acceptance', () => {
     const foreignPath = `/api/site-diary/${F.foreign}/print`;
     const foreign = page.waitForResponse((response) => new URL(response.url()).pathname === foreignPath);
     await page.goto(`/site-diary/print?id=${F.foreign}`);
-    expect((await foreign).status()).toBe(404);
-    await expect(page.getByTestId('error-state')).toHaveText('Rekod tidak dijumpai.');
+    expect((await foreign).status()).toBe(403);
+    await expect(page.getByTestId('error-state')).toHaveText('Akses ditolak. Anda tidak mempunyai kebenaran untuk melihat rekod ini.');
   });
 });
