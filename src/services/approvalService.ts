@@ -4,7 +4,9 @@ import { Approval, ApprovalStatus } from '@/types/approval';
 import { IApprovalService, CreateApprovalCommand, UpdateApprovalCommand } from './IApprovalService';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
-import { ISiteDiaryRepositoryAdapter } from '@/services/siteDiaryService';
+import { ISiteDiaryRepository } from '@/repositories/siteDiaryRepository';
+import { IProgressRepository } from '@/repositories/progressRepository';
+import { IApprovalRepository } from '@/repositories/approvalRepository';
 import { IApprovalAtomicRepository } from '@/repositories/atomic/IApprovalAtomicRepository';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
@@ -13,9 +15,9 @@ import { ApprovalNotFoundError, ApprovalTerminalStateError } from '@/errors/appr
 export interface IApprovalServiceDependencies {
   readonly revisionRepository: IProgrammeRevisionRepository;
   readonly activityRepository: IActivityRepository;
-  readonly siteDiaryRepository: ISiteDiaryRepositoryAdapter;
-  readonly progressRepository: typeof import('@/repositories/progressRepository').progressRepository;
-  readonly approvalRepository: typeof import('@/repositories/approvalRepository').approvalRepository;
+  readonly siteDiaryRepository: ISiteDiaryRepository;
+  readonly progressRepository: IProgressRepository;
+  readonly approvalRepository: IApprovalRepository;
   readonly atomicRepository: IApprovalAtomicRepository;
   readonly clock: IClock;
   readonly logger: Logger;
@@ -24,9 +26,9 @@ export interface IApprovalServiceDependencies {
 export class ApprovalService implements IApprovalService {
   private readonly revisionRepo: IProgrammeRevisionRepository;
   private readonly activityRepo: IActivityRepository;
-  private readonly siteDiaryRepo: ISiteDiaryRepositoryAdapter;
-  private readonly progressRepo: typeof import('@/repositories/progressRepository').progressRepository;
-  private readonly approvalRepo: typeof import('@/repositories/approvalRepository').approvalRepository;
+  private readonly siteDiaryRepo: ISiteDiaryRepository;
+  private readonly progressRepo: IProgressRepository;
+  private readonly approvalRepo: IApprovalRepository;
   private readonly atomicRepo: IApprovalAtomicRepository;
   private readonly clock: IClock;
   private readonly logger: Logger;
