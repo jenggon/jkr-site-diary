@@ -55,9 +55,9 @@ function approval(
     progress_id: null,
     approval_level: 1,
     approval_status: approvalStatus,
-    approval_date: null,
+    approval_date: approvalStatus === 'Approved' ? '2026-08-19T02:00:00.000Z' : null,
     approval_comment: null,
-    approved_by: null,
+    approved_by: approvalStatus === 'Approved' ? 'actor-B' : null,
     requested_by: 'actor-A',
     requested_at: '2026-08-19T01:00:00.000Z',
     created_at: '2026-08-19T01:00:00.000Z',
@@ -482,5 +482,38 @@ describe('F2.4-B03-H01 exact Approval review boundary', () => {
     // Returned decision calls onSuccess directly
     await act(async () => decisionButton('Pulangkan')?.click());
     expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  // K. Approved 200 with missing/mismatched canonical Approval fails closed
+  it('[Test K] [Correction C] Approved 200 with missing or mismatched canonical Approval data fails closed', async () => {
+    const invalidPayloads = [
+      { name: 'null data', payload: { data: null } },
+      { name: 'mismatched approval_id', payload: { data: { ...approval('other-approval', 'diary-A', 'Approved'), approved_by: 'rev-1' } } },
+      { name: 'mismatched site_diary_id', payload: { data: { ...approval('approval-A', 'other-diary', 'Approved'), approved_by: 'rev-1' } } },
+      { name: 'wrong status', payload: { data: { ...approval('approval-A', 'diary-A', 'Pending'), approved_by: 'rev-1' } } },
+      { name: 'empty approved_by', payload: { data: { ...approval('approval-A', 'diary-A', 'Approved'), approved_by: '' } } },
+    ];
+
+    for (const { payload } of invalidPayloads) {
+      onSuccess.mockClear();
+      global.fetch = vi.fn(async (input, init) => {
+        const url = String(input);
+        if (init?.method === 'PATCH') return json(payload);
+        if (url.endsWith('/api/approval/approval-A/review')) return json({ data: approval() });
+        if (url.endsWith('/api/site-diary/diary-A')) return json({ data: diary() });
+        if (url.includes('/history')) return json({ data: { siteDiaryId: 'diary-A', events: [] } });
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+      await render();
+      await act(async () => decisionButton('Luluskan')?.click());
+
+      // MUST NOT call onSuccess
+      expect(onSuccess).not.toHaveBeenCalled();
+      // MUST NOT render fake terminal success
+      expect(container.querySelector('[data-testid="terminal-approval-status"]')).toBeNull();
+      // MUST render safe action error
+      expect(container.textContent).toContain('Respons kelulusan tidak sah. Muat semula rekod sebelum meneruskan.');
+    }
   });
 });

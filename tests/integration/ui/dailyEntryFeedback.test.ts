@@ -492,8 +492,8 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
     container.remove();
   });
 
-  // E. 201 Pending captures approval_id, renders Pending state, prevents second request
-  it('23. [Test E] 201 Pending renders Pending state and removes/disables "Mohon Kelulusan"', async () => {
+  // E. 201 Pending captures approval_id, renders Pending state with data-approval-id, prevents second request
+  it('23. [Test E] 201 Pending retains approval_id in state/DOM and removes "Mohon Kelulusan"', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -535,7 +535,9 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
     });
 
     expect(callCount).toBe(1);
-    expect(container.querySelector('[data-testid="approval-status-pending"]')).toBeTruthy();
+    const pendingElem = container.querySelector('[data-testid="approval-status-pending"]');
+    expect(pendingElem).toBeTruthy();
+    expect(pendingElem?.getAttribute('data-approval-id')).toBe('appr-uuid-99');
     expect(container.textContent).toContain('Menunggu Kelulusan');
     expect(container.querySelector('[data-testid="request-approval-btn"]')).toBeNull();
 
@@ -543,8 +545,64 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
     container.remove();
   });
 
+  // E2. 201 with missing approval_id, mismatched site_diary_id, or wrong approval_status must NOT enter Pending
+  it('23b. [Correction A/B] 201 with malformed or mismatched data does not enter Pending', async () => {
+    const testCases = [
+      {
+        name: 'missing approval_id',
+        data: { approval_id: '', approval_status: 'Pending', site_diary_id: 'sd-valid-1' },
+      },
+      {
+        name: 'mismatched site_diary_id',
+        data: { approval_id: 'appr-1', approval_status: 'Pending', site_diary_id: 'sd-other' },
+      },
+      {
+        name: 'wrong approval_status',
+        data: { approval_id: 'appr-1', approval_status: 'Approved', site_diary_id: 'sd-valid-1' },
+      },
+    ];
+
+    for (const tc of testCases) {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+
+      const mockFetch = async () => ({
+        ok: true,
+        status: 201,
+        json: async () => ({ data: tc.data }),
+      } as unknown as Response);
+
+      await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+        error: null,
+        success: 'Buku Harian Tapak berjaya disimpan.',
+        savedSiteDiaryId: 'sd-valid-1',
+        isEditMode: false,
+        fetchFn: mockFetch as any,
+        approvalContext: {
+          programmeId: 'prog-1',
+          revisionId: 'rev-1',
+          activityId: 'act-1',
+          siteDiaryId: 'sd-valid-1',
+          lastModifiedAt: '2026-08-28T10:00:00.000Z',
+        },
+      })));
+
+      const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+      await act(async () => {
+        button.click();
+      });
+
+      expect(container.querySelector('[data-testid="approval-status-pending"]')).toBeNull();
+      expect(container.textContent).toContain('Gagal memohon kelulusan. Sila cuba lagi.');
+
+      act(() => root.unmount());
+      container.remove();
+    }
+  });
+
   // F. Approval request error: no fake Pending state, safe visible error, request may be retried manually
-  it('24. [Test F] Approval request error displays safe error without fake Pending and allows manual retry', async () => {
+  it('24. [Test F] Approval request error displays safe bounded error without leaking raw backend text and allows manual retry', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -556,7 +614,7 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
         return {
           ok: false,
           status: 500,
-          json: async () => ({ error: 'Ralat pelayan semasa memohon kelulusan' }),
+          json: async () => ({ error: 'permission denied for table approval SQLSTATE 42501' }),
         } as unknown as Response;
       }
       return {
@@ -566,6 +624,7 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
           data: {
             approval_id: 'appr-uuid-retry',
             approval_status: 'Pending',
+            site_diary_id: 'sd-valid-1',
           },
         }),
       } as unknown as Response;
@@ -589,14 +648,17 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
     const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
     expect(button).toBeTruthy();
 
-    // First attempt -> fails
+    // First attempt -> fails with 500
     await act(async () => {
       button.click();
     });
 
     expect(callCount).toBe(1);
     expect(container.querySelector('[data-testid="approval-status-pending"]')).toBeNull();
-    expect(container.textContent).toContain('Ralat pelayan semasa memohon kelulusan');
+    // Raw SQLSTATE error must NOT leak
+    expect(container.textContent).not.toContain('SQLSTATE');
+    expect(container.textContent).not.toContain('permission denied');
+    expect(container.textContent).toContain('Gagal memohon kelulusan. Sila cuba lagi.');
 
     // Button is still available and not disabled
     const retryBtn = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
@@ -609,11 +671,60 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
     });
 
     expect(callCount).toBe(2);
-    expect(container.querySelector('[data-testid="approval-status-pending"]')).toBeTruthy();
+    const pendingElem = container.querySelector('[data-testid="approval-status-pending"]');
+    expect(pendingElem).toBeTruthy();
+    expect(pendingElem?.getAttribute('data-approval-id')).toBe('appr-uuid-retry');
     expect(container.textContent).toContain('Menunggu Kelulusan');
 
     act(() => root.unmount());
     container.remove();
+  });
+
+  // F2. 401, 403, and 409 HTTP status codes map to bounded safe messages
+  it('24b. [Correction B] HTTP 401, 403, 409 map to specific bounded safe messages', async () => {
+    const errorCases = [
+      { status: 401, expectedMsg: 'Sesi telah tamat. Sila log masuk semula.' },
+      { status: 403, expectedMsg: 'Tiada kebenaran untuk memohon kelulusan.' },
+      { status: 409, expectedMsg: 'Rekod telah berubah. Muat semula sebelum memohon kelulusan.' },
+    ];
+
+    for (const ec of errorCases) {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+
+      const mockFetch = async () => ({
+        ok: false,
+        status: ec.status,
+        json: async () => ({ error: 'raw backend detail' }),
+      } as unknown as Response);
+
+      await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+        error: null,
+        success: 'Buku Harian Tapak berjaya disimpan.',
+        savedSiteDiaryId: 'sd-valid-1',
+        isEditMode: false,
+        fetchFn: mockFetch as any,
+        approvalContext: {
+          programmeId: 'prog-1',
+          revisionId: 'rev-1',
+          activityId: 'act-1',
+          siteDiaryId: 'sd-valid-1',
+          lastModifiedAt: '2026-08-28T10:00:00.000Z',
+        },
+      })));
+
+      const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+      await act(async () => {
+        button.click();
+      });
+
+      expect(container.textContent).not.toContain('raw backend detail');
+      expect(container.textContent).toContain(ec.expectedMsg);
+
+      act(() => root.unmount());
+      container.remove();
+    }
   });
 
   // G. Approval action is not invented for invalid/missing saved identity

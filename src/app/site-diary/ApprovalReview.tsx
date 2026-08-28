@@ -181,8 +181,26 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
       const resJson = await res.json().catch(() => null);
       const updatedApproval = resJson?.data as Approval | undefined;
 
-      if (status === 'Approved' && updatedApproval) {
-        setTerminalApproval(updatedApproval);
+      if (status === 'Approved') {
+        if (
+          !updatedApproval ||
+          typeof updatedApproval.approval_id !== 'string' ||
+          updatedApproval.approval_id !== approvalId ||
+          typeof updatedApproval.site_diary_id !== 'string' ||
+          updatedApproval.site_diary_id !== siteDiaryId ||
+          updatedApproval.approval_status !== 'Approved' ||
+          typeof updatedApproval.approved_by !== 'string' ||
+          updatedApproval.approved_by.trim() === ''
+        ) {
+          if (ownsRequest()) {
+            setActionError('Respons kelulusan tidak sah. Muat semula rekod sebelum meneruskan.');
+          }
+          return;
+        }
+
+        if (ownsRequest()) {
+          setTerminalApproval(updatedApproval);
+        }
       } else {
         if (ownsRequest()) onSuccess();
       }

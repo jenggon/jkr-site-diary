@@ -33,12 +33,14 @@ export default function DailyEntryFeedback({
   fetchFn,
 }: DailyEntryFeedbackProps) {
   const [approvalStatus, setApprovalStatus] = useState<'IDLE' | 'REQUESTING' | 'PENDING'>('IDLE');
+  const [approvalId, setApprovalId] = useState<string | null>(null);
   const [approvalError, setApprovalError] = useState<string | null>(null);
   const isRequestingRef = useRef<boolean>(false);
 
   useEffect(() => {
     setApprovalStatus('IDLE');
     setApprovalError(null);
+    setApprovalId(null);
     isRequestingRef.current = false;
   }, [savedSiteDiaryId]);
 
@@ -82,19 +84,47 @@ export default function DailyEntryFeedback({
       });
 
       if (res.status === 201) {
-        const json = await res.json();
+        const json = await res.json().catch(() => null);
         const createdApproval = json?.data;
-        if (createdApproval?.approval_status === 'Pending') {
+        if (
+          createdApproval &&
+          typeof createdApproval.approval_id === 'string' &&
+          createdApproval.approval_id.trim() !== '' &&
+          createdApproval.approval_status === 'Pending' &&
+          createdApproval.site_diary_id === siteDiaryId
+        ) {
+          setApprovalId(createdApproval.approval_id);
           setApprovalStatus('PENDING');
           return;
         }
+
+        setApprovalError('Gagal memohon kelulusan. Sila cuba lagi.');
+        setApprovalStatus('IDLE');
+        return;
       }
 
-      const errJson = await res.json().catch(() => null);
-      throw new Error(errJson?.error || 'Gagal memohon kelulusan');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gagal memohon kelulusan';
-      setApprovalError(msg);
+      if (res.status === 401) {
+        setApprovalError('Sesi telah tamat. Sila log masuk semula.');
+        setApprovalStatus('IDLE');
+        return;
+      }
+
+      if (res.status === 403) {
+        setApprovalError('Tiada kebenaran untuk memohon kelulusan.');
+        setApprovalStatus('IDLE');
+        return;
+      }
+
+      if (res.status === 409) {
+        setApprovalError('Rekod telah berubah. Muat semula sebelum memohon kelulusan.');
+        setApprovalStatus('IDLE');
+        return;
+      }
+
+      setApprovalError('Gagal memohon kelulusan. Sila cuba lagi.');
+      setApprovalStatus('IDLE');
+    } catch {
+      setApprovalError('Gagal memohon kelulusan. Sila cuba lagi.');
       setApprovalStatus('IDLE');
     } finally {
       isRequestingRef.current = false;
@@ -172,6 +202,7 @@ export default function DailyEntryFeedback({
                     {approvalStatus === 'PENDING' ? (
                       <span
                         data-testid="approval-status-pending"
+                        data-approval-id={approvalId ?? undefined}
                         className="px-3 py-1.5 rounded-xl bg-amber-950/80 text-amber-300 text-xs font-semibold border border-amber-700/60 shadow-sm flex items-center gap-1.5"
                       >
                         <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" aria-hidden="true"></span>
