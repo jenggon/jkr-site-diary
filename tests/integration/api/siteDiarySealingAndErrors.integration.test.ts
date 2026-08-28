@@ -98,7 +98,7 @@ describe('Site Diary Sealing and Conflict HTTP Propagation', () => {
 
     expect(res.status).toBe(500);
     const json = await res.json();
-    expect(json.error).toBe('DB connection pool exhausted');
+    expect(json.error).toBe('Failed to update site diary');
   });
 
   it('allows edit when Site Diary is unsealed (e.g. Returned Approval or No Approval)', async () => {

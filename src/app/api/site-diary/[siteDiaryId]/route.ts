@@ -46,9 +46,15 @@ export async function GET(request: Request, context: RouteParams) {
       if (!result.value) return NextResponse.json({ error: 'Site diary record not found' }, { status: 404 });
       return NextResponse.json({ data: result.value }, { status: 200 });
     }
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Failed to retrieve site diary' }, { status: 500 });
+
+    const httpStatus = result.error.httpStatus;
+    if (typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500) {
+      return NextResponse.json({ error: result.error.message }, { status: httpStatus });
+    }
+
+    return NextResponse.json({ error: 'Failed to retrieve site diary' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to retrieve site diary' }, { status: 500 });
   }
 }
 
@@ -90,8 +96,14 @@ export async function PATCH(request: Request, context: RouteParams) {
         },
       }, { status: 200 });
     }
-    return NextResponse.json({ error: result.error.message }, { status: result.error.httpStatus });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Failed to update site diary' }, { status: 500 });
+
+    const httpStatus = result.error.httpStatus;
+    if (typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500) {
+      return NextResponse.json({ error: result.error.message }, { status: httpStatus });
+    }
+
+    return NextResponse.json({ error: 'Failed to update site diary' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to update site diary' }, { status: 500 });
   }
 }

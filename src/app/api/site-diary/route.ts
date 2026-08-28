@@ -64,8 +64,14 @@ export async function POST(request: Request) {
     if (isSuccess(result)) {
       return NextResponse.json({ data: result.value }, { status: 201 });
     }
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Failed to create site diary' }, { status: 500 });
+
+    const httpStatus = result.error.httpStatus;
+    if (typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500) {
+      return NextResponse.json({ error: result.error.message }, { status: httpStatus });
+    }
+
+    return NextResponse.json({ error: 'Failed to create site diary' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to create site diary' }, { status: 500 });
   }
 }
