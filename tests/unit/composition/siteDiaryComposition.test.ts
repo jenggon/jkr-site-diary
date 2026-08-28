@@ -4,7 +4,7 @@ import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
 import { ISiteDiaryService } from '@/services/ISiteDiaryService';
 import { POST as createSiteDiaryRoute } from '@/app/api/site-diary/route';
 import { GET as getSiteDiaryRoute, PATCH as updateSiteDiaryRoute } from '@/app/api/site-diary/[siteDiaryId]/route';
-import { InfrastructureError } from '@/lib/errors';
+import { InfrastructureError, UnknownError } from '@/lib/errors';
 import {
   SiteDiaryValidationError,
   SiteDiaryRevisionNotApprovedError,
@@ -146,7 +146,68 @@ describe('Site Diary Composition & Authenticated Read Context (F2.7-C09-A)', () 
       });
     });
 
-    it('I. InfrastructureError in POST does not leak raw database internals and returns HTTP 500', async () => {
+    it('A. POST + UnknownError containing raw internal text returns HTTP 500 with generic message and redacts internals', async () => {
+      const validPayload = {
+        programme_id: generateUuid(),
+        revision_id: generateUuid(),
+        activity_id: generateUuid(),
+        activity_date: '2026-08-28',
+        operation_intent: 'IN_PROGRESS_DIARY',
+        notes: 'Test notes',
+      };
+
+      const req = createMockRequest(validPayload);
+      const rawError = new UnknownError('Internal server panic: unhandled exception at /db/pool.ts:42');
+      const serviceMock = {
+        createSiteDiary: vi.fn().mockResolvedValue(Failure(rawError)),
+      };
+      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock as unknown as ISiteDiaryService);
+
+      const res = await createSiteDiaryRoute(req);
+      expect(res.status).toBe(500);
+
+      const body = await res.json();
+      expect(body).toEqual({ error: 'Failed to create site diary' });
+      expect(JSON.stringify(body)).not.toMatch(/panic|unhandled|pool\.ts/i);
+    });
+
+    it('B. GET + UnknownError containing type syntax errors returns HTTP 500 with generic message and redacts internals', async () => {
+      const req = createMockRequest();
+      const rawError = new UnknownError('invalid input syntax for type uuid: secret-internal-detail');
+      const serviceMock = {
+        getSiteDiaryById: vi.fn().mockResolvedValue(Failure(rawError)),
+      };
+      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock as unknown as ISiteDiaryService);
+
+      const res = await getSiteDiaryRoute(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(res.status).toBe(500);
+
+      const body = await res.json();
+      expect(body).toEqual({ error: 'Failed to retrieve site diary' });
+      expect(JSON.stringify(body)).not.toMatch(/invalid input syntax|secret-internal-detail/i);
+    });
+
+    it('C. PATCH + UnknownError / internal 5xx returns HTTP 500 with generic message and redacts internals', async () => {
+      const req = createMockRequest({
+        expected_last_modified_at: '2026-08-28T08:00:00.000Z',
+        notes: 'Updated notes',
+      });
+
+      const rawError = new UnknownError('FATAL: connection terminated unexpectedly');
+      const serviceMock = {
+        updateSiteDiary: vi.fn().mockResolvedValue(Failure(rawError)),
+      };
+      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock as unknown as ISiteDiaryService);
+
+      const res = await updateSiteDiaryRoute(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(res.status).toBe(500);
+
+      const body = await res.json();
+      expect(body).toEqual({ error: 'Failed to update site diary' });
+      expect(JSON.stringify(body)).not.toMatch(/FATAL|connection terminated/i);
+    });
+
+    it('D1. POST + InfrastructureError does not leak raw database internals and returns HTTP 500', async () => {
       const validPayload = {
         programme_id: generateUuid(),
         revision_id: generateUuid(),
@@ -171,29 +232,39 @@ describe('Site Diary Composition & Authenticated Read Context (F2.7-C09-A)', () 
       expect(JSON.stringify(body)).not.toMatch(/42501|permission denied|Database error/i);
     });
 
-    it('J. InfrastructureError is NOT flattened to HTTP 400 on POST', async () => {
-      const validPayload = {
-        programme_id: generateUuid(),
-        revision_id: generateUuid(),
-        activity_id: generateUuid(),
-        activity_date: '2026-08-28',
-        operation_intent: 'IN_PROGRESS_DIARY',
-        notes: 'Test notes',
-      };
-
-      const req = createMockRequest(validPayload);
-      const rawError = new InfrastructureError('Database error [57014]: statement timeout');
+    it('D2. GET + InfrastructureError redacts raw database errors to HTTP 500', async () => {
+      const req = createMockRequest();
       const serviceMock = {
-        createSiteDiary: vi.fn().mockResolvedValue(Failure(rawError)),
+        getSiteDiaryById: vi.fn().mockResolvedValue(Failure(new InfrastructureError('Database error [42501]: permission denied'))),
       };
       vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock as unknown as ISiteDiaryService);
 
-      const res = await createSiteDiaryRoute(req);
+      const res = await getSiteDiaryRoute(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
       expect(res.status).toBe(500);
-      expect(res.status).not.toBe(400);
+      const body = await res.json();
+      expect(body).toEqual({ error: 'Failed to retrieve site diary' });
+      expect(JSON.stringify(body)).not.toMatch(/42501|permission denied/i);
     });
 
-    it('K. Known domain errors preserve expected safe HTTP status and message on POST', async () => {
+    it('D3. PATCH + InfrastructureError redacts raw database errors to HTTP 500', async () => {
+      const req = createMockRequest({
+        expected_last_modified_at: '2026-08-28T08:00:00.000Z',
+        notes: 'Updated notes',
+      });
+
+      const serviceMock = {
+        updateSiteDiary: vi.fn().mockResolvedValue(Failure(new InfrastructureError('Database error [42501]: permission denied'))),
+      };
+      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock as unknown as ISiteDiaryService);
+
+      const res = await updateSiteDiaryRoute(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body).toEqual({ error: 'Failed to update site diary' });
+      expect(JSON.stringify(body)).not.toMatch(/42501|permission denied/i);
+    });
+
+    it('E. Known 4xx domain errors preserve expected safe HTTP status and message on POST and PATCH', async () => {
       const validPayload = {
         programme_id: generateUuid(),
         revision_id: generateUuid(),
@@ -222,50 +293,22 @@ describe('Site Diary Composition & Authenticated Read Context (F2.7-C09-A)', () 
         const body = await res.json();
         expect(body.error).toBe(expectedMsg);
       }
-    });
 
-    it('GET /api/site-diary/[siteDiaryId] redacts raw database errors to HTTP 500', async () => {
-      const req = createMockRequest();
-      const serviceMock = {
-        getSiteDiaryById: vi.fn().mockResolvedValue(Failure(new InfrastructureError('Database error [42501]: permission denied'))),
-      };
-      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock as unknown as ISiteDiaryService);
-
-      const res = await getSiteDiaryRoute(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
-      expect(res.status).toBe(500);
-      const body = await res.json();
-      expect(body).toEqual({ error: 'Failed to retrieve site diary' });
-      expect(JSON.stringify(body)).not.toMatch(/42501|permission denied/i);
-    });
-
-    it('PATCH /api/site-diary/[siteDiaryId] redacts raw database errors to HTTP 500 while preserving domain errors', async () => {
-      const req = createMockRequest({
+      // PATCH domain error -> 409 preserved
+      const patchReq = createMockRequest({
         expected_last_modified_at: '2026-08-28T08:00:00.000Z',
         notes: 'Updated notes',
       });
-
-      // 1. Raw DB error -> 500 redacted
-      const serviceMock1 = {
-        updateSiteDiary: vi.fn().mockResolvedValue(Failure(new InfrastructureError('Database error [42501]: permission denied'))),
+      const staleError = new SiteDiaryStaleEditError('Site diary was modified by another user');
+      const patchServiceMock = {
+        updateSiteDiary: vi.fn().mockResolvedValue(Failure(staleError)),
       };
-      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock1 as unknown as ISiteDiaryService);
+      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(patchServiceMock as unknown as ISiteDiaryService);
 
-      const res1 = await updateSiteDiaryRoute(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
-      expect(res1.status).toBe(500);
-      const body1 = await res1.json();
-      expect(body1).toEqual({ error: 'Failed to update site diary' });
-      expect(JSON.stringify(body1)).not.toMatch(/42501|permission denied/i);
-
-      // 2. Domain error -> 409 preserved
-      const serviceMock2 = {
-        updateSiteDiary: vi.fn().mockResolvedValue(Failure(new SiteDiaryStaleEditError('Site diary was modified by another user'))),
-      };
-      vi.spyOn(await import('@/composition/siteDiaryComposition'), 'createSiteDiaryService').mockReturnValue(serviceMock2 as unknown as ISiteDiaryService);
-
-      const res2 = await updateSiteDiaryRoute(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
-      expect(res2.status).toBe(409);
-      const body2 = await res2.json();
-      expect(body2.error).toBe('Site diary was modified by another user');
+      const patchRes = await updateSiteDiaryRoute(patchReq, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
+      expect(patchRes.status).toBe(409);
+      const patchBody = await patchRes.json();
+      expect(patchBody.error).toBe('Site diary was modified by another user');
     });
   });
 });

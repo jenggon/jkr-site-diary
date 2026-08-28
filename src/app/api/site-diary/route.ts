@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { isValidUuid } from '@/lib/uuid';
 import { isValidIso8601 } from '@/lib/clock';
 import { isSuccess } from '@/lib/result';
-import { InfrastructureError } from '@/lib/errors';
 
 const timeValue = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid HH:MM time').nullable();
 const printContextSchema = z.object({
@@ -66,14 +65,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ data: result.value }, { status: 201 });
     }
 
-    if (result.error instanceof InfrastructureError || /42501|permission denied|database error/i.test(result.error.message)) {
-      return NextResponse.json({ error: 'Failed to create site diary' }, { status: 500 });
+    const httpStatus = result.error.httpStatus;
+    if (typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500) {
+      return NextResponse.json({ error: result.error.message }, { status: httpStatus });
     }
 
-    const status = (typeof result.error.httpStatus === 'number' && result.error.httpStatus >= 400 && result.error.httpStatus < 600)
-      ? result.error.httpStatus
-      : 500;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return NextResponse.json({ error: 'Failed to create site diary' }, { status: 500 });
   } catch {
     return NextResponse.json({ error: 'Failed to create site diary' }, { status: 500 });
   }
