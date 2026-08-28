@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createOpenActivityService } from '@/composition/activityComposition';
 import { ActivityRepository } from '@/repositories/activityRepository';
 import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
 import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isFailure } from '@/lib/result';
 import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
@@ -13,7 +13,7 @@ type RouteParams = {
 
 /**
  * GET /api/activity/[activityId]
- * Retrieves an Activity by ID.
+ * Retrieves an Activity by ID using the caller's verified authenticated context.
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
@@ -31,11 +31,12 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
 
-    const repo = new ActivityRepository(new SupabaseDatabaseAdapter(supabase));
+    const client = getSupabaseAuthenticatedClient(identity.accessToken);
+    const repo = new ActivityRepository(new SupabaseDatabaseAdapter(client));
     const result = await repo.findById(activityId);
 
     if (isFailure(result)) {
-      return NextResponse.json({ error: result.error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to retrieve activity' }, { status: 500 });
     }
 
     if (!result.value) {
@@ -46,9 +47,9 @@ export async function GET(request: Request, context: RouteParams) {
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve activity' },
+      { error: 'Failed to retrieve activity' },
       { status: 500 }
     );
   }
