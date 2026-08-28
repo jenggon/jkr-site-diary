@@ -332,7 +332,8 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
       rain_end_time: '16:00',
       contractor_scope: 'NSC',
     });
-    expect(rainySdCall?.body.weather).toBe('Rainy');
+    expect(rainySdCall?.body.weather).toBeNull();
+    expect(['Sunny', 'Rainy', 'Cloudy', 'HeavyRain']).not.toContain(rainySdCall?.body.weather);
 
     // 2. Weather = ELOK -> rain times must be null even if string provided in state
     calls = [];
@@ -345,9 +346,47 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
 
     await submitDailyEntry({ ...sunnyParams, fetchFn: mockFetch });
     const sunnySdCall = calls.find((c) => c.url === '/api/site-diary' && c.method === 'POST');
+    expect(sunnySdCall?.body.print_context.weather_condition).toBe('ELOK');
     expect(sunnySdCall?.body.print_context.rain_start_time).toBeNull();
     expect(sunnySdCall?.body.print_context.rain_end_time).toBeNull();
-    expect(sunnySdCall?.body.weather).toBe('Sunny');
+    expect(sunnySdCall?.body.weather).toBeNull();
+    expect(['Sunny', 'Rainy', 'Cloudy', 'HeavyRain']).not.toContain(sunnySdCall?.body.weather);
+
+    // 3. Weather = MENDUNG
+    calls = [];
+    const mendungParams: SubmitDailyEntryParams = {
+      ...defaultParams,
+      weatherCondition: 'MENDUNG',
+    };
+    await submitDailyEntry({ ...mendungParams, fetchFn: mockFetch });
+    const mendungSdCall = calls.find((c) => c.url === '/api/site-diary' && c.method === 'POST');
+    expect(mendungSdCall?.body.print_context.weather_condition).toBe('MENDUNG');
+    expect(mendungSdCall?.body.weather).toBeNull();
+    expect(['Sunny', 'Rainy', 'Cloudy', 'HeavyRain']).not.toContain(mendungSdCall?.body.weather);
+
+    // 4. Weather = RIBUT
+    calls = [];
+    const ributParams: SubmitDailyEntryParams = {
+      ...defaultParams,
+      weatherCondition: 'RIBUT',
+    };
+    await submitDailyEntry({ ...ributParams, fetchFn: mockFetch });
+    const ributSdCall = calls.find((c) => c.url === '/api/site-diary' && c.method === 'POST');
+    expect(ributSdCall?.body.print_context.weather_condition).toBe('RIBUT');
+    expect(ributSdCall?.body.weather).toBeNull();
+    expect(['Sunny', 'Rainy', 'Cloudy', 'HeavyRain']).not.toContain(ributSdCall?.body.weather);
+
+    // 5. Weather = null / unselected
+    calls = [];
+    const nullParams: SubmitDailyEntryParams = {
+      ...defaultParams,
+      weatherCondition: null,
+    };
+    await submitDailyEntry({ ...nullParams, fetchFn: mockFetch });
+    const nullSdCall = calls.find((c) => c.url === '/api/site-diary' && c.method === 'POST');
+    expect(nullSdCall?.body.print_context.weather_condition).toBeNull();
+    expect(nullSdCall?.body.weather).toBeNull();
+    expect(['Sunny', 'Rainy', 'Cloudy', 'HeavyRain']).not.toContain(nullSdCall?.body.weather);
   });
 
   it('Scenario 10 (AUTH / ACTOR BOUNDARY): never sends client-side actorId or submittedBy in mutation payloads', async () => {
