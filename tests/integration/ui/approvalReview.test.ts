@@ -117,7 +117,19 @@ describe('F2.4-B03-H01 exact Approval review boundary', () => {
     expect(container.textContent).toContain('Bukti diary-A');
     expect(decisionButton('Luluskan')).toBeTruthy();
     await act(async () => decisionButton('Luluskan')?.click());
+
+    // Does NOT immediately navigate away
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('Rekod Berjaya Diluluskan (Approved)');
+    expect(container.textContent).toContain('diary-A');
+
+    // Terminal back button triggers onSuccess
+    const backBtn = container.querySelector('[data-testid="terminal-back-btn"]') as HTMLButtonElement;
+    expect(backBtn).toBeTruthy();
+    expect(backBtn.textContent).toContain('Kembali ke Kelulusan');
+    await act(async () => backBtn.click());
     expect(onSuccess).toHaveBeenCalledTimes(1);
+
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/approval/approval-A',
       expect.objectContaining({ method: 'PATCH' })
@@ -321,6 +333,10 @@ describe('F2.4-B03-H01 exact Approval review boundary', () => {
     });
     expect(patches).toBe(1);
     await act(async () => patch.resolve(json({ data: approval('approval-A', 'diary-A', 'Approved') })));
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('Rekod Berjaya Diluluskan (Approved)');
+    const backBtn = container.querySelector('[data-testid="terminal-back-btn"]') as HTMLButtonElement;
+    await act(async () => backBtn.click());
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 
@@ -366,5 +382,105 @@ describe('F2.4-B03-H01 exact Approval review boundary', () => {
 
     expect(container.textContent).not.toContain('stale failure');
     expect(container.textContent).toContain('Bukti diary-B');
+  });
+
+  // H. ApprovalReview successful Approved PATCH renders Approved state, same site_diary_id, approved_by, comment
+  it('[Test H] successful Approved PATCH parses returned Approval, does not call onSuccess immediately, and renders terminal state with site_diary_id, approved_by, comment', async () => {
+    const returnedApproval = {
+      ...approval('approval-A', 'diary-A', 'Approved'),
+      approved_by: 'reviewer@jkr.gov.my',
+      approval_comment: 'Kerja dilaksanakan mengikut spesifikasi JKR.',
+      approval_date: '2026-08-28T11:00:00.000Z',
+    };
+
+    global.fetch = vi.fn(async (input, init) => {
+      const url = String(input);
+      if (init?.method === 'PATCH') return json({ data: returnedApproval });
+      if (url.endsWith('/api/approval/approval-A/review')) return json({ data: approval() });
+      if (url.endsWith('/api/site-diary/diary-A')) return json({ data: diary() });
+      if (url.includes('/history')) return json({ data: { siteDiaryId: 'diary-A', events: [] } });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    await render();
+
+    const commentInput = container.querySelector('#approvalComment') as HTMLTextAreaElement;
+    await act(async () => {
+      commentInput.value = 'Kerja dilaksanakan mengikut spesifikasi JKR.';
+      commentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    expect(decisionButton('Luluskan')).toBeTruthy();
+    await act(async () => decisionButton('Luluskan')?.click());
+
+    // DOES NOT immediately call onSuccess
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    // Renders Approved state
+    expect(container.querySelector('[data-testid="terminal-approval-status"]')?.textContent).toContain('Approved');
+    // Renders same site_diary_id
+    expect(container.querySelector('[data-testid="terminal-site-diary-id"]')?.textContent).toBe('diary-A');
+    // Renders approved_by
+    expect(container.querySelector('[data-testid="terminal-approved-by"]')?.textContent).toBe('reviewer@jkr.gov.my');
+    // Preserves comment
+    expect(container.querySelector('[data-testid="terminal-approval-comment"]')?.textContent).toBe('Kerja dilaksanakan mengikut spesifikasi JKR.');
+  });
+
+  // I. Only explicit "Kembali" action invokes navigation callback after terminal success
+  it('[Test I] only explicit "Kembali ke Kelulusan" click invokes navigation callback after terminal success', async () => {
+    global.fetch = vi.fn(async (input, init) => {
+      const url = String(input);
+      if (init?.method === 'PATCH') return json({ data: approval('approval-A', 'diary-A', 'Approved') });
+      if (url.endsWith('/api/approval/approval-A/review')) return json({ data: approval() });
+      if (url.endsWith('/api/site-diary/diary-A')) return json({ data: diary() });
+      if (url.includes('/history')) return json({ data: { siteDiaryId: 'diary-A', events: [] } });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    await render();
+    await act(async () => decisionButton('Luluskan')?.click());
+
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    const backBtn = container.querySelector('[data-testid="terminal-back-btn"]') as HTMLButtonElement;
+    expect(backBtn).toBeTruthy();
+    await act(async () => backBtn.click());
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  // J. Existing Returned / Rejected behaviour does not regress
+  it('[Test J] Returned and Rejected decisions require comments and invoke onSuccess on success', async () => {
+    global.fetch = vi.fn(async (input, init) => {
+      const url = String(input);
+      if (init?.method === 'PATCH') {
+        const body = JSON.parse(init.body as string);
+        return json({ data: approval('approval-A', 'diary-A', body.approval_status) });
+      }
+      if (url.endsWith('/api/approval/approval-A/review')) return json({ data: approval() });
+      if (url.endsWith('/api/site-diary/diary-A')) return json({ data: diary() });
+      if (url.includes('/history')) return json({ data: { siteDiaryId: 'diary-A', events: [] } });
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    await render();
+
+    // Pulangkan and Tolak disabled without comment
+    expect((decisionButton('Pulangkan') as HTMLButtonElement).disabled).toBe(true);
+    expect((decisionButton('Tolak') as HTMLButtonElement).disabled).toBe(true);
+
+    const commentInput = container.querySelector('#approvalComment') as HTMLTextAreaElement;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+      setter?.call(commentInput, 'Perlu pembetulan maklumat tenaga kerja');
+      commentInput.dispatchEvent(new Event('input', { bubbles: true }));
+      commentInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect((decisionButton('Pulangkan') as HTMLButtonElement).disabled).toBe(false);
+
+    // Returned decision calls onSuccess directly
+    await act(async () => decisionButton('Pulangkan')?.click());
+    expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 });

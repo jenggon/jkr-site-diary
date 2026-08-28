@@ -375,6 +375,10 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
 
     const postJson = await postRes.json();
     savedSiteDiaryId = postJson?.data?.site_diary_id ?? postJson?.data?.siteDiaryId ?? null;
+    responseLastModifiedAt = postJson?.data?.lastModifiedAt
+      ?? postJson?.data?.updated_at
+      ?? postJson?.data?.submitted_at
+      ?? null;
   }
 
   if (!savedSiteDiaryId) {
@@ -452,6 +456,8 @@ export default function DailyEntryForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [savedDiaryId, setSavedDiaryId] = useState<string | null>(null);
+  const [savedActivityId, setSavedActivityId] = useState<string | null>(null);
+  const [savedLastModifiedAt, setSavedLastModifiedAt] = useState<string | null>(null);
   const isSubmittingRef = useRef<boolean>(false);
 
   const editDiaryGenerationRef = useRef<number>(0);
@@ -518,6 +524,8 @@ export default function DailyEntryForm({
       setFormError(null);
       setFormSuccess(null);
       setSavedDiaryId(null);
+      setSavedActivityId(null);
+      setSavedLastModifiedAt(null);
       setManpower(
         DEFAULT_TRADES.map((trade) => ({
           trade_name: trade,
@@ -722,6 +730,9 @@ export default function DailyEntryForm({
       });
 
       setSavedDiaryId(result.siteDiaryId);
+      setSavedActivityId(result.activityId);
+      setSavedLastModifiedAt(result.lastModifiedAt);
+
       if (editingSiteDiaryId && result.lastModifiedAt) {
         setExpectedLastModifiedAt(result.lastModifiedAt);
       }
@@ -1124,6 +1135,17 @@ export default function DailyEntryForm({
             success={formSuccess}
             savedSiteDiaryId={savedDiaryId}
             isEditMode={Boolean(editingSiteDiaryId)}
+            approvalContext={
+              !editingSiteDiaryId && savedDiaryId && savedActivityId && savedLastModifiedAt && programmeId && revisionId
+                ? {
+                    programmeId,
+                    revisionId,
+                    activityId: savedActivityId,
+                    siteDiaryId: savedDiaryId,
+                    lastModifiedAt: savedLastModifiedAt,
+                  }
+                : null
+            }
             onBackToOpenActivities={() => {
               invalidateContinuationContext('OPEN_ACTIVITIES');
             }}

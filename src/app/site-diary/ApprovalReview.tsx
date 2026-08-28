@@ -21,6 +21,7 @@ interface DecisionRequest {
 export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSuccess }: ApprovalReviewProps) {
   const [detail, setDetail] = useState<SiteDiary | null>(null);
   const [reviewApproval, setReviewApproval] = useState<Approval | null>(null);
+  const [terminalApproval, setTerminalApproval] = useState<Approval | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
     if (!preserveActionError) setActionError(null);
     setDetail(null);
     setReviewApproval(null);
+    setTerminalApproval(null);
 
     try {
       const [diaryResponse, approvalResponse] = await Promise.all([
@@ -116,6 +118,7 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
     decisionRef.current = null;
     decisionGenerationRef.current += 1;
     setSubmitting(false);
+    setTerminalApproval(null);
     return () => {
       decisionRef.current?.controller.abort();
       decisionRef.current = null;
@@ -175,7 +178,14 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
         throw new Error(errorData?.error || 'Tindakan gagal. Sila cuba lagi.');
       }
 
-      if (ownsRequest()) onSuccess();
+      const resJson = await res.json().catch(() => null);
+      const updatedApproval = resJson?.data as Approval | undefined;
+
+      if (status === 'Approved' && updatedApproval) {
+        setTerminalApproval(updatedApproval);
+      } else {
+        if (ownsRequest()) onSuccess();
+      }
     } catch (err: unknown) {
       if (ownsRequest() && err instanceof Error && err.name !== 'AbortError') {
         setActionError(err.message);
@@ -199,6 +209,89 @@ export default function ApprovalReview({ siteDiaryId, approvalId, onBack, onSucc
       </button>
     </div>
   );
+
+  if (terminalApproval) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white">Status Kelulusan</h2>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-800/80 bg-emerald-950/70 p-6 text-emerald-200 shadow-lg space-y-4">
+          <div className="flex items-start gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div className="flex-1 space-y-1">
+              <h3 className="text-lg font-bold text-emerald-300">
+                Rekod Berjaya Diluluskan (Approved)
+              </h3>
+              <p className="text-sm text-emerald-200">
+                Buku Harian Tapak telah disahkan dan status kelulusan dikemaskini.
+              </p>
+            </div>
+          </div>
+
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-3 border-t border-emerald-800/50 text-xs sm:text-sm">
+            <div>
+              <dt className="text-emerald-400/80 font-medium">Status Kelulusan</dt>
+              <dd className="mt-1 font-bold text-emerald-100" data-testid="terminal-approval-status">
+                {terminalApproval.approval_status} (Diluluskan)
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-400/80 font-medium">ID Buku Harian (Site Diary ID)</dt>
+              <dd className="mt-1 font-mono text-emerald-100 font-semibold" data-testid="terminal-site-diary-id">
+                {terminalApproval.site_diary_id}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-400/80 font-medium">Diluluskan Oleh (Approved By)</dt>
+              <dd className="mt-1 text-emerald-100 font-semibold" data-testid="terminal-approved-by">
+                {terminalApproval.approved_by || 'Pegawai Pengesah'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-400/80 font-medium">Tarikh & Masa Kelulusan</dt>
+              <dd className="mt-1 text-emerald-100">
+                {terminalApproval.approval_date || terminalApproval.updated_at || '-'}
+              </dd>
+            </div>
+            {terminalApproval.approval_comment && (
+              <div className="sm:col-span-2">
+                <dt className="text-emerald-400/80 font-medium">Ulasan Kelulusan</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-emerald-100" data-testid="terminal-approval-comment">
+                  {terminalApproval.approval_comment}
+                </dd>
+              </div>
+            )}
+          </dl>
+
+          <div className="pt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={onSuccess}
+              data-testid="terminal-back-btn"
+              className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm shadow-md transition-colors"
+            >
+              Kembali ke Kelulusan
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!detail) return null;
 
   const canDecide = reviewApproval?.approval_id === approvalId
