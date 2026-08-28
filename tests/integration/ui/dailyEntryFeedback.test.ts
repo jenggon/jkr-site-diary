@@ -344,4 +344,438 @@ describe('F2.1-E Feedback, Validation & Submission UX Behavioural Suite', () => 
     expect(sources).not.toContain('activityDate}');
     expect(sources).not.toContain('activityId}');
   });
+
+  // A. CREATE submitDailyEntry captures returned submitted_at / lastModifiedAt token
+  it('20. [Test A] CREATE submitDailyEntry captures returned token prioritizing lastModifiedAt > updated_at > submitted_at', async () => {
+    // Case 1: lastModifiedAt is provided
+    const mockFetch1 = createMockFetch({
+      '/api/site-diary': {
+        status: 201,
+        json: {
+          data: {
+            site_diary_id: 'sd-token-1',
+            lastModifiedAt: '2026-08-28T09:00:00.000Z',
+            updated_at: '2026-08-28T08:00:00.000Z',
+            submitted_at: '2026-08-28T07:00:00.000Z',
+          },
+        },
+      },
+    });
+    const res1 = await submitDailyEntry({ ...baseParams, fetchFn: mockFetch1 });
+    expect(res1.lastModifiedAt).toBe('2026-08-28T09:00:00.000Z');
+
+    // Case 2: updated_at is provided (no lastModifiedAt)
+    const mockFetch2 = createMockFetch({
+      '/api/site-diary': {
+        status: 201,
+        json: {
+          data: {
+            site_diary_id: 'sd-token-2',
+            updated_at: '2026-08-28T08:30:00.000Z',
+            submitted_at: '2026-08-28T07:00:00.000Z',
+          },
+        },
+      },
+    });
+    const res2 = await submitDailyEntry({ ...baseParams, fetchFn: mockFetch2 });
+    expect(res2.lastModifiedAt).toBe('2026-08-28T08:30:00.000Z');
+
+    // Case 3: submitted_at is provided (canonical DB column)
+    const mockFetch3 = createMockFetch({
+      '/api/site-diary': {
+        status: 201,
+        json: {
+          data: {
+            site_diary_id: 'sd-token-3',
+            submitted_at: '2026-08-28T07:15:00.000Z',
+          },
+        },
+      },
+    });
+    const res3 = await submitDailyEntry({ ...baseParams, fetchFn: mockFetch3 });
+    expect(res3.lastModifiedAt).toBe('2026-08-28T07:15:00.000Z');
+  });
+
+  // B. Successful non-edit save exposes "Mohon Kelulusan"
+  it('21. [Test B] Successful non-edit save exposes "Mohon Kelulusan" button', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: 'sd-valid-1',
+      isEditMode: false,
+      approvalContext: {
+        programmeId: 'prog-1',
+        revisionId: 'rev-1',
+        activityId: 'act-1',
+        siteDiaryId: 'sd-valid-1',
+        lastModifiedAt: '2026-08-28T10:00:00.000Z',
+      },
+    })));
+
+    const button = container.querySelector('[data-testid="request-approval-btn"]');
+    expect(button).toBeTruthy();
+    expect(button?.textContent).toContain('Mohon Kelulusan');
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  // C & D. Approval request payload contains EXACT required fields and NO client actor identity
+  it('22. [Test C & D] Approval request payload contains exact required fields and no client actor identity', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    const postCalls: any[] = [];
+    const mockFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      postCalls.push({ url: String(input), method: init?.method, body });
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({
+          data: {
+            approval_id: 'appr-uuid-1',
+            approval_status: 'Pending',
+            site_diary_id: 'sd-valid-1',
+          },
+        }),
+      } as unknown as Response;
+    };
+
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: 'sd-valid-1',
+      isEditMode: false,
+      fetchFn: mockFetch as any,
+      approvalContext: {
+        programmeId: 'prog-1',
+        revisionId: 'rev-1',
+        activityId: 'act-1',
+        siteDiaryId: 'sd-valid-1',
+        lastModifiedAt: '2026-08-28T10:00:00.000Z',
+      },
+    })));
+
+    const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+    expect(button).toBeTruthy();
+    await act(async () => {
+      button.click();
+    });
+
+    expect(postCalls).toHaveLength(1);
+    const call = postCalls[0];
+    expect(call.url).toBe('/api/approval');
+    expect(call.method).toBe('POST');
+
+    // C. Exact required fields
+    expect(call.body).toEqual({
+      programme_id: 'prog-1',
+      revision_id: 'rev-1',
+      activity_id: 'act-1',
+      site_diary_id: 'sd-valid-1',
+      expected_site_diary_last_modified_at: '2026-08-28T10:00:00.000Z',
+    });
+
+    // D. No client actor identity
+    expect(call.body.requested_by).toBeUndefined();
+    expect(call.body.approved_by).toBeUndefined();
+    expect(call.body.actorId).toBeUndefined();
+    expect(call.body.userId).toBeUndefined();
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  // E. 201 Pending captures approval_id, renders Pending state with data-approval-id, prevents second request
+  it('23. [Test E] 201 Pending retains approval_id in state/DOM and removes "Mohon Kelulusan"', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    let callCount = 0;
+    const mockFetch = async () => {
+      callCount++;
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({
+          data: {
+            approval_id: 'appr-uuid-99',
+            approval_status: 'Pending',
+            site_diary_id: 'sd-valid-1',
+          },
+        }),
+      } as unknown as Response;
+    };
+
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: 'sd-valid-1',
+      isEditMode: false,
+      fetchFn: mockFetch as any,
+      approvalContext: {
+        programmeId: 'prog-1',
+        revisionId: 'rev-1',
+        activityId: 'act-1',
+        siteDiaryId: 'sd-valid-1',
+        lastModifiedAt: '2026-08-28T10:00:00.000Z',
+      },
+    })));
+
+    const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+    await act(async () => {
+      button.click();
+    });
+
+    expect(callCount).toBe(1);
+    const pendingElem = container.querySelector('[data-testid="approval-status-pending"]');
+    expect(pendingElem).toBeTruthy();
+    expect(pendingElem?.getAttribute('data-approval-id')).toBe('appr-uuid-99');
+    expect(container.textContent).toContain('Menunggu Kelulusan');
+    expect(container.querySelector('[data-testid="request-approval-btn"]')).toBeNull();
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  // E2. 201 with missing approval_id, mismatched site_diary_id, or wrong approval_status must NOT enter Pending
+  it('23b. [Correction A/B] 201 with malformed or mismatched data does not enter Pending', async () => {
+    const testCases = [
+      {
+        name: 'missing approval_id',
+        data: { approval_id: '', approval_status: 'Pending', site_diary_id: 'sd-valid-1' },
+      },
+      {
+        name: 'mismatched site_diary_id',
+        data: { approval_id: 'appr-1', approval_status: 'Pending', site_diary_id: 'sd-other' },
+      },
+      {
+        name: 'wrong approval_status',
+        data: { approval_id: 'appr-1', approval_status: 'Approved', site_diary_id: 'sd-valid-1' },
+      },
+    ];
+
+    for (const tc of testCases) {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+
+      const mockFetch = async () => ({
+        ok: true,
+        status: 201,
+        json: async () => ({ data: tc.data }),
+      } as unknown as Response);
+
+      await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+        error: null,
+        success: 'Buku Harian Tapak berjaya disimpan.',
+        savedSiteDiaryId: 'sd-valid-1',
+        isEditMode: false,
+        fetchFn: mockFetch as any,
+        approvalContext: {
+          programmeId: 'prog-1',
+          revisionId: 'rev-1',
+          activityId: 'act-1',
+          siteDiaryId: 'sd-valid-1',
+          lastModifiedAt: '2026-08-28T10:00:00.000Z',
+        },
+      })));
+
+      const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+      await act(async () => {
+        button.click();
+      });
+
+      expect(container.querySelector('[data-testid="approval-status-pending"]')).toBeNull();
+      expect(container.textContent).toContain('Gagal memohon kelulusan. Sila cuba lagi.');
+
+      act(() => root.unmount());
+      container.remove();
+    }
+  });
+
+  // F. Approval request error: no fake Pending state, safe visible error, request may be retried manually
+  it('24. [Test F] Approval request error displays safe bounded error without leaking raw backend text and allows manual retry', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    let callCount = 0;
+    const mockFetch = async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'permission denied for table approval SQLSTATE 42501' }),
+        } as unknown as Response;
+      }
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({
+          data: {
+            approval_id: 'appr-uuid-retry',
+            approval_status: 'Pending',
+            site_diary_id: 'sd-valid-1',
+          },
+        }),
+      } as unknown as Response;
+    };
+
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: 'sd-valid-1',
+      isEditMode: false,
+      fetchFn: mockFetch as any,
+      approvalContext: {
+        programmeId: 'prog-1',
+        revisionId: 'rev-1',
+        activityId: 'act-1',
+        siteDiaryId: 'sd-valid-1',
+        lastModifiedAt: '2026-08-28T10:00:00.000Z',
+      },
+    })));
+
+    const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+    expect(button).toBeTruthy();
+
+    // First attempt -> fails with 500
+    await act(async () => {
+      button.click();
+    });
+
+    expect(callCount).toBe(1);
+    expect(container.querySelector('[data-testid="approval-status-pending"]')).toBeNull();
+    // Raw SQLSTATE error must NOT leak
+    expect(container.textContent).not.toContain('SQLSTATE');
+    expect(container.textContent).not.toContain('permission denied');
+    expect(container.textContent).toContain('Gagal memohon kelulusan. Sila cuba lagi.');
+
+    // Button is still available and not disabled
+    const retryBtn = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+    expect(retryBtn).toBeTruthy();
+    expect(retryBtn.disabled).toBe(false);
+
+    // Second attempt -> succeeds
+    await act(async () => {
+      retryBtn.click();
+    });
+
+    expect(callCount).toBe(2);
+    const pendingElem = container.querySelector('[data-testid="approval-status-pending"]');
+    expect(pendingElem).toBeTruthy();
+    expect(pendingElem?.getAttribute('data-approval-id')).toBe('appr-uuid-retry');
+    expect(container.textContent).toContain('Menunggu Kelulusan');
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  // F2. 401, 403, and 409 HTTP status codes map to bounded safe messages
+  it('24b. [Correction B] HTTP 401, 403, 409 map to specific bounded safe messages', async () => {
+    const errorCases = [
+      { status: 401, expectedMsg: 'Sesi telah tamat. Sila log masuk semula.' },
+      { status: 403, expectedMsg: 'Tiada kebenaran untuk memohon kelulusan.' },
+      { status: 409, expectedMsg: 'Rekod telah berubah. Muat semula sebelum memohon kelulusan.' },
+    ];
+
+    for (const ec of errorCases) {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = createRoot(container);
+
+      const mockFetch = async () => ({
+        ok: false,
+        status: ec.status,
+        json: async () => ({ error: 'raw backend detail' }),
+      } as unknown as Response);
+
+      await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+        error: null,
+        success: 'Buku Harian Tapak berjaya disimpan.',
+        savedSiteDiaryId: 'sd-valid-1',
+        isEditMode: false,
+        fetchFn: mockFetch as any,
+        approvalContext: {
+          programmeId: 'prog-1',
+          revisionId: 'rev-1',
+          activityId: 'act-1',
+          siteDiaryId: 'sd-valid-1',
+          lastModifiedAt: '2026-08-28T10:00:00.000Z',
+        },
+      })));
+
+      const button = container.querySelector('[data-testid="request-approval-btn"]') as HTMLButtonElement;
+      await act(async () => {
+        button.click();
+      });
+
+      expect(container.textContent).not.toContain('raw backend detail');
+      expect(container.textContent).toContain(ec.expectedMsg);
+
+      act(() => root.unmount());
+      container.remove();
+    }
+  });
+
+  // G. Approval action is not invented for invalid/missing saved identity
+  it('25. [Test G] Approval action is not rendered when context is missing or in edit mode', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    // Case 1: Edit mode
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya dikemaskini.',
+      savedSiteDiaryId: 'sd-edit-1',
+      isEditMode: true,
+      approvalContext: {
+        programmeId: 'prog-1',
+        revisionId: 'rev-1',
+        activityId: 'act-1',
+        siteDiaryId: 'sd-edit-1',
+        lastModifiedAt: '2026-08-28T10:00:00.000Z',
+      },
+    })));
+    expect(container.querySelector('[data-testid="request-approval-btn"]')).toBeNull();
+
+    // Case 2: Missing lastModifiedAt
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: 'sd-valid-1',
+      isEditMode: false,
+      approvalContext: {
+        programmeId: 'prog-1',
+        revisionId: 'rev-1',
+        activityId: 'act-1',
+        siteDiaryId: 'sd-valid-1',
+        lastModifiedAt: null,
+      },
+    })));
+    expect(container.querySelector('[data-testid="request-approval-btn"]')).toBeNull();
+
+    // Case 3: Missing approvalContext altogether
+    await act(async () => root.render(React.createElement(DailyEntryFeedback, {
+      error: null,
+      success: 'Buku Harian Tapak berjaya disimpan.',
+      savedSiteDiaryId: 'sd-valid-1',
+      isEditMode: false,
+      approvalContext: null,
+    })));
+    expect(container.querySelector('[data-testid="request-approval-btn"]')).toBeNull();
+
+    act(() => root.unmount());
+    container.remove();
+  });
 });
