@@ -1,10 +1,11 @@
 import { Result, Success, Failure, isFailure } from '@/lib/result';
-import { BaseAppError, ValidationError, InfrastructureError } from '@/lib/errors';
+import { BaseAppError, ValidationError, InfrastructureError, AuthorizationError } from '@/lib/errors';
 import { Approval, ApprovalStatus } from '@/types/approval';
 import { IApprovalService, CreateApprovalCommand, UpdateApprovalCommand } from './IApprovalService';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
 import { IActivityRepository } from '@/repositories/IActivityRepository';
-import { ISiteDiaryRepositoryAdapter } from '@/services/siteDiaryService';
+import { ISiteDiaryRepository } from '@/repositories/siteDiaryRepository';
+import { IApprovalReviewReadRepository, ApprovalReviewReadError } from '@/repositories/ApprovalReviewReadRepository';
 import { IApprovalAtomicRepository } from '@/repositories/atomic/IApprovalAtomicRepository';
 import { Logger } from '@/lib/logger';
 import { IClock } from '@/lib/IClock';
@@ -13,9 +14,10 @@ import { ApprovalNotFoundError, ApprovalTerminalStateError } from '@/errors/appr
 export interface IApprovalServiceDependencies {
   readonly revisionRepository: IProgrammeRevisionRepository;
   readonly activityRepository: IActivityRepository;
-  readonly siteDiaryRepository: ISiteDiaryRepositoryAdapter;
+  readonly siteDiaryRepository: ISiteDiaryRepository;
   readonly progressRepository: typeof import('@/repositories/progressRepository').progressRepository;
   readonly approvalRepository: typeof import('@/repositories/approvalRepository').approvalRepository;
+  readonly approvalReviewRepository?: IApprovalReviewReadRepository | undefined;
   readonly atomicRepository: IApprovalAtomicRepository;
   readonly clock: IClock;
   readonly logger: Logger;
@@ -24,9 +26,10 @@ export interface IApprovalServiceDependencies {
 export class ApprovalService implements IApprovalService {
   private readonly revisionRepo: IProgrammeRevisionRepository;
   private readonly activityRepo: IActivityRepository;
-  private readonly siteDiaryRepo: ISiteDiaryRepositoryAdapter;
+  private readonly siteDiaryRepo: ISiteDiaryRepository;
   private readonly progressRepo: typeof import('@/repositories/progressRepository').progressRepository;
   private readonly approvalRepo: typeof import('@/repositories/approvalRepository').approvalRepository;
+  private readonly approvalReviewRepo?: IApprovalReviewReadRepository | undefined;
   private readonly atomicRepo: IApprovalAtomicRepository;
   private readonly clock: IClock;
   private readonly logger: Logger;
@@ -37,6 +40,7 @@ export class ApprovalService implements IApprovalService {
     this.siteDiaryRepo = deps.siteDiaryRepository;
     this.progressRepo = deps.progressRepository;
     this.approvalRepo = deps.approvalRepository;
+    this.approvalReviewRepo = deps.approvalReviewRepository;
     this.atomicRepo = deps.atomicRepository;
     this.clock = deps.clock;
     this.logger = deps.logger;
@@ -201,7 +205,28 @@ export class ApprovalService implements IApprovalService {
     cmd: UpdateApprovalCommand
   ): Promise<Result<Approval, BaseAppError>> {
     try {
-      const existing = await this.approvalRepo.getApprovalById(approvalId);
+      let existing: Approval | null = null;
+
+      if (this.approvalReviewRepo) {
+        try {
+          existing = await this.approvalReviewRepo.getExact(approvalId);
+        } catch (error) {
+          if (error instanceof ApprovalReviewReadError) {
+            if (error.status === 403) {
+              return Failure(new AuthorizationError(error.message || 'F24_UNAUTHORIZED_CAPABILITY'));
+            }
+            if (error.status === 404) {
+              return Failure(new ApprovalNotFoundError(`Approval record not found: ${approvalId}`));
+            }
+            this.logger.error(`Approval review exact read failed: ${error.message}`);
+            return Failure(new InfrastructureError('Failed to retrieve approval record'));
+          }
+          throw error;
+        }
+      } else {
+        existing = await this.approvalRepo.getApprovalById(approvalId);
+      }
+
       if (!existing) {
         return Failure(new ApprovalNotFoundError(`Approval record not found: ${approvalId}`));
       }

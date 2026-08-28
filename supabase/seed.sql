@@ -88,13 +88,41 @@ INSERT INTO auth.identities (
     'email', now(), now(), now()
 ) ON CONFLICT DO NOTHING;
 
+-- P4 — Project Manager (creator role)
+INSERT INTO auth.users (
+    id, email, encrypted_password, email_confirmed_at,
+    created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+    aud, role, instance_id, confirmation_token, recovery_token,
+    email_change_token_new, email_change
+) VALUES (
+    '99999999-9999-4999-8999-999999999994',
+    'pm@jkr.gov.my',
+    crypt('password123', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}',
+    '{}', 'authenticated', 'authenticated',
+    '00000000-0000-0000-0000-000000000000', '', '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+    id, provider_id, user_id, identity_data, provider,
+    created_at, updated_at, last_sign_in_at
+) VALUES (
+    gen_random_uuid(),
+    '99999999-9999-4999-8999-999999999994',
+    '99999999-9999-4999-8999-999999999994',
+    '{"sub":"99999999-9999-4999-8999-999999999994","email":"pm@jkr.gov.my"}',
+    'email', now(), now(), now()
+) ON CONFLICT DO NOTHING;
+
 -- ============================================================
 -- 2. User Profiles
 -- ============================================================
 INSERT INTO public.user_profile (user_id, full_name, is_active) VALUES
     ('99999999-9999-9999-9999-999999999991', 'C01 Submitter', true),
     ('99999999-9999-9999-9999-999999999992', 'C01 Reviewer',  true),
-    ('99999999-9999-9999-9999-999999999993', 'C01 Unauth',    true)
+    ('99999999-9999-9999-9999-999999999993', 'C01 Unauth',    true),
+    ('99999999-9999-4999-8999-999999999994', 'C01 Project Manager', true)
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -106,7 +134,7 @@ INSERT INTO public.programme (
 ) VALUES (
     '11111111-1111-1111-1111-111111111111',
     'C01-TEST', 'C01 Test Programme', 'Approved',
-    '99999999-9999-9999-9999-999999999991',
+    '99999999-9999-4999-8999-999999999994',
     now(), now()
 ) ON CONFLICT DO NOTHING;
 
@@ -117,7 +145,7 @@ INSERT INTO public.programme (
 ) VALUES (
     '22222222-2222-2222-2222-222222222222',
     'C01-PROG-B', 'C01 Programme B', 'Approved',
-    '99999999-9999-9999-9999-999999999991',
+    '99999999-9999-4999-8999-999999999994',
     now(), now()
 ) ON CONFLICT DO NOTHING;
 

@@ -2,9 +2,10 @@ import { ApprovalService } from '@/services/approvalService';
 import { IApprovalService } from '@/services/IApprovalService';
 import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
 import { ActivityRepository } from '@/repositories/activityRepository';
-import { siteDiaryRepository } from '@/repositories/siteDiaryRepository';
+import { createSiteDiaryRepository } from '@/repositories/siteDiaryRepository';
 import { progressRepository } from '@/repositories/progressRepository';
 import { approvalRepository } from '@/repositories/approvalRepository';
+import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
 import { ApprovalAtomicRepository } from '@/repositories/atomic/ApprovalAtomicRepository';
 import { ApprovalQueueReadRepository } from '@/repositories/ApprovalQueueReadRepository';
 import { ApprovalReviewReadRepository } from '@/repositories/ApprovalReviewReadRepository';
@@ -12,19 +13,20 @@ import { getSupabaseAuthenticatedClient, getSupabaseServerClient } from '@/lib/s
 import { SystemClock } from '@/lib/clock';
 import { Logger } from '@/lib/logger';
 
-const revisionRepository = new ProgrammeRevisionRepository();
-const activityRepository = new ActivityRepository();
 const clock = new SystemClock();
 const logger = new Logger({ module: 'ApprovalEngine' });
 
 export function createApprovalService(accessToken?: string): IApprovalService {
   const client = accessToken ? getSupabaseAuthenticatedClient(accessToken) : getSupabaseServerClient();
+  const adapter = new SupabaseDatabaseAdapter(client);
+
   return new ApprovalService({
-    revisionRepository,
-    activityRepository,
-    siteDiaryRepository,
+    revisionRepository: new ProgrammeRevisionRepository(adapter),
+    activityRepository: new ActivityRepository(adapter),
+    siteDiaryRepository: createSiteDiaryRepository(client),
     progressRepository,
     approvalRepository,
+    approvalReviewRepository: accessToken ? new ApprovalReviewReadRepository(client) : undefined,
     atomicRepository: new ApprovalAtomicRepository(client),
     clock,
     logger,
