@@ -298,17 +298,6 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
     (m) => m.bumi_count > 0 || m.non_bumi_count > 0 || m.foreign_count > 0
   );
 
-  const mappedWeather =
-    params.weatherCondition === 'HUJAN'
-      ? 'Rainy'
-      : params.weatherCondition === 'RIBUT'
-      ? 'HeavyRain'
-      : params.weatherCondition === 'MENDUNG'
-      ? 'Cloudy'
-      : params.weatherCondition === 'ELOK'
-      ? 'Sunny'
-      : null;
-
   let savedSiteDiaryId: string | null = params.editingSiteDiaryId ?? null;
   let responseLastModifiedAt: string | null = params.expectedLastModifiedAt ?? null;
 
@@ -323,7 +312,7 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
       body: JSON.stringify({
         expected_last_modified_at: params.expectedLastModifiedAt,
         notes: params.notes.trim(),
-        weather: mappedWeather,
+        weather: null,
         manpower: activeManpower,
         print_context: compiledPrintContext,
       }),
@@ -360,7 +349,7 @@ export async function submitDailyEntry(params: SubmitDailyEntryParams): Promise<
         activity_date: params.activityDate,
         operation_intent: params.workStatus === 'Siap' ? 'FINAL_COMPLETION_DIARY' : 'IN_PROGRESS_DIARY',
         notes: params.notes.trim(),
-        weather: mappedWeather,
+        weather: null,
         manpower: activeManpower,
         print_context: compiledPrintContext,
       }),
