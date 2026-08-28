@@ -3,8 +3,8 @@ import { IApprovalService } from '@/services/IApprovalService';
 import { ProgrammeRevisionRepository } from '@/repositories/ProgrammeRevisionRepository';
 import { ActivityRepository } from '@/repositories/activityRepository';
 import { createSiteDiaryRepository } from '@/repositories/siteDiaryRepository';
-import { createProgressRepository } from '@/repositories/progressRepository';
-import { createApprovalRepository } from '@/repositories/approvalRepository';
+import { progressRepository } from '@/repositories/progressRepository';
+import { approvalRepository } from '@/repositories/approvalRepository';
 import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
 import { ApprovalAtomicRepository } from '@/repositories/atomic/ApprovalAtomicRepository';
 import { ApprovalQueueReadRepository } from '@/repositories/ApprovalQueueReadRepository';
@@ -24,8 +24,9 @@ export function createApprovalService(accessToken?: string): IApprovalService {
     revisionRepository: new ProgrammeRevisionRepository(adapter),
     activityRepository: new ActivityRepository(adapter),
     siteDiaryRepository: createSiteDiaryRepository(client),
-    progressRepository: createProgressRepository(client),
-    approvalRepository: createApprovalRepository(client),
+    progressRepository,
+    approvalRepository,
+    approvalReviewRepository: accessToken ? new ApprovalReviewReadRepository(client) : undefined,
     atomicRepository: new ApprovalAtomicRepository(client),
     clock,
     logger,

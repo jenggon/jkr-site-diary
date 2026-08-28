@@ -11,7 +11,11 @@ export class ApprovalReviewReadError extends Error {
   }
 }
 
-export class ApprovalReviewReadRepository {
+export interface IApprovalReviewReadRepository {
+  getExact(approvalId: string): Promise<Approval>;
+}
+
+export class ApprovalReviewReadRepository implements IApprovalReviewReadRepository {
   public constructor(private readonly client: SupabaseClient) {}
 
   public async getExact(approvalId: string): Promise<Approval> {
