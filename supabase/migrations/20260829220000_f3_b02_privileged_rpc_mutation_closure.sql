@@ -1298,6 +1298,9 @@ BEGIN
         RAISE EXCEPTION 'A27_SITE_DIARY_NOT_FOUND' USING ERRCODE = 'P0001';
     END IF;
 
+    -- Seal edits if Pending or Approved (F2.4 invariant)
+    PERFORM "private"."f24_assert_site_diary_unsealed"(p_site_diary_id);
+
     PERFORM "private"."a27_assert_revision_operational"(v_diary_row.programme_id, v_diary_row.revision_id);
 
     IF p_expected_last_modified_at IS NULL THEN

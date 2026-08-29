@@ -191,6 +191,28 @@ describe('F3-B02 Privileged RPC Mutation Closure Contract Test Suite', () => {
       expect(securityDefinerBlocks!.length).toBeGreaterThanOrEqual(15);
     });
 
+    it('HQ-B02-001: f1_update_site_diary_with_workforce_core preserves F2.4 site diary unsealed invariant before any mutation', () => {
+      const updateSdCore = b02MigrationSql.match(
+        /CREATE OR REPLACE FUNCTION "private"\."f1_update_site_diary_with_workforce_core"[\s\S]*?\$\$;/,
+      )?.[0];
+      expect(updateSdCore).toBeDefined();
+      expect(updateSdCore).toContain('PERFORM "private"."f24_assert_site_diary_unsealed"(p_site_diary_id);');
+
+      const lockIdx = updateSdCore!.indexOf(
+        'SELECT * INTO v_diary_row FROM "public"."site_diary" WHERE site_diary_id = p_site_diary_id FOR UPDATE;',
+      );
+      const unsealedIdx = updateSdCore!.indexOf(
+        'PERFORM "private"."f24_assert_site_diary_unsealed"(p_site_diary_id);',
+      );
+      const mutateIdx = updateSdCore!.indexOf(
+        'v_diary := "private"."a27_mutate_site_diary_core"(',
+      );
+
+      expect(lockIdx).toBeGreaterThan(-1);
+      expect(unsealedIdx).toBeGreaterThan(lockIdx);
+      expect(mutateIdx).toBeGreaterThan(unsealedIdx);
+    });
+
     it('guarantees exact-signature REVOKE ALL and GRANT EXECUTE TO authenticated posture', () => {
       const publicRpcSignatures = [
         'a27_create_programme_atomic(jsonb, uuid, uuid, uuid, uuid)',
@@ -309,6 +331,12 @@ describe('F3-B02 Privileged RPC Mutation Closure Contract Test Suite', () => {
       status: string;
     }
 
+    interface Approval {
+      approvalId: string;
+      siteDiaryId: string;
+      approvalStatus: 'Pending' | 'Approved' | 'Rejected' | 'Returned' | 'Cancelled';
+    }
+
     class MockPgDb {
       userProfiles = new Map<string, UserProfile>();
       roles = new Map<string, Role>();
@@ -324,6 +352,7 @@ describe('F3-B02 Privileged RPC Mutation Closure Contract Test Suite', () => {
       workforces = new Map<string, Workforce>();
       tradeLibrary = new Map<string, TradeLibrary>();
       progresses = new Map<string, Progress>();
+      approvals = new Map<string, Approval>();
 
       currentAuthUid: string | null = null;
 
@@ -524,10 +553,25 @@ describe('F3-B02 Privileged RPC Mutation Closure Contract Test Suite', () => {
         return sd;
       }
 
+      assertSiteDiaryUnsealed(siteDiaryId: string) {
+        const sealed = [...this.approvals.values()].some(
+          (appr) =>
+            appr.siteDiaryId === siteDiaryId &&
+            (appr.approvalStatus === 'Pending' || appr.approvalStatus === 'Approved'),
+        );
+        if (sealed) {
+          const err = new Error('F24_SITE_DIARY_SEALED');
+          (err as unknown as { code: string }).code = 'PT409';
+          throw err;
+        }
+      }
+
       // B02 Target 8: Site Diary Update
       updateSiteDiary(siteDiaryId: string, actorId: string) {
+        this.assertActor(actorId);
         const sd = this.siteDiaries.get(siteDiaryId);
         if (!sd) throw new Error('A27_SITE_DIARY_NOT_FOUND');
+        this.assertSiteDiaryUnsealed(siteDiaryId);
         this.assertAuthority(actorId, sd.programmeId, 'SITE_DIARY_UPDATE');
         return sd;
       }
@@ -872,6 +916,33 @@ describe('F3-B02 Privileged RPC Mutation Closure Contract Test Suite', () => {
       db.currentAuthUid = SE_A;
       // SE_A pretending to be SYSADMIN
       expect(() => db.createProgramme({ programme_code: 'FORGED', programme_name: 'Forged' }, SYSADMIN, 'p-f', 'r-f')).toThrow('A27_AUTH_ACTOR_MISMATCH');
+    });
+
+    it('Contract 21: HQ-B02-001 Site Diary edit sealing denies update when Approval is Pending or Approved', () => {
+      db.currentAuthUid = SS_A;
+      // Normal unsealed update succeeds
+      expect(() => db.updateSiteDiary('sd-a1', SS_A)).not.toThrow();
+
+      // Submit for approval -> Pending
+      db.approvals.set('appr-sd-a1', {
+        approvalId: 'appr-sd-a1',
+        siteDiaryId: 'sd-a1',
+        approvalStatus: 'Pending',
+      });
+
+      // Update attempt must be blocked by edit sealing
+      expect(() => db.updateSiteDiary('sd-a1', SS_A)).toThrow('F24_SITE_DIARY_SEALED');
+
+      // Approved status also seals edits
+      db.approvals.get('appr-sd-a1')!.approvalStatus = 'Approved';
+      expect(() => db.updateSiteDiary('sd-a1', SS_A)).toThrow('F24_SITE_DIARY_SEALED');
+
+      // Returned status unseals the diary
+      db.approvals.get('appr-sd-a1')!.approvalStatus = 'Returned';
+      expect(() => db.updateSiteDiary('sd-a1', SS_A)).not.toThrow();
+
+      // Clean up test approval state
+      db.approvals.delete('appr-sd-a1');
     });
   });
 });
