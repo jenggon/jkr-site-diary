@@ -25,10 +25,7 @@ export async function GET(request: Request, context: RouteParams) {
     const result = await workforceService.getWorkforceById(workforceId);
 
     if (isFailure(result)) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 
     if (!result.value) {
@@ -39,11 +36,8 @@ export async function GET(request: Request, context: RouteParams) {
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve workforce record' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -76,17 +70,14 @@ export async function PATCH(request: Request, context: RouteParams) {
     const result = await createWorkforceService(identity.accessToken).updateWorkforce(workforceId, { ...body, actor_id: identity.actorId });
 
     if (isFailure(result)) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 400 }
-      );
+      const status = result.error.httpStatus;
+      return status >= 500
+        ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        : NextResponse.json({ error: result.error.message }, { status });
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to update workforce record' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

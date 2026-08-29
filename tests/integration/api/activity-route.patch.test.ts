@@ -50,6 +50,9 @@ vi.mock('@/lib/supabase', () => ({
 import { GET, PATCH } from '@/app/api/activity/[activityId]/route';
 
 describe('/api/activity/[activityId] Route', () => {
+  const activityId = '11111111-1111-4111-8111-111111111111';
+  const foreignActivityId = '22222222-2222-4222-8222-222222222222';
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -68,7 +71,7 @@ describe('/api/activity/[activityId] Route', () => {
       };
       mocks.findById.mockResolvedValue(Success(mockActivity));
 
-      const request = new Request('http://localhost/api/activity/act-001', {
+      const request = new Request(`http://localhost/api/activity/${activityId}`, {
         method: 'GET',
         headers: {
           authorization: 'Bearer valid-p1-jwt-token',
@@ -76,7 +79,7 @@ describe('/api/activity/[activityId] Route', () => {
       });
 
       const response = await GET(request, {
-        params: Promise.resolve({ activityId: 'act-001' }),
+        params: Promise.resolve({ activityId }),
       });
 
       expect(response.status).toBe(200);
@@ -88,18 +91,18 @@ describe('/api/activity/[activityId] Route', () => {
       expect(mocks.SupabaseDatabaseAdapterMock).toHaveBeenCalledWith(
         expect.objectContaining({ token: 'valid-p1-jwt-token' })
       );
-      expect(mocks.findById).toHaveBeenCalledWith('act-001');
+      expect(mocks.findById).toHaveBeenCalledWith(activityId);
     });
 
     it('returns 401 when request is unauthenticated', async () => {
       mocks.extractVerifiedIdentity.mockResolvedValue(null);
 
-      const request = new Request('http://localhost/api/activity/act-001', {
+      const request = new Request(`http://localhost/api/activity/${activityId}`, {
         method: 'GET',
       });
 
       const response = await GET(request, {
-        params: Promise.resolve({ activityId: 'act-001' }),
+        params: Promise.resolve({ activityId }),
       });
 
       expect(response.status).toBe(401);
@@ -116,7 +119,7 @@ describe('/api/activity/[activityId] Route', () => {
       });
       mocks.findById.mockResolvedValue(Success(null));
 
-      const request = new Request('http://localhost/api/activity/act-foreign-999', {
+      const request = new Request(`http://localhost/api/activity/${foreignActivityId}`, {
         method: 'GET',
         headers: {
           authorization: 'Bearer foreign-p3-jwt-token',
@@ -124,7 +127,7 @@ describe('/api/activity/[activityId] Route', () => {
       });
 
       const response = await GET(request, {
-        params: Promise.resolve({ activityId: 'act-foreign-999' }),
+        params: Promise.resolve({ activityId: foreignActivityId }),
       });
 
       expect(response.status).toBe(404);
@@ -142,7 +145,7 @@ describe('/api/activity/[activityId] Route', () => {
         Failure(new InfrastructureError('permission denied for table activity: 42501 details'))
       );
 
-      const request = new Request('http://localhost/api/activity/act-001', {
+      const request = new Request(`http://localhost/api/activity/${activityId}`, {
         method: 'GET',
         headers: {
           authorization: 'Bearer valid-p1-jwt-token',
@@ -150,7 +153,7 @@ describe('/api/activity/[activityId] Route', () => {
       });
 
       const response = await GET(request, {
-        params: Promise.resolve({ activityId: 'act-001' }),
+        params: Promise.resolve({ activityId }),
       });
 
       expect(response.status).toBe(500);
@@ -168,12 +171,13 @@ describe('/api/activity/[activityId] Route', () => {
         actorId: 'actor-123',
         accessToken: 'token-abc',
       });
+      const updateActivityId = '33333333-3333-4333-8333-333333333333';
       mocks.updateActivity.mockResolvedValue({
         success: true,
-        value: { activityId: 'activity-123' },
+        value: { activityId: updateActivityId },
       });
 
-      const request = new Request('http://localhost/api/activity/activity-123', {
+      const request = new Request(`http://localhost/api/activity/${updateActivityId}`, {
         method: 'PATCH',
         headers: {
           authorization: 'Bearer token-abc',
@@ -183,13 +187,13 @@ describe('/api/activity/[activityId] Route', () => {
       });
 
       const response = await PATCH(request, {
-        params: Promise.resolve({ activityId: 'activity-123' }),
+        params: Promise.resolve({ activityId: updateActivityId }),
       });
 
       expect(response.status).toBe(200);
       expect(mocks.createOpenActivityService).toHaveBeenCalledWith('token-abc');
       expect(mocks.updateActivity).toHaveBeenCalledWith({
-        activityId: 'activity-123',
+        activityId: updateActivityId,
         activityName: 'Install reinforcement',
         updatedBy: 'actor-123',
       });
@@ -198,14 +202,15 @@ describe('/api/activity/[activityId] Route', () => {
     it('rejects the mutation when verified identity is unavailable', async () => {
       mocks.extractVerifiedIdentity.mockResolvedValue(null);
 
-      const request = new Request('http://localhost/api/activity/activity-123', {
+      const updateActivityId = '33333333-3333-4333-8333-333333333333';
+      const request = new Request(`http://localhost/api/activity/${updateActivityId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ subtask: 'Install reinforcement' }),
       });
 
       const response = await PATCH(request, {
-        params: Promise.resolve({ activityId: 'activity-123' }),
+        params: Promise.resolve({ activityId: updateActivityId }),
       });
 
       expect(response.status).toBe(401);

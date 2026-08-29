@@ -34,10 +34,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: dtos }, { status: 200 });
     }
 
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Failed to list programmes';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const errorStatus = result.error.httpStatus;
+    return errorStatus >= 500
+      ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      : NextResponse.json({ error: result.error.message }, { status: errorStatus });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -96,12 +98,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ data: result.value }, { status: 201 });
     }
 
-    return NextResponse.json(
-      { error: result.error.message },
-      { status: result.error.errorCode === 'PROGRAMME_ALREADY_EXISTS' ? 409 : 400 }
-    );
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Failed to create programme';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const errorStatus = result.error.httpStatus;
+    return errorStatus >= 500
+      ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      : NextResponse.json({ error: result.error.message }, { status: errorStatus });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

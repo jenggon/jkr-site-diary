@@ -25,9 +25,10 @@ export async function GET(request: Request, context: RouteParams) {
     const result = await approvalService.getApprovalById(approvalId);
 
     if (isFailure(result)) {
+      const status = result.error.httpStatus || 500;
       return NextResponse.json(
-        { error: result.error.message },
-        { status: result.error.httpStatus || 500 }
+        { error: status >= 500 ? 'Internal server error' : result.error.message },
+        { status: status >= 500 ? 500 : status }
       );
     }
 
@@ -39,12 +40,8 @@ export async function GET(request: Request, context: RouteParams) {
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error) {
-    const err = error as Error;
-    return NextResponse.json(
-      { error: err?.message || 'Failed to retrieve approval record' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -80,18 +77,15 @@ export async function PATCH(request: Request, context: RouteParams) {
     });
 
     if (isFailure(result)) {
+      const status = result.error.httpStatus || 400;
       return NextResponse.json(
-        { error: result.error.message },
-        { status: result.error.httpStatus || 400 }
+        { error: status >= 500 ? 'Internal server error' : result.error.message },
+        { status: status >= 500 ? 500 : status }
       );
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error) {
-    const err = error as Error;
-    return NextResponse.json(
-      { error: err?.message || 'Failed to update approval record' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

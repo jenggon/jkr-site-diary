@@ -10,10 +10,7 @@ export async function GET() {
     const activeTrades = await tradeLibraryService.getAllActiveTrades();
 
     return NextResponse.json({ data: activeTrades }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve active trades' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

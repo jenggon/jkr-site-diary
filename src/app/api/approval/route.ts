@@ -49,18 +49,15 @@ export async function POST(request: Request) {
     });
 
     if (isFailure(result)) {
+      const status = result.error.httpStatus || 400;
       return NextResponse.json(
-        { error: result.error.message },
-        { status: result.error.httpStatus || 400 }
+        { error: status >= 500 ? 'Internal server error' : result.error.message },
+        { status: status >= 500 ? 500 : status }
       );
     }
 
     return NextResponse.json({ data: result.value }, { status: 201 });
-  } catch (error) {
-    const err = error as Error;
-    return NextResponse.json(
-      { error: err?.message || 'Failed to create approval request' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

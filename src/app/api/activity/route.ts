@@ -49,17 +49,18 @@ export async function POST(request: Request) {
     });
 
     if (isFailure(result)) {
+      const status = mapErrorToHttpStatus(result.error);
+      if (status >= 500) {
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+      }
       return NextResponse.json(
         { error: result.error.message },
-        { status: mapErrorToHttpStatus(result.error) }
+        { status }
       );
     }
 
     return NextResponse.json({ data: result.value }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to create activity' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

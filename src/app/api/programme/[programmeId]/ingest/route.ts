@@ -91,16 +91,14 @@ export async function POST(
       return NextResponse.json({ data: result.value }, { status: 201 });
     }
 
-    const statusCode =
-      result.error.errorCode === 'MSP_DUPLICATE_IMPORT'
-        ? 409
-        : result.error.errorCode === 'PROGRAMME_NOT_FOUND'
-        ? 404
-        : 400;
-
-    return NextResponse.json({ error: result.error.message, code: result.error.errorCode }, { status: statusCode });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Failed to ingest MSP file';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const statusCode = result.error.httpStatus;
+    return statusCode >= 500
+      ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      : NextResponse.json(
+          { error: result.error.message, code: result.error.errorCode },
+          { status: statusCode }
+        );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

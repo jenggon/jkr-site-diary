@@ -60,17 +60,14 @@ export async function POST(request: Request) {
     const result = await createWorkforceService(identity.accessToken).createWorkforce({ ...body, actor_id: identity.actorId });
 
     if (isFailure(result)) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 400 }
-      );
+      const status = result.error.httpStatus;
+      return status >= 500
+        ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        : NextResponse.json({ error: result.error.message }, { status });
     }
 
     return NextResponse.json(result.value, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to create workforce record' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

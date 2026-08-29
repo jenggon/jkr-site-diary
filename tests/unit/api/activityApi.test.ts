@@ -3,6 +3,7 @@ import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
 import { toSuccessResponse, createdResponse, toErrorResponse, pagedResponse } from '@/app/api/_shared/response';
 import { mapActivityToResponseDto, mapActivityLogToResponseDto } from '@/app/api/_shared/activity.mapper';
 import { ActivityNotFoundError, ActivityValidationError, ActivityLockedError } from '@/errors/activityErrors';
+import { InfrastructureError } from '@/lib/errors';
 import { OpenActivityDto, ActivityLogEntry, ActivityStatus } from '@/types/openActivity';
 
 describe('Activity API Shared Infrastructure', () => {
@@ -61,6 +62,36 @@ describe('Activity API Shared Infrastructure', () => {
           message: 'Activity not found',
         },
       });
+    });
+
+    it('redacts a plain internal Error', async () => {
+      const res = toErrorResponse(new Error('42501 permission denied for table audit'));
+
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Internal server error',
+        },
+      });
+    });
+
+    it('redacts a BaseAppError that maps to 5xx', async () => {
+      const res = toErrorResponse(
+        new InfrastructureError('22P02 invalid input syntax for type uuid')
+      );
+
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body).toEqual({
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Internal server error',
+        },
+      });
+      expect(JSON.stringify(body)).not.toMatch(/22P02|invalid input syntax/i);
     });
   });
 

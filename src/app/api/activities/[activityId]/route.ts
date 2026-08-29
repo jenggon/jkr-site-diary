@@ -9,14 +9,27 @@ import { isSuccess } from '@/lib/result';
 import { ActivityNotFoundError } from '@/errors/activityErrors';
 import { Activity, ActivitySourceType } from '@/types/activity';
 import { OpenActivityDto } from '@/types/openActivity';
+import { isValidUuid } from '@/lib/uuid';
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ activityId: string }> }
 ) {
-  return handleRoute(request, async ({ services }) => {
+  return handleRoute(request, async () => {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { activityId } = await context.params;
-    const service = services.openActivity();
+    if (!isValidUuid(activityId)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid route parameter: activityId' },
+        { status: 400 }
+      );
+    }
+
+    const service = createOpenActivityService(identity.accessToken);
 
     const historyRes = await service.getActivityHistory(activityId);
     if (isSuccess(historyRes)) {
@@ -62,6 +75,12 @@ export async function PATCH(
     }
 
     const { activityId } = await context.params;
+    if (!isValidUuid(activityId)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid route parameter: activityId' },
+        { status: 400 }
+      );
+    }
     const body: UpdateActivityRequestDto = await request.json();
 
     const service = createOpenActivityService(identity.accessToken);

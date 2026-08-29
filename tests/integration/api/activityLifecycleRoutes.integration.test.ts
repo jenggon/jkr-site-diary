@@ -34,6 +34,8 @@ vi.mock('@/app/api/_shared/container', () => ({
 }));
 
 describe('A19 Phase 3 Lifecycle Integration Routes', () => {
+  const lifecycleActivityId = '22222222-2222-4222-8222-222222222222';
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -55,7 +57,7 @@ describe('A19 Phase 3 Lifecycle Integration Routes', () => {
   describe('POST /api/activities/[activityId]/start', () => {
     it('returns 401 if token is missing', async () => {
       const req = createMockRequest('POST', {});
-      const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+      const ctx = { params: Promise.resolve({ activityId: lifecycleActivityId }) };
       const res = await startActivity(req, ctx);
       expect(res.status).toBe(401);
     });
@@ -63,15 +65,15 @@ describe('A19 Phase 3 Lifecycle Integration Routes', () => {
     it('receives verified actorId and ignores body.started_by', async () => {
       const body = { started_by: 'spoofed-actor' };
       const req = createMockRequest('POST', body, 'valid-token');
-      const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+      const ctx = { params: Promise.resolve({ activityId: lifecycleActivityId }) };
       
-      mockService.startActivity.mockResolvedValue(Success({ activity_id: 'act-1' }));
+      mockService.startActivity.mockResolvedValue(Success({ activity_id: lifecycleActivityId }));
 
       const res = await startActivity(req, ctx);
       expect(res.status).toBe(200);
 
       expect(mockService.startActivity).toHaveBeenCalledWith(
-        'act-1',
+        lifecycleActivityId,
         'verified-actor-123'
       );
     });
@@ -80,7 +82,7 @@ describe('A19 Phase 3 Lifecycle Integration Routes', () => {
   describe('POST /api/activities/[activityId]/complete', () => {
     it('returns 401 if token is missing', async () => {
       const req = createMockRequest('POST', {});
-      const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+      const ctx = { params: Promise.resolve({ activityId: lifecycleActivityId }) };
       const res = await completeActivity(req, ctx);
       expect(res.status).toBe(401);
     });
@@ -88,38 +90,40 @@ describe('A19 Phase 3 Lifecycle Integration Routes', () => {
     it('receives verified actorId and ignores body.completed_by', async () => {
       const body = { completed_by: 'spoofed-actor' };
       const req = createMockRequest('POST', body, 'valid-token');
-      const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+      const ctx = { params: Promise.resolve({ activityId: lifecycleActivityId }) };
       
-      mockService.completeActivity.mockResolvedValue(Success({ activity_id: 'act-1' }));
+      mockService.completeActivity.mockResolvedValue(Success({ activity_id: lifecycleActivityId }));
 
       const res = await completeActivity(req, ctx);
       expect(res.status).toBe(200);
 
       expect(mockService.completeActivity).toHaveBeenCalledWith(
-        'act-1',
+        lifecycleActivityId,
         'verified-actor-123'
       );
     });
   });
 
   describe('GET /api/activities/[activityId]/history', () => {
+    const activityId = '11111111-1111-4111-8111-111111111111';
+
     it('returns 401 if token is missing', async () => {
       const req = createMockRequest('GET');
-      const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+      const ctx = { params: Promise.resolve({ activityId }) };
       const res = await getActivityHistory(req, ctx);
       expect(res.status).toBe(401);
     });
 
     it('allows access with valid token', async () => {
       const req = createMockRequest('GET', undefined, 'valid-token');
-      const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+      const ctx = { params: Promise.resolve({ activityId }) };
       
       mockService.getActivityHistory.mockResolvedValue(Success([]));
 
       const res = await getActivityHistory(req, ctx);
       expect(res.status).toBe(200);
 
-      expect(mockService.getActivityHistory).toHaveBeenCalledWith('act-1');
+      expect(mockService.getActivityHistory).toHaveBeenCalledWith(activityId);
     });
   });
 });

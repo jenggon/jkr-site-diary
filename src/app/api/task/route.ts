@@ -56,10 +56,7 @@ export async function POST(request: Request) {
 
     const task = await taskService.createTask({ ...body, created_by: actorId });
     return NextResponse.json({ data: task }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to create task' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

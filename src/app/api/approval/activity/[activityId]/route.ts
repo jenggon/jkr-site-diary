@@ -24,18 +24,11 @@ export async function GET(request: Request, context: RouteParams) {
     const result = await approvalService.getApprovalsByActivity(activityId);
 
     if (isFailure(result)) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error) {
-    const err = error as Error;
-    return NextResponse.json(
-      { error: err?.message || 'Failed to retrieve approvals by activity' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

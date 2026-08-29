@@ -42,13 +42,19 @@ export async function POST(req: NextRequest) {
     if (activityId) {
       const result = await siteDiaryService.continueYesterday(activityId, targetDate, identity.actorId);
       if (isFailure(result)) {
-        return NextResponse.json({ error: result.error.message }, { status: result.error.httpStatus || 400 });
+        const status = result.error.httpStatus || 400;
+        return status >= 500
+          ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+          : NextResponse.json({ error: result.error.message }, { status });
       }
       return NextResponse.json({ data: result.value });
     } else if (programmeId) {
       const result = await siteDiaryService.carryForwardActiveOperations(programmeId, targetDate, identity.actorId);
       if (isFailure(result)) {
-        return NextResponse.json({ error: result.error.message }, { status: result.error.httpStatus || 400 });
+        const status = result.error.httpStatus || 400;
+        return status >= 500
+          ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+          : NextResponse.json({ error: result.error.message }, { status });
       }
       return NextResponse.json({ data: result.value });
     } else {

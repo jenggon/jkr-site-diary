@@ -6,6 +6,7 @@ import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
 import { toSuccessResponse, toErrorResponse } from '@/app/api/_shared/response';
 import { mapActivityToResponseDto } from '@/app/api/_shared/activity.mapper';
 import { isSuccess } from '@/lib/result';
+import { isValidUuid } from '@/lib/uuid';
 
 const isDateOnly = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -21,6 +22,12 @@ export async function POST(
     }
 
     const { activityId } = await context.params;
+    if (!isValidUuid(activityId)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid route parameter: activityId' },
+        { status: 400 }
+      );
+    }
     const body = await request.json().catch(() => ({}));
     const actualStartDate = body?.actualStartDate;
 
@@ -39,7 +46,7 @@ export async function POST(
       });
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
       }
 
       return NextResponse.json({ data }, { status: 200 });

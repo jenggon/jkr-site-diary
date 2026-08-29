@@ -77,10 +77,7 @@ export async function PATCH(request: Request, context: RouteParams) {
     ).updateTask(taskId, body, identity.actorId);
 
     return NextResponse.json({ data: updatedTask }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to update task' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -25,13 +25,10 @@ export async function GET(request: Request, context: RouteParams) {
     const data = await repo.getQueue(programmeId);
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch (error: any) {
-    if (error.message === 'F24_UNAUTHORIZED_CAPABILITY') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'F24_UNAUTHORIZED_CAPABILITY') {
       return NextResponse.json({ error: 'F24_UNAUTHORIZED_CAPABILITY' }, { status: 403 });
     }
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve approval queue' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

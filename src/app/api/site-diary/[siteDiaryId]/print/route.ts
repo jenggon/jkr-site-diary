@@ -33,7 +33,9 @@ export async function GET(request: Request, context: RouteParams) {
     return NextResponse.json({ data }, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof SiteDiaryPrintReadError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return error.status >= 500
+        ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        : NextResponse.json({ error: error.message }, { status: error.status });
     }
     // Do not return raw infrastructure/database error messages in HTTP 500
     console.error('Unhandled Site Diary Print Error:', error);

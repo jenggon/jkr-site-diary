@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { ActivityRepository } from '@/repositories/activityRepository';
 import { SupabaseDatabaseAdapter } from '@/repositories/adapters/SupabaseDatabaseAdapter';
-import { supabase } from '@/lib/supabase';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isFailure } from '@/lib/result';
+import { isValidUuid } from '@/lib/uuid';
 
 type RouteParams = {
   params: Promise<{ taskId: string }>;
@@ -15,32 +16,30 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
     const { taskId } = await context.params;
 
-    if (!taskId || typeof taskId !== 'string') {
+    if (!isValidUuid(taskId)) {
       return NextResponse.json(
         { error: 'Missing or invalid route parameter: taskId' },
         { status: 400 }
       );
     }
 
-    const repo = new ActivityRepository(new SupabaseDatabaseAdapter(supabase));
+    const client = getSupabaseAuthenticatedClient(identity.accessToken);
+    const repo = new ActivityRepository(new SupabaseDatabaseAdapter(client));
     const result = await repo.findByTaskId(taskId);
 
     if (isFailure(result)) {
-      return NextResponse.json({ error: result.error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve activities by task' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

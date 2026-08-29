@@ -25,7 +25,9 @@ export function createOpenActivityService(accessToken?: string): IOpenActivitySe
   const activityRepo = authenticatedAdapter
     ? new ActivityRepository(authenticatedAdapter)
     : new ActivityRepository();
-  const logRepo = new ActivityLogRepository();
+  const logRepo = authenticatedAdapter
+    ? new ActivityLogRepository(authenticatedAdapter)
+    : new ActivityLogRepository();
   const revisionRepo = authenticatedAdapter
     ? new ProgrammeRevisionRepository(authenticatedAdapter)
     : new ProgrammeRevisionRepository();
