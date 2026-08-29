@@ -14,17 +14,17 @@ The following architecture must not be changed without explicit approval.
 
 ## Current State
 
-Table:
+*Authority: REM-007 — Architecture Supersession & Migration Specification*
+*Reason: Canonical normalization of Activity / Site Diary ownership.*
 
-site_diary
-
-Purpose:
-
-One row represents ONE current activity.
-
-UPDATE always updates the existing row.
-
-Never INSERT a duplicate for the same activity during edit.
+1. `activity` is the canonical persistence owner of operational Activity state (DB-014).
+2. `site_diary` is the canonical persistence owner of daily execution records (DB-015).
+3. Open Activity is an operational Activity state/concept and is not a separate persistence owner.
+4. Site Diary records reference Activity through `activity_id`.
+5. Activity owns operational state.
+6. Site Diary does not own operational Activity state.
+7. A Site Diary record represents ONE Activity and ONE operational date.
+8. Operational model follows the latest authorised CPM Revision only. No cross-revision Activity migration, continuation, or operational use of superseded CPM revisions is permitted.
 
 ---
 
@@ -54,7 +54,7 @@ Never modify historical log rows.
 
 Log Hari Ini
 
-Displays ONLY current activities from site_diary.
+Displays ONLY current activities from activity.
 
 Never display historical UPDATE rows.
 
@@ -93,7 +93,7 @@ editingReportId
 
 always equals
 
-site_diary.id
+site_diary_id
 
 Never use site_diary_logs.id
 for editing.
@@ -104,7 +104,7 @@ for editing.
 
 Current activities are loaded from:
 
-site_diary
+activity
 
 History is loaded from:
 
@@ -112,4 +112,35 @@ site_diary_logs
 
 Never reverse this relationship.
 
-Architecture is LOCKED.
+Architecture is LOCKED (Subordinate to REM-007 and DB-014/DB-015 Specifications).
+
+---
+
+# CI-HARDEN-001 — MANDATORY ENGINEERING GATE
+
+The repository uses a mandatory preflight contract for implementation agents.
+
+Before any implementation change is considered commit-ready, push-ready, PR-ready, or merge-ready, run:
+
+```bash
+pnpm run verify
+```
+
+`pnpm run verify` must pass completely. A failing preflight means the implementation is NOT complete and must not be pushed or presented as ready for merge.
+
+The verification contract includes:
+
+1. frozen lockfile consistency;
+2. standard TypeScript validation;
+3. API-inclusive TypeScript validation;
+4. lint;
+5. full automated test suite;
+6. production build.
+
+If `package.json` dependencies or devDependencies change, `pnpm-lock.yaml` must be regenerated/synchronised and committed in the same change. Never bypass this rule with `--no-frozen-lockfile` in CI.
+
+Implementation work must use a feature/fix/chore branch and a Pull Request into `develop`. Required CI checks must be green before merge. Direct implementation pushes to `develop` are prohibited for agents.
+
+`develop` is the always-green forward-development baseline. `main` receives only accepted green release states.
+
+This CI governance rule does not authorise architecture, business-rule, Site Diary output, or domain-semantics changes.

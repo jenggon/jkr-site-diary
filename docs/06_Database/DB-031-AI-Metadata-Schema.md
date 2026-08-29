@@ -1,9 +1,12 @@
 # DB-031
 # AI Metadata Schema
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Status
 
-Approved
+Locked
 
 ---
 

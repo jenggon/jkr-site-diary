@@ -1,9 +1,12 @@
 # DB-025
 # Notification Schema
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Status
 
-Approved
+Locked
 
 ---
 

@@ -1,5 +1,8 @@
 # G-008: Progress
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 Progress represents the measurable completion status of project work performed through Activities.

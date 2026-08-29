@@ -1,29 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { NextRequest, NextResponse } from 'next/server';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { createA26QueryService } from '@/composition/a26QueryComposition';
 
 export async function GET(request: NextRequest) {
-  const building = request.nextUrl.searchParams.get("building");
+  const identity = await extractVerifiedIdentity(request);
+  if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  if (!building) {
+  const building = request.nextUrl.searchParams.get('building');
+  if (!building)
+    return NextResponse.json({ error: 'building parameter required' }, { status: 400 });
+  const programmeId = request.nextUrl.searchParams.get('programmeId') ?? undefined;
+  try {
     return NextResponse.json(
-      { error: "building parameter required" },
-      { status: 400 }
+      await createA26QueryService(identity.accessToken).getWorkpackages(building, programmeId),
+    );
+  } catch (error) {
+    const notFound =
+      error instanceof Error &&
+      error.message.startsWith('Programme or current revision not found:');
+    return NextResponse.json(
+      { error: notFound ? 'Programme not found' : 'Failed to load workpackages' },
+      { status: notFound ? 404 : 500 },
     );
   }
-
-  const { data, error } = await supabase
-  .from("msp_tasks")
-  .select("task_name, outline_number, outline_level")
-  .eq("summary", false)
-  .like("outline_number", `${building}.%`)
-  .order("outline_number");
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json(data);
 }

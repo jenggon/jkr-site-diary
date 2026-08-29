@@ -1,6 +1,9 @@
 # ADR-001: Separate Bounded Contexts
 
-**Status:** Accepted
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+**Status:** Locked
 
 **Date:** 2026-07-22
 
@@ -106,3 +109,5 @@ This decision affects:
 
 - PROJECT-CONSTITUTION.md
 - ADR-002 Program Kerja Boundary
+
+LOCKED

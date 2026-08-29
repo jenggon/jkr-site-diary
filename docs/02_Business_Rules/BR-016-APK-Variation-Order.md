@@ -1,6 +1,9 @@
 # BR-016: APK / Variation Order
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 Priority: High
 

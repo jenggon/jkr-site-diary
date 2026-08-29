@@ -1,6 +1,9 @@
 # ADR-003: No Migration Between Programme Revisions
 
-**Status:** Accepted
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+**Status:** Locked
 
 **Date:** 2026-07-22
 

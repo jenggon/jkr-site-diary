@@ -1,5 +1,8 @@
 # Architecture Diagrams
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Purpose
 
 This folder contains the official architecture diagrams for the JKR Site Diary Platform.

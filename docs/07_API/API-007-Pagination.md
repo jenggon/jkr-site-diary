@@ -1,9 +1,12 @@
 # API-007
 # Pagination
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Status
 
-Approved
+Locked
 
 ---
 
@@ -103,3 +106,5 @@ Large datasets shall never be loaded into memory.
 API-001
 
 API-006
+
+DB-001

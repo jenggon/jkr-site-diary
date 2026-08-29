@@ -2,7 +2,7 @@
 
 **Project:** JKR Site Diary Platform  
 **Version:** 1.0.0  
-**Status:** Active
+**Status:** Locked
 
 ---
 
@@ -36,19 +36,39 @@ docs/
 │   ├── BR-002-*.md
 │   └── ...
 │
-├── 03_Zon_Penjadualan/
+├── 03_Domain_Model/
 │
-├── 04_Zon_Operasi/
+├── 04_Zon_Penjadualan/
 │
-├── 05_API/
+├── 05_Zon_Operasi/
 │
 ├── 06_Database/
 │
-├── 07_UI/
+├── 07_API/
 │
-├── 08_UX/
+├── 08_UI/
 │
-└── 09_HQ/
+├── 09_Product_Modules/
+│
+├── 10_Development/
+│
+├── 10_UX/
+│
+├── 11_Architecture_Diagrams/
+│
+├── 12_Sequence_Diagrams/
+│
+├── 13_State_Machines/
+│
+├── 14_Decision_Tables/
+│
+├── 15_Data_Dictionary/
+│
+├── 16_Test_Scenarios/
+│
+├── 18_Engineering/
+│
+└── 99_Glossary/
 ```
 
 ---
@@ -79,13 +99,23 @@ Sekiranya terdapat percanggahan, dokumen yang mempunyai keutamaan lebih tinggi h
 | 00_Governance | Architecture governance dan polisi projek |
 | 01_ADR | Architecture Decision Records |
 | 02_Business_Rules | Business Rules rasmi |
-| 03_Zon_Penjadualan | Dokumentasi Zon Penjadualan |
-| 04_Zon_Operasi | Dokumentasi Zon Operasi |
-| 05_API | API Contract |
+| 03_Domain_Model | Domain model documentation |
+| 04_Zon_Penjadualan | Dokumentasi Zon Penjadualan |
+| 05_Zon_Operasi | Dokumentasi Zon Operasi |
 | 06_Database | Database Architecture |
-| 07_UI | UI Behaviour |
-| 08_UX | UX Principles |
-| 09_HQ | HQ Review & Compliance |
+| 07_API | API Contract |
+| 08_UI | UI Behaviour |
+| 09_Product_Modules | Product module documentation |
+| 10_Development | Development operating system and implementation governance |
+| 10_UX | UX Principles |
+| 11_Architecture_Diagrams | Architecture diagrams |
+| 12_Sequence_Diagrams | Sequence diagrams |
+| 13_State_Machines | State machines |
+| 14_Decision_Tables | Decision tables |
+| 15_Data_Dictionary | Data dictionary |
+| 16_Test_Scenarios | Test scenarios |
+| 18_Engineering | Engineering standards |
+| 99_Glossary | Project glossary |
 
 ---
 

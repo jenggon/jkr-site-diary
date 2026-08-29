@@ -1,5 +1,8 @@
 # G-011: LHI
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 LHI (Location Header Information) records the actual execution location associated with operational activities.

@@ -1,6 +1,9 @@
 # BR-002: Programme Revision
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 Priority: Critical
 

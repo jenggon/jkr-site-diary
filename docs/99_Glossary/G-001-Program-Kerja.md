@@ -1,5 +1,8 @@
 # G-001: Program Kerja
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 Program Kerja is the officially approved operational planning package that forms the boundary between Zon Penjadualan and Zon Operasi.

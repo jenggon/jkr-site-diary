@@ -1,5 +1,8 @@
 # DM-002: Programme Revision
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Description
 
 A versioned planning baseline belonging to a Programme.

@@ -1,8 +1,11 @@
 # ADR-009
 # Programme First Principle
 
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
 Status
-Approved
+Locked
 
 Date
 2026-07-26

@@ -57,14 +57,7 @@ export default function SearchPicker({
     });
   }, [items, query]);
 
-  const selectedItem = useMemo(() => {
 
-    return items.find(
-      (x) => x.outline_number === value
-    );
-
-  }, [items, value]);
-  
   useEffect(() => {
 
       if (!value) {

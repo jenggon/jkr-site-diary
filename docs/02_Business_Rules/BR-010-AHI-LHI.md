@@ -1,6 +1,9 @@
 # BR-010: AHI / LHI
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 Priority: High
 

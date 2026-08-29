@@ -1,8 +1,11 @@
 # PB-013 — Build Audit
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

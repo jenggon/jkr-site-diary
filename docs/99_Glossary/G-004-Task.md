@@ -1,5 +1,8 @@
 # G-004: Task
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 A Task is the smallest schedulable work package imported from the Approved Program Kerja.

@@ -1,41 +1,48 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+/.pnpm-store
 
-# testing
-/coverage
-
-# next.js
+# next.js build output
 /.next/
 /out/
 
-# production
+# production output
 /build
+/dist
 
-# misc
-.DS_Store
-*.pem
+# environment files
+.env
+.env*.local
+!.env.example
 
-# debug
+# audit & temporary files
+*_AUDIT.txt
+TEMP_AUDIT*.txt
+audit.txt
+*-audit.txt
+test-*.js
+.temp/
+
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# system files
+.DS_Store
+Thumbs.db
+*.pem
 
-# vercel
-.vercel
-
-# typescript
+# typescript cache
 *.tsbuildinfo
 next-env.d.ts
+
+# test & coverage outputs
+/coverage
+/test-results
+/playwright-report
+/playwright/.cache
+
+# supabase local state
+.supabase/local

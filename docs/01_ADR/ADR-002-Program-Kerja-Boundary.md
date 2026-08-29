@@ -1,6 +1,9 @@
 # ADR-002: Program Kerja as the Official Boundary
 
-**Status:** Accepted
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+**Status:** Locked
 
 **Date:** 2026-07-22
 

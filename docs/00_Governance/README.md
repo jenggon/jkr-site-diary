@@ -1,8 +1,10 @@
 # Developer Architecture Repository (DAR)
 
+**Version:** 1.0.0
+
 **Project:** JKR Site Diary Platform  
 **Repository Version:** 1.0.0  
-**Status:** Active
+**Status:** Locked
 
 ---
 

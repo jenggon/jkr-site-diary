@@ -1,6 +1,9 @@
 # ADR-005: HQ Compliance Requirements
 
-**Status:** Accepted
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+**Status:** Locked
 
 **Date:** 2026-07-22
 

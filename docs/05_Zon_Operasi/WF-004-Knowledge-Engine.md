@@ -1,8 +1,11 @@
 # WF-004 — Knowledge Engine
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

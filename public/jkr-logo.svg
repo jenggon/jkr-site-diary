@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 110" role="img" aria-label="JKR">
+  <polygon points="90,5 165,28 165,82 90,105 15,82 15,28" fill="white" stroke="black" stroke-width="4"/>
+  <text x="90" y="58" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" font-style="italic">JKR</text>
+  <path d="M42 70h96M48 78h84M58 86h64" fill="none" stroke="black" stroke-width="3"/>
+</svg>

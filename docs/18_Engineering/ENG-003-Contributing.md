@@ -1,9 +1,12 @@
 # ENG-003
 # Contributing Guide
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

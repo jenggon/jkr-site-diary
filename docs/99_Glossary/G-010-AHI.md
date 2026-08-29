@@ -1,5 +1,8 @@
 # G-010: AHI
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 AHI (Activity Header Information) is the primary operational registration record created before work execution.

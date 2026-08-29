@@ -1,8 +1,11 @@
 # PB-014 — Publish Package
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

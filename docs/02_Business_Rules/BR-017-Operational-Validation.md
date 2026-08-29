@@ -1,6 +1,9 @@
 # BR-017: Operational Validation
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 Priority: High
 

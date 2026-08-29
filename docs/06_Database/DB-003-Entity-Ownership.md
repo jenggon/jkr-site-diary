@@ -1,8 +1,11 @@
 # DB-003 — Entity Ownership
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

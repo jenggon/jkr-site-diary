@@ -1,5 +1,8 @@
 # G-007: Site Diary
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Definition
 
 The Site Diary is the official daily operational record of project execution.

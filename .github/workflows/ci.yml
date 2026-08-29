@@ -1,0 +1,42 @@
+name: CI Workflow
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: 1. Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: 2. Unified verification contract
+        run: pnpm run verify
+
+      - name: 3. Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: |
+            .next/
+            public/
+            package.json
+          retention-days: 7

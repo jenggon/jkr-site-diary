@@ -1,5 +1,8 @@
 # Business Rules Repository
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Purpose
 
 This folder contains the official business rules governing the behaviour of the JKR Site Diary Platform.

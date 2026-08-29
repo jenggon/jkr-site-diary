@@ -1,6 +1,9 @@
 # BR-001: Programme Lifecycle
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 Priority: Critical
 

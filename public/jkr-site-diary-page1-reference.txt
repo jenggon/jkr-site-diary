@@ -1,0 +1,4 @@
+Authoritative visual source supplied by Product Owner on 2026-08-16.
+Original working-session file: 1st page-JKR-Borang-Site-Diary.pdf
+Rendered reference dimensions used during implementation: 1024 x 1450 px.
+This text file records provenance only; the printable renderer reproduces the form structure in HTML/CSS and does not depend on embedding the scan as the final printable output.

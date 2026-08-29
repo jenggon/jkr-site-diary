@@ -1,6 +1,9 @@
 # BR-015: Activity Closure
 
-Status: Active
+**Project:** JKR Site Diary Platform
+**Version:** 1.0.0
+
+Status: Locked
 
 Priority: High
 
@@ -22,7 +25,6 @@ Closed Activities shall automatically disappear from the Outstanding Activity qu
 ## Related Domain Model
 
 DM-005
-DM-006
 
 ## Related ADR
 

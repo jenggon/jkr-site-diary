@@ -1,9 +1,12 @@
 # ENG-001
 # Engineering README
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 

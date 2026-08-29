@@ -1,8 +1,11 @@
 # WF-005 — Manual Trades
 
+**Version:** 1.0.0
+**Project:** JKR Site Diary Platform
+
 ## Status
 
-Approved
+Locked
 
 ---
 
