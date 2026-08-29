@@ -24,17 +24,11 @@ export async function GET(request: Request, context: RouteParams) {
     const result = await workforceService.getWorkforceByActivity(activityId);
 
     if (isFailure(result)) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve workforce records by activity' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

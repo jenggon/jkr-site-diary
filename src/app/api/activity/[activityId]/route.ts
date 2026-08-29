@@ -6,6 +6,7 @@ import { getSupabaseAuthenticatedClient } from '@/lib/supabase';
 import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isFailure } from '@/lib/result';
 import { mapErrorToHttpStatus } from '@/app/api/_shared/httpErrorMapper';
+import { isValidUuid } from '@/lib/uuid';
 
 type RouteParams = {
   params: Promise<{ activityId: string }>;
@@ -24,7 +25,7 @@ export async function GET(request: Request, context: RouteParams) {
 
     const { activityId } = await context.params;
 
-    if (!activityId || typeof activityId !== 'string') {
+    if (!isValidUuid(activityId)) {
       return NextResponse.json(
         { error: 'Missing or invalid route parameter: activityId' },
         { status: 400 }
@@ -68,7 +69,7 @@ export async function PATCH(request: Request, context: RouteParams) {
 
     const { activityId } = await context.params;
 
-    if (!activityId || typeof activityId !== 'string') {
+    if (!isValidUuid(activityId)) {
       return NextResponse.json(
         { error: 'Missing or invalid route parameter: activityId' },
         { status: 400 }
@@ -92,17 +93,18 @@ export async function PATCH(request: Request, context: RouteParams) {
     });
 
     if (isFailure(result)) {
+      const status = mapErrorToHttpStatus(result.error);
+      if (status >= 500) {
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+      }
       return NextResponse.json(
         { error: result.error.message },
-        { status: mapErrorToHttpStatus(result.error) }
+        { status }
       );
     }
 
     return NextResponse.json({ data: result.value }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to update activity' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

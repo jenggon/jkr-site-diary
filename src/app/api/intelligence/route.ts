@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   const result = await orchestrator.resolveActivityIntelligence(ctx);
 
   if (isFailure(result)) {
-    return NextResponse.json({ error: result.error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
   return NextResponse.json(result.value);

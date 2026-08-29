@@ -30,10 +30,7 @@ export async function GET(request: Request, context: RouteParams) {
     }
 
     return NextResponse.json({ data: trade }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve trade by code' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

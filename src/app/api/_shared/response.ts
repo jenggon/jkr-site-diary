@@ -41,9 +41,25 @@ export function pagedResponse<T>(items: readonly T[], pagination: PaginationMeta
   );
 }
 
+export function internalServerErrorResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Internal server error',
+      },
+    },
+    { status: 500 }
+  );
+}
+
 export function toErrorResponse(error: BaseAppError | Error | string, defaultStatus = 500): NextResponse {
   if (error instanceof BaseAppError) {
     const status = mapErrorToHttpStatus(error);
+    if (status >= 500) {
+      return internalServerErrorResponse();
+    }
     return NextResponse.json(
       {
         success: false,
@@ -55,12 +71,17 @@ export function toErrorResponse(error: BaseAppError | Error | string, defaultSta
       { status }
     );
   }
+
+  if (defaultStatus >= 500) {
+    return internalServerErrorResponse();
+  }
+
   const msg = error instanceof Error ? error.message : String(error);
   return NextResponse.json(
     {
       success: false,
       error: {
-        code: 'INTERNAL_SERVER_ERROR',
+        code: 'ERROR',
         message: msg,
       },
     },

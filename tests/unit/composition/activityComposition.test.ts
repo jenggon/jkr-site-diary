@@ -27,6 +27,7 @@ describe('Open Activity composition authentication', () => {
     const service = createOpenActivityService('verified-token') as unknown as {
       activityRepo: { adapter: { client: SupabaseClient } };
       revisionRepo: { adapter: { client: SupabaseClient } };
+      logRepo: { adapter: { client: SupabaseClient } };
       atomicRepo: { client: SupabaseClient };
       taskRepo: unknown;
     };
@@ -34,6 +35,7 @@ describe('Open Activity composition authentication', () => {
     expect(supabaseMocks.getSupabaseAuthenticatedClient).toHaveBeenCalledOnce();
     expect(supabaseMocks.getSupabaseAuthenticatedClient).toHaveBeenCalledWith('verified-token');
     expect(service.activityRepo.adapter).toBe(service.revisionRepo.adapter);
+    expect(service.activityRepo.adapter).toBe(service.logRepo.adapter);
     expect(service.activityRepo.adapter.client).toBe(supabaseMocks.authenticatedClient);
     expect(service.atomicRepo.client).toBe(supabaseMocks.authenticatedClient);
     expect(service.taskRepo).toBeDefined();

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { auditService } from '@/services/auditService';
+import { createAuditReadService } from '@/composition/auditReadComposition';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { isValidUuid } from '@/lib/uuid';
 
 type RouteParams = {
   params: Promise<{ programmeId: string }>;
@@ -11,22 +13,24 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { programmeId } = await context.params;
 
-    if (!programmeId || typeof programmeId !== 'string') {
+    if (!isValidUuid(programmeId)) {
       return NextResponse.json(
         { error: 'Missing or invalid route parameter: programmeId' },
         { status: 400 }
       );
     }
 
-    const auditLogs = await auditService.getAuditByProgramme(programmeId);
+    const auditLogs = await createAuditReadService(identity.accessToken).getAuditByProgramme(programmeId);
 
     return NextResponse.json({ data: auditLogs }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve audit logs by programme' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

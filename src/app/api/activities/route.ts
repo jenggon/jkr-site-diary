@@ -54,11 +54,14 @@ export async function POST(request: Request) {
     });
 
     if (isFailure(result)) {
-      return NextResponse.json({ error: result.error.message }, { status: mapErrorToHttpStatus(result.error) });
+      const status = mapErrorToHttpStatus(result.error);
+      return status >= 500
+        ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        : NextResponse.json({ error: result.error.message }, { status });
     }
 
     return NextResponse.json({ data: result.value }, { status: 201 });
-  } catch (error: unknown) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to create activity' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

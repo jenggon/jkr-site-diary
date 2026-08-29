@@ -79,7 +79,10 @@ describe('F3-B04 Progress / Approval Authority & Separation of Duty contracts', 
     expect(files).toHaveLength(1);
     expect(files[0]!.localeCompare('20260829230000_f3_b03_read_isolation_grant_closure.sql')).toBeGreaterThan(0);
 
-    migrationSql = readFileSync(join(migrationsDirectory, files[0]!), 'utf8');
+    migrationSql = readFileSync(join(migrationsDirectory, files[0]!), 'utf8').replace(
+      /\r\n/g,
+      '\n',
+    );
     normalizedMigration = normalizeSql(migrationSql);
     createProgress = functionDefinition(
       migrationSql,

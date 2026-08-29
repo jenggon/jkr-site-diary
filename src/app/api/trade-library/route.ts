@@ -56,17 +56,16 @@ export async function POST(request: Request) {
 
     if (error) {
       const conflict = error.message.includes('F1_TRADE_CODE_CONFLICT');
-      return NextResponse.json(
-        { error: conflict ? 'Trade code already belongs to a different trade name' : error.message },
-        { status: conflict ? 409 : 400 }
-      );
+      return conflict
+        ? NextResponse.json(
+            { error: 'Trade code already belongs to a different trade name' },
+            { status: 409 }
+          )
+        : NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 
     return NextResponse.json({ data }, { status: 201 });
-  } catch (error: unknown) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create trade entry' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -39,8 +39,11 @@ export async function GET(request: Request, context: RouteParams) {
     return NextResponse.json({ data }, { status: 200 });
   } catch (error: unknown) {
     const status = error instanceof SiteDiaryManagementReadError ? error.status : 500;
+    if (status >= 500) {
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to retrieve site diaries by revision' },
+      { error: error instanceof Error ? error.message : 'Invalid request' },
       { status }
     );
   }

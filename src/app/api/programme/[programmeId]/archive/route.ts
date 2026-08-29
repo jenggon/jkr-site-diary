@@ -31,12 +31,11 @@ export async function POST(request: Request, context: RouteParams) {
       return NextResponse.json({ data: result.value }, { status: 200 });
     }
 
-    return NextResponse.json(
-      { error: result.error.message },
-      { status: result.error.errorCode === 'PROGRAMME_NOT_FOUND' ? 404 : 400 }
-    );
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Failed to archive programme';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const status = result.error.httpStatus;
+    return status >= 500
+      ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      : NextResponse.json({ error: result.error.message }, { status });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

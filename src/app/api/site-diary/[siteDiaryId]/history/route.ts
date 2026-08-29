@@ -16,6 +16,8 @@ export async function GET(request: Request, context: RouteParams) {
     return NextResponse.json({ data }, { status: 200 });
   } catch (error: unknown) {
     const status = error instanceof SiteDiaryHistoryNotFoundError ? error.status : 500;
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to retrieve Site Diary history' }, { status });
+    return status >= 500
+      ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      : NextResponse.json({ error: error instanceof Error ? error.message : 'Not found' }, { status });
   }
 }

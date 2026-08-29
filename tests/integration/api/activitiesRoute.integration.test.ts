@@ -26,6 +26,8 @@ vi.mock('@/app/api/_shared/container', () => ({
 }));
 
 describe('PATCH /api/activities/[activityId]', () => {
+  const activityId = '11111111-1111-4111-8111-111111111111';
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -45,14 +47,14 @@ describe('PATCH /api/activities/[activityId]', () => {
 
   it('returns 401 if token is missing', async () => {
     const req = createMockRequest({ subtask: 'test' });
-    const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+    const ctx = { params: Promise.resolve({ activityId }) };
     const res = await updateActivity(req, ctx);
     expect(res.status).toBe(401);
   });
 
   it('returns 401 if token is invalid', async () => {
     const req = createMockRequest({ subtask: 'test' }, 'invalid');
-    const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+    const ctx = { params: Promise.resolve({ activityId }) };
     const res = await updateActivity(req, ctx);
     expect(res.status).toBe(401);
   });
@@ -60,15 +62,15 @@ describe('PATCH /api/activities/[activityId]', () => {
   it('receives verified actorId from extractIdentity and ignores body.updated_by', async () => {
     const body = { subtask: 'Updated Name', updated_by: 'spoofed-actor-999' };
     const req = createMockRequest(body, 'valid-token');
-    const ctx = { params: Promise.resolve({ activityId: 'act-1' }) };
+    const ctx = { params: Promise.resolve({ activityId }) };
     
-    mockService.updateActivity.mockResolvedValue(Success({ activity_id: 'act-1' }));
+    mockService.updateActivity.mockResolvedValue(Success({ activity_id: activityId }));
 
     const res = await updateActivity(req, ctx);
     expect(res.status).toBe(200);
 
     expect(mockService.updateActivity).toHaveBeenCalledWith({
-      activityId: 'act-1',
+      activityId,
       activityName: 'Updated Name',
       updatedBy: 'verified-actor-123', // should be the verified actor, NOT spoofed-actor-999
     });

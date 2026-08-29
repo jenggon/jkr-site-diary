@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { auditService } from '@/services/auditService';
+import { createAuditReadService } from '@/composition/auditReadComposition';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
+import { isValidUuid } from '@/lib/uuid';
 
 type RouteParams = {
   params: Promise<{ auditId: string }>;
@@ -11,16 +13,21 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { auditId } = await context.params;
 
-    if (!auditId || typeof auditId !== 'string') {
+    if (!isValidUuid(auditId)) {
       return NextResponse.json(
         { error: 'Missing or invalid route parameter: auditId' },
         { status: 400 }
       );
     }
 
-    const audit = await auditService.getAuditById(auditId);
+    const audit = await createAuditReadService(identity.accessToken).getAuditById(auditId);
 
     if (!audit) {
       return NextResponse.json(
@@ -30,11 +37,8 @@ export async function GET(request: Request, context: RouteParams) {
     }
 
     return NextResponse.json({ data: audit }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve audit log record' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

@@ -18,11 +18,8 @@ export async function GET(request: Request) {
     }
     const service = createSiteDiaryManagementReadService(identity.accessToken);
     return NextResponse.json({ data: await service.listRevisions(programmeId) }, { status: 200 });
-  } catch (error: unknown) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to retrieve Programme Revisions' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -62,10 +59,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ data: result.value }, { status: 201 });
     }
 
-    const status = result.error.errorCode === 'PROGRAMME_NOT_FOUND' ? 404 : 400;
-    return NextResponse.json({ error: result.error.message }, { status });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Failed to create programme revision';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const status = result.error.httpStatus;
+    return status >= 500
+      ? NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      : NextResponse.json({ error: result.error.message }, { status });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

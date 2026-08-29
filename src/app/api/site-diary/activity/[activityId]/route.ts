@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createSiteDiaryService } from '@/composition/siteDiaryComposition';
-import { extractIdentity } from '@/app/api/_shared/identity';
+import { extractVerifiedIdentity } from '@/app/api/_shared/identity';
 import { isSuccess } from '@/lib/result';
+import { isValidUuid } from '@/lib/uuid';
 
 type RouteParams = {
   params: Promise<{ activityId: string }>;
@@ -14,14 +15,14 @@ type RouteParams = {
  */
 export async function GET(request: Request, context: RouteParams) {
   try {
-    const actorId = await extractIdentity(request);
-    if (!actorId) {
+    const identity = await extractVerifiedIdentity(request);
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid identity' }, { status: 401 });
     }
 
     const { activityId } = await context.params;
 
-    if (!activityId || typeof activityId !== 'string') {
+    if (!isValidUuid(activityId)) {
       return NextResponse.json(
         { error: 'Missing or invalid route parameter: activityId' },
         { status: 400 }
@@ -31,7 +32,7 @@ export async function GET(request: Request, context: RouteParams) {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
 
-    const siteDiaryService = createSiteDiaryService();
+    const siteDiaryService = createSiteDiaryService(identity.accessToken);
     const result = await siteDiaryService.getSiteDiariesByActivity(activityId);
 
     if (isSuccess(result)) {
@@ -51,11 +52,12 @@ export async function GET(request: Request, context: RouteParams) {
       return NextResponse.json({ data: diaries }, { status: 200 });
     }
 
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to retrieve site diaries by activity' },
-      { status: 500 }
-    );
+    const status = result.error.httpStatus;
+    if (typeof status === 'number' && status >= 400 && status < 500) {
+      return NextResponse.json({ error: result.error.message }, { status });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
