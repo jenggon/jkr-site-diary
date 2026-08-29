@@ -32,6 +32,12 @@ describe('F3-B01 Authority Foundation & RBAC Closure Contract Test Suite', () =>
       expect(triggerFn).toContain("RAISE EXCEPTION 'Cannot assign a Programme role as a global_role_id.' USING ERRCODE = 'PT400';");
     });
 
+    it('explicitly seals private.trg_check_user_profile_global_role_scope from PUBLIC, anon, and authenticated', () => {
+      expect(migrationSql).toMatch(
+        /REVOKE ALL ON FUNCTION "private"\."trg_check_user_profile_global_role_scope"\(\)\s+FROM PUBLIC, anon, authenticated;/,
+      );
+    });
+
     it('binds the trigger before INSERT OR UPDATE on user_profile', () => {
       expect(migrationSql).toMatch(
         /CREATE TRIGGER "trg_check_user_profile_global_role_scope"\s+BEFORE INSERT OR UPDATE ON "public"\."user_profile"/,
@@ -127,7 +133,7 @@ describe('F3-B01 Authority Foundation & RBAC Closure Contract Test Suite', () =>
       );
     });
 
-    it('creates private.assert_authority with SECURITY DEFINER and search_path hardening', () => {
+    it('creates private.assert_authority composing canonical assert_capability and assert_global_capability', () => {
       const fn = migrationSql.match(
         /CREATE OR REPLACE FUNCTION "private"\."assert_authority"[\s\S]*?\$\$;/,
       )?.[0];
@@ -135,9 +141,12 @@ describe('F3-B01 Authority Foundation & RBAC Closure Contract Test Suite', () =>
       expect(fn).toContain('SECURITY DEFINER');
       expect(fn).toContain("SET search_path = ''");
       expect(fn).toContain('PERFORM "private"."a27_assert_actor"(p_actor_id);');
-      expect(fn).toContain("r.scope = 'Programme'");
-      expect(fn).toContain("r.scope = 'Global'");
+      expect(fn).toContain('PERFORM "private"."assert_capability"(p_actor_id, p_programme_id, p_permission_code);');
+      expect(fn).toContain('PERFORM "private"."assert_global_capability"(p_actor_id, p_permission_code);');
+      expect(fn).toContain("WHEN SQLSTATE 'PT403' THEN");
       expect(fn).toContain("RAISE EXCEPTION 'F3_UNAUTHORIZED_AUTHORITY' USING ERRCODE = 'PT403';");
+      // Proves no duplicate queries on programme_membership / role / permission in assert_authority
+      expect(fn).not.toContain('FROM "public"."programme_membership"');
     });
 
     it('revokes execute on private.assert_authority from PUBLIC, anon, authenticated', () => {
@@ -147,8 +156,8 @@ describe('F3-B01 Authority Foundation & RBAC Closure Contract Test Suite', () =>
     });
   });
 
-  describe('4. Comprehensive 20-Point Authority Foundation Logic Proof', () => {
-    // Relational In-Memory Simulator mirroring PostgreSQL schema and helpers exactly
+  describe('4. In-Memory Behavioral Simulation Proof (Static & Simulation; Runtime DB Proof deferred to F3-B06)', () => {
+    // Relational In-Memory Simulator mirroring PostgreSQL schema and composed helper semantics
     interface UserProfile {
       userId: string;
       fullName: string | null;
@@ -228,26 +237,36 @@ describe('F3-B01 Authority Foundation & RBAC Closure Contract Test Suite', () =>
       assertCapability(actorId: string, programmeId: string, permissionCode: string): void {
         const user = this.userProfiles.get(actorId);
         if (!user || !user.isActive) {
-          throw new Error('F24_UNAUTHORIZED_CAPABILITY');
+          const err = new Error('F24_UNAUTHORIZED_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
 
         const membership = this.programmeMemberships.get(`${programmeId}:${actorId}`);
         if (!membership || !membership.isActive) {
-          throw new Error('F24_UNAUTHORIZED_CAPABILITY');
+          const err = new Error('F24_UNAUTHORIZED_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
 
         const role = this.roles.get(membership.roleId);
         if (!role || !role.isActive || role.scope !== 'Programme') {
-          throw new Error('F24_UNAUTHORIZED_CAPABILITY');
+          const err = new Error('F24_UNAUTHORIZED_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
 
         const perm = [...this.permissions.values()].find((p) => p.permissionCode === permissionCode);
         if (!perm || !perm.isActive) {
-          throw new Error('F24_UNAUTHORIZED_CAPABILITY');
+          const err = new Error('F24_UNAUTHORIZED_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
 
         if (!this.rolePermissions.has(`${role.roleId}:${perm.permissionId}`)) {
-          throw new Error('F24_UNAUTHORIZED_CAPABILITY');
+          const err = new Error('F24_UNAUTHORIZED_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
       }
 
@@ -255,48 +274,53 @@ describe('F3-B01 Authority Foundation & RBAC Closure Contract Test Suite', () =>
       assertGlobalCapability(actorId: string, permissionCode: string): void {
         const user = this.userProfiles.get(actorId);
         if (!user || !user.isActive || !user.globalRoleId) {
-          throw new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          const err = new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
 
         const role = this.roles.get(user.globalRoleId);
         if (!role || !role.isActive || role.scope !== 'Global') {
-          throw new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          const err = new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
 
         const perm = [...this.permissions.values()].find((p) => p.permissionCode === permissionCode);
         if (!perm || !perm.isActive) {
-          throw new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          const err = new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
 
         if (!this.rolePermissions.has(`${role.roleId}:${perm.permissionId}`)) {
-          throw new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          const err = new Error('F3_UNAUTHORIZED_GLOBAL_CAPABILITY');
+          (err as unknown as { code: string }).code = 'PT403';
+          throw err;
         }
       }
 
-      // private.assert_authority
+      // private.assert_authority (Composed of assertCapability and assertGlobalCapability)
       assertAuthority(actorId: string, programmeId: string, permissionCode: string): void {
-        let authorized = false;
-
-        // Path A: Programme
         try {
           this.assertCapability(actorId, programmeId, permissionCode);
-          authorized = true;
-        } catch {
-          // Check Path B
-        }
-
-        // Path B: Global
-        if (!authorized) {
-          try {
-            this.assertGlobalCapability(actorId, permissionCode);
-            authorized = true;
-          } catch {
-            // Both paths failed
+          return;
+        } catch (err) {
+          if ((err as { code?: string }).code !== 'PT403') {
+            throw err; // Unexpected DB error not swallowed
           }
         }
 
-        if (!authorized) {
-          throw new Error('F3_UNAUTHORIZED_AUTHORITY');
+        try {
+          this.assertGlobalCapability(actorId, permissionCode);
+          return;
+        } catch (err) {
+          if ((err as { code?: string }).code === 'PT403') {
+            const authErr = new Error('F3_UNAUTHORIZED_AUTHORITY');
+            (authErr as unknown as { code: string }).code = 'PT403';
+            throw authErr;
+          }
+          throw err; // Unexpected DB error not swallowed
         }
       }
     }

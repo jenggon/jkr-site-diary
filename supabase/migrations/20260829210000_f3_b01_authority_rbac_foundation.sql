@@ -23,6 +23,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
+REVOKE ALL ON FUNCTION "private"."trg_check_user_profile_global_role_scope"() FROM PUBLIC, anon, authenticated;
+
 DROP TRIGGER IF EXISTS "trg_check_user_profile_global_role_scope" ON "public"."user_profile";
 CREATE TRIGGER "trg_check_user_profile_global_role_scope"
 BEFORE INSERT OR UPDATE ON "public"."user_profile"
@@ -275,52 +277,28 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-DECLARE
-    v_authorized boolean;
 BEGIN
     -- 1. Actor must bind to auth.uid()
     PERFORM "private"."a27_assert_actor"(p_actor_id);
 
-    -- 2. Check authority: Programme capability OR Global capability
-    SELECT (
-        -- Path A: Active Programme Role Permission
-        EXISTS (
-            SELECT 1
-            FROM "public"."user_profile" up
-            JOIN "public"."programme_membership" pm ON up.user_id = pm.user_id
-            JOIN "public"."role" r ON pm.role_id = r.role_id
-            JOIN "public"."role_permission" rp ON r.role_id = rp.role_id
-            JOIN "public"."permission" p ON rp.permission_id = p.permission_id
-            WHERE up.user_id = p_actor_id
-              AND up.is_active = true
-              AND pm.programme_id = p_programme_id
-              AND pm.is_active = true
-              AND r.is_active = true
-              AND r.scope = 'Programme'
-              AND p.permission_code = p_permission_code
-              AND p.is_active = true
-        )
-        OR
-        -- Path B: Active Global Role Permission
-        EXISTS (
-            SELECT 1
-            FROM "public"."user_profile" up
-            JOIN "public"."role" r ON up.global_role_id = r.role_id
-            JOIN "public"."role_permission" rp ON r.role_id = rp.role_id
-            JOIN "public"."permission" p ON rp.permission_id = p.permission_id
-            WHERE up.user_id = p_actor_id
-              AND up.is_active = true
-              AND up.global_role_id IS NOT NULL
-              AND r.is_active = true
-              AND r.scope = 'Global'
-              AND p.permission_code = p_permission_code
-              AND p.is_active = true
-        )
-    ) INTO v_authorized;
+    -- 2. Attempt Programme authority via canonical assert_capability
+    BEGIN
+        PERFORM "private"."assert_capability"(p_actor_id, p_programme_id, p_permission_code);
+        RETURN;
+    EXCEPTION
+        WHEN SQLSTATE 'PT403' THEN
+            -- Fall through to Global capability attempt on explicit authorization denial
+            NULL;
+    END;
 
-    IF NOT v_authorized THEN
-        RAISE EXCEPTION 'F3_UNAUTHORIZED_AUTHORITY' USING ERRCODE = 'PT403';
-    END IF;
+    -- 3. Attempt Global authority via canonical assert_global_capability
+    BEGIN
+        PERFORM "private"."assert_global_capability"(p_actor_id, p_permission_code);
+        RETURN;
+    EXCEPTION
+        WHEN SQLSTATE 'PT403' THEN
+            RAISE EXCEPTION 'F3_UNAUTHORIZED_AUTHORITY' USING ERRCODE = 'PT403';
+    END;
 END;
 $$;
 
