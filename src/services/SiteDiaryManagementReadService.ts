@@ -22,11 +22,12 @@ export interface SiteDiaryManagementReadQuery {
 
 function mapRevision(row: ManagementRevisionRow): SiteDiaryManagementRevision {
   const isCurrentRevision = row.programme?.current_revision_id === row.revision_id;
+  const revisionTitle = row.revision_name ?? row.revision_title ?? '';
   return {
     programmeId: row.programme_id,
     revisionId: row.revision_id,
     revisionNumber: row.revision_no,
-    revisionTitle: row.revision_title,
+    revisionTitle,
     revisionStatus: row.status,
     isCurrentRevision,
     isReadOnly: !isCurrentRevision || row.status !== 'Approved',
