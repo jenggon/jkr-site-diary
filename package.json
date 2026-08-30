@@ -20,6 +20,7 @@
     "test:integration": "vitest run tests/integration",
     "test:contract": "vitest run tests/contract",
     "test:e2e": "playwright test",
+    "evidence:datum": "tsx scripts/capture-datum-mobile.ts",
     "prepare": "husky"
   },
   "dependencies": {
