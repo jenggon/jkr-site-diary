@@ -22,12 +22,12 @@ import { GET as getTaskById } from '@/app/api/task/[taskId]/route';
 import { GET as getTasksByRevision } from '@/app/api/task/revision/[revisionId]/route';
 import { TaskReadRepository } from '@/repositories/TaskReadRepository';
 
-const revisionId = '33333333-3333-3333-3333-333333333333';
-const foreignRevisionId = '44444444-4444-4444-4444-444444444444';
-const taskId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+const revisionId = '33333333-3333-4333-8333-333333333333';
+const foreignRevisionId = '44444444-4444-4444-8444-444444444444';
+const taskId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const task = {
   task_id: taskId,
-  programme_id: '11111111-1111-1111-1111-111111111111',
+  programme_id: '11111111-1111-4111-8111-111111111111',
   revision_id: revisionId,
   task_uid: 2,
   task_name: 'C01 Test Task',
@@ -43,7 +43,7 @@ describe('F2.7-C08 authenticated Task read routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.extractVerifiedIdentity.mockResolvedValue({
-      actorId: '99999999-9999-9999-9999-999999999992',
+      actorId: '99999999-9999-4999-8999-999999999992',
       accessToken: 'p2-verified-token',
     });
     mocks.getTaskById.mockResolvedValue(null);

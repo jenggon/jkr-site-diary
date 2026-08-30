@@ -11,9 +11,9 @@ const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = 'http://127.0.0.1:54321';
 const API_URL = process.env.C04_API_URL || 'http://127.0.0.1:3000';
-const PROGRAMME_A_ID = '11111111-1111-1111-1111-111111111111';
-const PROGRAMME_B_ID = '22222222-2222-2222-2222-222222222222';
-const REVIEWER_ID = '99999999-9999-9999-9999-999999999992';
+const PROGRAMME_A_ID = '11111111-1111-4111-8111-111111111111';
+const PROGRAMME_B_ID = '22222222-2222-4222-8222-222222222222';
+const REVIEWER_ID = '99999999-9999-4999-8999-999999999992';
 
 function localEnv(name) {
   if (process.env[name]) return process.env[name];
