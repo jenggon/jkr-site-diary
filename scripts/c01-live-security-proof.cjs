@@ -16,28 +16,38 @@ const assert = require('node:assert/strict');
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = 'http://127.0.0.1:54321';
-const SUPABASE_ANON_KEY = (() => {
+function localEnv(name) {
+  if (process.env[name]) return process.env[name];
+  try {
+    const line = require('node:fs').readFileSync('.env.local', 'utf8')
+      .split(/\r?\n/)
+      .find((candidate) => candidate.startsWith(`${name}=`));
+    return line?.slice(name.length + 1) || '';
+  } catch {
+    return '';
+  }
+}
+
+const SUPABASE_ANON_KEY = localEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') || (() => {
   try { return require('../supabase/config.json').anon_key; } catch {}
-  // Fallback: get from supabase status
   return process.env.SUPABASE_ANON_KEY || '';
 })();
 
-const PROGRAMME_A_ID = '11111111-1111-1111-1111-111111111111';
-const PROGRAMME_B_ID = '22222222-2222-2222-2222-222222222222';
-const APPROVAL_A_ID  = '66666666-6666-6666-6666-666666666661';
-const APPROVAL_B_ID  = '66666666-6666-6666-6666-666666666662';
-const DIARY_A_ID     = '55555555-5555-5555-5555-555555555551';
-const DIARY_B_ID     = '55555555-5555-5555-5555-555555555552';
-const HISTORICAL_DIARY_ID = '55555555-5555-5555-5555-555555555553';
-const CURRENT_REVISION_ID = '33333333-3333-3333-3333-333333333333';
-const HISTORICAL_REVISION_ID = '77777777-7777-7777-7777-777777777777';
+const PROGRAMME_A_ID = '11111111-1111-4111-8111-111111111111';
+const PROGRAMME_B_ID = '22222222-2222-4222-8222-222222222222';
+const APPROVAL_A_ID  = '66666666-6666-4666-8666-666666666661';
+const APPROVAL_B_ID  = '66666666-6666-4666-8666-666666666662';
+const DIARY_A_ID     = '55555555-5555-4555-8555-555555555551';
+const DIARY_B_ID     = '55555555-5555-4555-8555-555555555552';
+const HISTORICAL_DIARY_ID = '55555555-5555-4555-8555-555555555553';
+const CURRENT_REVISION_ID = '33333333-3333-4333-8333-333333333333';
+const HISTORICAL_REVISION_ID = '77777777-7777-4777-8777-777777777777';
 
 async function getAnonKey() {
   if (SUPABASE_ANON_KEY) return SUPABASE_ANON_KEY;
-  // Read from env or supabase local status output
   const { execSync } = require('node:child_process');
   const output = execSync('supabase status', { cwd: process.cwd(), encoding: 'utf8' });
-  const match = output.match(/anon key:\s+([^\s]+)/i);
+  const match = output.match(/anon key:\s+([^\s]+)/i) || output.match(/"ANON_KEY":\s*"([^"]+)"/);
   if (match) return match[1];
   throw new Error('Cannot determine SUPABASE_ANON_KEY — run supabase status');
 }
@@ -274,7 +284,7 @@ async function runC01LiveProof() {
   console.log('\n[C01-11: Direct Private Invocation Denial]');
 
   // Attempt direct call to private function via PostgREST (will hit schema routing)
-  const p2DirectPrivate = await clientP2.rpc('get_site_diary_approval_queue', { p_actor_id: '99999999-9999-9999-9999-999999999992', p_programme_id: PROGRAMME_A_ID });
+  const p2DirectPrivate = await clientP2.rpc('get_site_diary_approval_queue', { p_actor_id: '99999999-9999-4999-8999-999999999992', p_programme_id: PROGRAMME_A_ID });
   // PostgREST only exposes public schema by default; this must fail
   assert.ok(
     p2DirectPrivate.error,
@@ -300,7 +310,7 @@ async function runC01LiveProof() {
 
   const spoofAttempt = await clientP3.rpc('f24_get_site_diary_approval_queue', {
     p_programme_id: PROGRAMME_A_ID,
-    p_actor_id: '99999999-9999-9999-9999-999999999992'
+    p_actor_id: '99999999-9999-4999-8999-999999999992'
   });
   assert.ok(spoofAttempt.error, 'Actor-spoofing call with p_actor_id must fail');
   assert.ok(

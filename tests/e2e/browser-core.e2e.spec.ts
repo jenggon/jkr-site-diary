@@ -18,16 +18,16 @@ test.describe('F2.7-B02-A Real Browser Core Acceptance', () => {
   test.setTimeout(90_000);
 
   const PROGRAMME_A: ProgrammeFixture = {
-    id: '11111111-1111-1111-1111-111111111111',
+    id: '11111111-1111-4111-8111-111111111111',
     name: 'C01 Test Programme',
-    revisionId: '33333333-3333-3333-3333-333333333333',
+    revisionId: '33333333-3333-4333-8333-333333333333',
     activity: 'Concrete Works',
     task: 'C01 Test Task',
   };
   const PROGRAMME_B: ProgrammeFixture = {
-    id: '22222222-2222-2222-2222-222222222222',
+    id: '22222222-2222-4222-8222-222222222222',
     name: 'C01 Programme B',
-    revisionId: '44444444-4444-4444-4444-444444444444',
+    revisionId: '44444444-4444-4444-8444-444444444444',
     activity: 'Prog B Activity',
     task: 'Prog B Task',
   };

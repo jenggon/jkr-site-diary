@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { PAGE1_CONTRACTOR_CAPACITY, PAGE1_NSC_CAPACITY } from '../../src/app/site-diary/print/printPagination';
 
 const F = {
-  single: { id: 'b02b3000-0000-4000-8000-000000000001', revision: '33333333-3333-3333-3333-333333333333', task: 'Pemasangan tetulang rasuk utama Blok Pentadbiran' },
-  overflow: { id: 'b02b3000-0000-4000-8000-000000000002', revision: '33333333-3333-3333-3333-333333333333', task: 'Penuangan konkrit papak podium dan pemeriksaan kemasan permukaan' },
-  historical: { id: 'b02b3000-0000-4000-8000-000000000003', revision: '77777777-7777-7777-7777-777777777777', task: 'Kerja konkrit aras sejarah untuk pengesahan cetakan tepat' },
+  single: { id: 'b02b3000-0000-4000-8000-000000000001', revision: '33333333-3333-4333-8333-333333333333', task: 'Pemasangan tetulang rasuk utama Blok Pentadbiran' },
+  overflow: { id: 'b02b3000-0000-4000-8000-000000000002', revision: '33333333-3333-4333-8333-333333333333', task: 'Penuangan konkrit papak podium dan pemeriksaan kemasan permukaan' },
+  historical: { id: 'b02b3000-0000-4000-8000-000000000003', revision: '77777777-7777-4777-8777-777777777777', task: 'Kerja konkrit aras sejarah untuk pengesahan cetakan tepat' },
   foreign: 'b02b3000-0000-4000-8000-000000000004',
   missing: 'b02b3000-0000-4000-8000-000000009999',
 } as const;

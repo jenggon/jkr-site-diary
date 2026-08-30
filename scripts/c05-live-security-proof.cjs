@@ -9,10 +9,10 @@ const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = 'http://127.0.0.1:54321';
 const API_URL = process.env.C05_API_URL || 'http://127.0.0.1:3000';
-const PROGRAMME_A_ID = '11111111-1111-1111-1111-111111111111';
-const PROGRAMME_B_ID = '22222222-2222-2222-2222-222222222222';
-const PROGRAMME_A_ACTIVITY_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-const PROGRAMME_B_ACTIVITY_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const PROGRAMME_A_ID = '11111111-1111-4111-8111-111111111111';
+const PROGRAMME_B_ID = '22222222-2222-4222-8222-222222222222';
+const PROGRAMME_A_ACTIVITY_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const PROGRAMME_B_ACTIVITY_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const INTERNAL_ERROR = /42501|permission denied|Database error|PostgREST/i;
 
 function localEnv(name) {
