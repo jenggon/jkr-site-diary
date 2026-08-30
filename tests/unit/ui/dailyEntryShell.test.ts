@@ -38,7 +38,7 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).toContain('Sistem Pengurusan Tapak Digital');
 
     // Verify mobile-responsive classes
-    expect(html).toContain('min-h-screen');
+    expect(html).toContain('h-[100dvh]');
     expect(html).toContain('w-full');
 
     // F2.6-B02: Print is exact-record contextual and cannot be a generic shell link.

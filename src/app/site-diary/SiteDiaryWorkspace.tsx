@@ -18,11 +18,87 @@ export default function SiteDiaryWorkspace() {
     approvalId: string;
   } | null>(null);
 
-  const tabs: Array<{ id: WorkspaceTab; label: string }> = [
-    { id: 'NEW', label: 'Laporan Baharu' },
-    { id: 'OPEN', label: 'Aktiviti Terbuka' },
-    { id: 'RECORDS', label: 'Rekod / Sejarah' },
-    { id: 'APPROVALS', label: 'Kelulusan' },
+  const tabs: Array<{ id: WorkspaceTab; label: string; icon: React.ReactNode }> = [
+    {
+      id: 'NEW',
+      label: 'Laporan Baharu',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5 sm:w-6 sm:h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: 'OPEN',
+      label: 'Aktiviti Terbuka',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5 sm:w-6 sm:h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: 'RECORDS',
+      label: 'Rekod / Sejarah',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5 sm:w-6 sm:h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: 'APPROVALS',
+      label: 'Kelulusan',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5 sm:w-6 sm:h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
+    },
   ];
 
   useEffect(() => {
@@ -31,42 +107,32 @@ export default function SiteDiaryWorkspace() {
 
   if (reviewContext?.programmeId === programmeId) {
     return (
-      <ApprovalReview
-        siteDiaryId={reviewContext.siteDiaryId}
-        approvalId={reviewContext.approvalId}
-        onBack={() => setReviewContext(null)}
-        onSuccess={() => setReviewContext(null)}
-      />
+      <div className="flex-1 w-full overflow-y-auto px-4 py-4 md:py-6">
+        <ApprovalReview
+          siteDiaryId={reviewContext.siteDiaryId}
+          approvalId={reviewContext.approvalId}
+          onBack={() => setReviewContext(null)}
+          onSuccess={() => setReviewContext(null)}
+        />
+      </div>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <nav aria-label="Navigasi Buku Harian Tapak" className="grid grid-cols-2 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900 p-1 sm:grid-cols-4">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            onClick={() => setTab(item.id)}
-            style={{ minHeight: 44 }}
-            className={`min-h-[44px] rounded-xl px-2 py-2 text-xs font-bold transition-colors ${
-              tab === item.id ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      <div key={programmeId ?? 'no-programme'} data-programme-context={programmeId ?? ''}>
+  const renderContent = () => {
+    return (
+      <div
+        key={programmeId ?? 'no-programme'}
+        data-programme-context={programmeId ?? ''}
+        className="w-full"
+      >
         {tab === 'RECORDS' ? (
           <DiaryManagementList />
         ) : tab === 'APPROVALS' ? (
-          <ApprovalQueue onSelectReview={(siteDiaryId, approvalId) => {
-            if (programmeId) setReviewContext({ programmeId, siteDiaryId, approvalId });
-          }} />
+          <ApprovalQueue
+            onSelectReview={(siteDiaryId, approvalId) => {
+              if (programmeId) setReviewContext({ programmeId, siteDiaryId, approvalId });
+            }}
+          />
         ) : (
           <DailyEntryForm
             key={tab}
@@ -75,6 +141,80 @@ export default function SiteDiaryWorkspace() {
           />
         )}
       </div>
+    );
+  };
+
+  return (
+    <div className="flex-1 flex flex-col md:flex-row w-full h-full min-h-0 overflow-hidden relative">
+      {/* Desktop Sidebar Rail */}
+      <nav aria-label="Navigasi Buku Harian Tapak" className="hidden md:flex flex-col w-20 lg:w-64 shrink-0 bg-surface-canvas border-r border-surface-border overflow-y-auto">
+        <div className="flex-1 py-4 px-2 lg:px-3 space-y-1 lg:space-y-2">
+          {tabs.map((item) => {
+            const isSelected = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => setTab(item.id)}
+                className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-accent-selected active:duration-75 ${
+                  isSelected
+                    ? 'bg-surface-raised text-accent-selected border-l-4 border-accent-selected shadow-sm active:bg-surface-interactive'
+                    : 'text-tactical-text-secondary hover:bg-surface-raised hover:text-tactical-text-primary border-l-4 border-transparent active:bg-surface-interactive'
+                }`}
+                title={item.label}
+              >
+                <div className={`shrink-0 flex items-center justify-center ${isSelected ? 'text-accent-selected' : 'text-tactical-text-muted'}`}>
+                  {item.icon}
+                </div>
+                <span className={`ml-3 hidden lg:block text-sm font-semibold tracking-wide ${isSelected ? 'text-tactical-text-primary' : ''}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col w-full h-full min-w-0 overflow-hidden relative">
+        <div className="flex-1 overflow-y-auto bg-surface-canvas w-full px-2 sm:px-4 md:px-6 py-4 pb-24 md:pb-6">
+          <div className="w-full max-w-5xl mx-auto">
+            {renderContent()}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden absolute bottom-0 left-0 right-0 z-40 bg-surface-primary/95 backdrop-blur-xl border-t border-surface-border shadow-[0_-4px_12px_rgba(0,0,0,0.3)] pb-safe">
+        <div className="flex items-center justify-around px-1 py-2">
+          {tabs.map((item) => {
+            const isSelected = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => setTab(item.id)}
+                className={`flex flex-col items-center justify-center flex-1 min-h-[56px] rounded-lg transition-colors duration-150 motion-safe:active:scale-95 active:duration-75 ${
+                  isSelected
+                    ? 'bg-surface-raised text-accent-selected border-t-2 border-accent-selected'
+                    : 'text-tactical-text-muted hover:bg-surface-primary hover:text-tactical-text-secondary border-t-2 border-transparent'
+                }`}
+              >
+                <div className={`mb-1 motion-safe:transition-transform motion-safe:duration-150 ${isSelected ? 'motion-safe:scale-110' : ''}`}>
+                  {item.icon}
+                </div>
+                <span className={`text-xs font-bold tracking-tight ${isSelected ? 'text-tactical-text-primary' : ''}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
