@@ -144,4 +144,59 @@ describe('SiteDiaryManagementReadService', () => {
     })).list({ programmeId, revisionId });
     expect(results.map((item) => item.siteDiaryId)).toEqual(['c', 'a', 'b']);
   });
+
+  it('correctly maps authoritative revision_name to revisionTitle and identifies exactly one current revision', async () => {
+    const currentRevId = '00000000-0000-4000-8000-000000000002';
+    const historicalRevId = '00000000-0000-4000-8000-000000000001';
+    const revisions = [
+      {
+        revision_id: currentRevId,
+        programme_id: programmeId,
+        revision_no: 2,
+        revision_name: 'Semakan Semasa',
+        status: 'Approved',
+        programme: { current_revision_id: currentRevId },
+      },
+      {
+        revision_id: historicalRevId,
+        programme_id: programmeId,
+        revision_no: 1,
+        revision_name: 'Semakan Asal',
+        status: 'Approved',
+        programme: { current_revision_id: currentRevId },
+      },
+    ];
+
+    const service = new SiteDiaryManagementReadService(repository({
+      findRevisions: vi.fn().mockResolvedValue(revisions),
+    }));
+
+    const result = await service.listRevisions(programmeId);
+    expect(result).toHaveLength(2);
+
+    // Exactly one current revision is identified
+    const currentRevisions = result.filter(r => r.isCurrentRevision);
+    expect(currentRevisions).toHaveLength(1);
+    expect(currentRevisions[0]).toEqual({
+      programmeId,
+      revisionId: currentRevId,
+      revisionNumber: 2,
+      revisionTitle: 'Semakan Semasa',
+      revisionStatus: 'Approved',
+      isCurrentRevision: true,
+      isReadOnly: false,
+    });
+
+    // Historical revision is distinguishable and read-only
+    const historical = result.find(r => r.revisionId === historicalRevId);
+    expect(historical).toEqual({
+      programmeId,
+      revisionId: historicalRevId,
+      revisionNumber: 1,
+      revisionTitle: 'Semakan Asal',
+      revisionStatus: 'Approved',
+      isCurrentRevision: false,
+      isReadOnly: true,
+    });
+  });
 });

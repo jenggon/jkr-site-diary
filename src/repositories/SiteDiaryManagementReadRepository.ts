@@ -6,7 +6,9 @@ export interface ManagementRevisionRow {
   readonly revision_id: string;
   readonly programme_id: string;
   readonly revision_no: number;
-  readonly revision_title: string;
+  readonly revision_name: string | null;
+  /** @deprecated Optional fallback for backward compatibility with mock test fixtures */
+  readonly revision_title?: string;
   readonly status: ProgrammeRevisionStatus;
   readonly programme: { current_revision_id: string | null } | null;
 }
@@ -48,13 +50,15 @@ const DIARY_PROJECTION = `
   )
 `;
 
+const REVISION_PROJECTION = 'revision_id, programme_id, revision_no, revision_name, status, programme!programme_revision_programme_id_fkey(current_revision_id)';
+
 export class SiteDiaryManagementReadRepository {
   public constructor(private readonly client: SupabaseClient) {}
 
   public async findRevision(programmeId: string, revisionId: string): Promise<ManagementRevisionRow | null> {
     const { data, error } = await this.client
       .from('programme_revision')
-      .select('revision_id, programme_id, revision_no, revision_title, status, programme(current_revision_id)')
+      .select(REVISION_PROJECTION)
       .eq('programme_id', programmeId)
       .eq('revision_id', revisionId)
       .maybeSingle();
@@ -65,7 +69,7 @@ export class SiteDiaryManagementReadRepository {
   public async findRevisions(programmeId: string): Promise<ManagementRevisionRow[]> {
     const { data, error } = await this.client
       .from('programme_revision')
-      .select('revision_id, programme_id, revision_no, revision_title, status, programme(current_revision_id)')
+      .select(REVISION_PROJECTION)
       .eq('programme_id', programmeId)
       .order('revision_no', { ascending: false });
     if (error) throw new Error(`Failed to retrieve Programme Revisions: ${error.message}`);
