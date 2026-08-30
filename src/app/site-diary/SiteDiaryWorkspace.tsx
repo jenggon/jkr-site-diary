@@ -158,10 +158,10 @@ export default function SiteDiaryWorkspace() {
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setTab(item.id)}
-                className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-accent-selected ${
-                  isSelected 
-                    ? 'bg-surface-raised text-accent-selected border-l-4 border-accent-selected shadow-sm' 
-                    : 'text-tactical-text-secondary hover:bg-surface-primary hover:text-tactical-text-primary border-l-4 border-transparent'
+                className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-accent-selected active:duration-75 ${
+                  isSelected
+                    ? 'bg-surface-raised text-accent-selected border-l-4 border-accent-selected shadow-sm active:bg-surface-interactive'
+                    : 'text-tactical-text-secondary hover:bg-surface-raised hover:text-tactical-text-primary border-l-4 border-transparent active:bg-surface-interactive'
                 }`}
                 title={item.label}
               >
@@ -198,14 +198,16 @@ export default function SiteDiaryWorkspace() {
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setTab(item.id)}
-                className={`flex flex-col items-center justify-center flex-1 min-h-[56px] rounded-lg transition-all duration-200 ${
-                  isSelected ? 'text-accent-selected' : 'text-tactical-text-muted hover:text-tactical-text-secondary'
+                className={`flex flex-col items-center justify-center flex-1 min-h-[56px] rounded-lg transition-colors duration-150 motion-safe:active:scale-95 active:duration-75 ${
+                  isSelected
+                    ? 'bg-surface-raised text-accent-selected border-t-2 border-accent-selected'
+                    : 'text-tactical-text-muted hover:bg-surface-primary hover:text-tactical-text-secondary border-t-2 border-transparent'
                 }`}
               >
-                <div className={`mb-1 transition-transform ${isSelected ? 'scale-110' : ''}`}>
+                <div className={`mb-1 motion-safe:transition-transform motion-safe:duration-150 ${isSelected ? 'motion-safe:scale-110' : ''}`}>
                   {item.icon}
                 </div>
-                <span className={`text-[10px] font-bold tracking-tight ${isSelected ? 'text-tactical-text-primary' : ''}`}>
+                <span className={`text-xs font-bold tracking-tight ${isSelected ? 'text-tactical-text-primary' : ''}`}>
                   {item.label}
                 </span>
               </button>

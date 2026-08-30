@@ -215,8 +215,14 @@ export default function DiaryManagementList() {
   if (selectedDiary && programmeId) {
     return <div className="space-y-4">
       <div role="tablist" aria-label="Tukar konteks rekod dari butiran" className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-2">
-        <button type="button" role="tab" aria-selected={viewMode === 'CURRENT'} onClick={chooseCurrent} className="min-h-[44px] rounded-xl bg-zinc-800 px-3 text-sm font-bold">Rekod Semasa</button>
-        <button type="button" role="tab" aria-selected={viewMode === 'HISTORY'} onClick={() => { setSelectedDiary(null); setViewMode('HISTORY'); }} className="min-h-[44px] rounded-xl bg-zinc-800 px-3 text-sm font-bold">Semakan Terdahulu</button>
+        <button type="button" role="tab" aria-selected={viewMode === 'CURRENT'} onClick={chooseCurrent}
+          className={`min-h-[44px] rounded-xl px-3 text-sm font-bold transition-colors ${viewMode === 'CURRENT' ? 'bg-accent-operational text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+          Rekod Semasa
+        </button>
+        <button type="button" role="tab" aria-selected={viewMode === 'HISTORY'} onClick={() => { setSelectedDiary(null); setViewMode('HISTORY'); }}
+          className={`min-h-[44px] rounded-xl px-3 text-sm font-bold transition-colors ${viewMode === 'HISTORY' ? 'bg-accent-operational text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+          Semakan Terdahulu
+        </button>
       </div>
       <DiaryDetail
         key={`${selectedDiary.siteDiaryId}-${detailRefresh}`}
@@ -233,12 +239,12 @@ export default function DiaryManagementList() {
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
         <div role="tablist" aria-label="Konteks rekod" className="grid grid-cols-2 gap-2">
           <button type="button" role="tab" aria-selected={viewMode === 'CURRENT'} onClick={chooseCurrent}
-            className={`min-h-[44px] rounded-xl px-3 py-2 text-sm font-bold ${viewMode === 'CURRENT' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+            className={`min-h-[44px] rounded-xl px-3 py-2 text-sm font-bold transition-colors ${viewMode === 'CURRENT' ? 'bg-accent-operational text-white' : 'bg-zinc-800 text-zinc-300'}`}>
             Rekod Semasa
           </button>
           <button type="button" role="tab" aria-selected={viewMode === 'HISTORY'}
             onClick={() => { setSelectedDiary(null); setEditingSiteDiaryId(null); setViewMode('HISTORY'); }}
-            className={`min-h-[44px] rounded-xl px-3 py-2 text-sm font-bold ${viewMode === 'HISTORY' ? 'bg-amber-700 text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+            className={`min-h-[44px] rounded-xl px-3 py-2 text-sm font-bold transition-colors ${viewMode === 'HISTORY' ? 'bg-accent-operational text-white' : 'bg-zinc-800 text-zinc-300'}`}>
             Semakan Terdahulu
           </button>
         </div>
@@ -352,7 +358,7 @@ export default function DiaryManagementList() {
             {viewMode === 'HISTORY' && selectedRevision && (
               <p className="mt-3 text-xs text-zinc-400">{revisionLabel(selectedRevision)} · {selectedRevision.revisionStatus}</p>
             )}
-            <p className="mt-3 text-[11px] text-zinc-500">Dikemaskini {formatTimestamp(diary.lastModifiedAt)}</p>
+            <p className="mt-3 text-xs text-zinc-500">Dikemaskini {formatTimestamp(diary.lastModifiedAt)}</p>
             <button type="button" onClick={() => setSelectedDiary(diary)}
               className="mt-3 min-h-[44px] w-full rounded-xl border border-zinc-700 px-3 text-sm font-bold text-blue-300">
               Lihat Butiran

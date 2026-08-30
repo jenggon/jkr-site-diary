@@ -292,79 +292,61 @@ export default function DailyEntryShell({
 
         {/* Dynamic Project & Active Revision Context Header (when programme is selected) */}
         {programmeId && (
-          <div className="shrink-0 w-full bg-surface-primary/50 border-b border-surface-border px-4 py-3">
-            <div className="mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-tactical-state-pending bg-surface-raised border border-surface-border px-2 py-0.5 rounded">
-                    {programmeCode || 'Program Aktif'}
-                  </span>
-                  {availableProgrammes.length > 1 && (
-                    <button
-                      onClick={() => changeProgramme(null)}
-                      style={{ minHeight: 44 }}
-                      className="text-[10px] text-tactical-text-secondary hover:text-accent-operational underline transition-colors"
-                      title="Pilih projek lain"
-                    >
-                      Tukar Projek
-                    </button>
-                  )}
-                  {loading && (
-                    <span className="text-[11px] text-tactical-text-muted animate-pulse">
-                      Memuatkan...
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-sm sm:text-base font-semibold text-tactical-text-primary truncate mt-1" title={programmeName || ''}>
+          <div className="shrink-0 w-full bg-surface-primary/50 border-b border-surface-border px-4 py-1.5">
+            <div className="mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
+              {/* Left: code + name on one tight row */}
+              <div className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold uppercase tracking-wider text-tactical-state-pending bg-surface-raised border border-surface-border px-2 py-0.5 rounded leading-tight shrink-0">
+                  {programmeCode || 'Program Aktif'}
+                </span>
+                <h2 className="text-sm font-semibold text-tactical-text-primary truncate leading-tight" title={programmeName || ''}>
                   {programmeName || 'Nama Program'}
                 </h2>
+                {availableProgrammes.length > 1 && (
+                  <button
+                    onClick={() => changeProgramme(null)}
+                    style={{ minHeight: 44 }}
+                    className="text-xs text-tactical-text-secondary hover:text-accent-operational underline transition-colors shrink-0"
+                    title="Pilih projek lain"
+                  >
+                    Tukar Projek
+                  </button>
+                )}
+                {loading && (
+                  <span className="text-xs text-tactical-text-muted animate-pulse">
+                    Memuatkan...
+                  </span>
+                )}
               </div>
 
-              {/* Authorised Revision badge */}
-              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                <div className="flex flex-col items-start sm:items-end">
-                  {revisionState === 'RESOLVED' && revisionId && (
-                    <>
-                      <span className="text-[10px] uppercase font-bold text-tactical-state-valid flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-tactical-state-valid animate-pulse"></span>
-                        Semakan Sah
-                      </span>
-                      <span className="text-xs font-mono text-tactical-text-secondary">Semakan Semasa</span>
-                    </>
-                  )}
-                  {revisionState === 'RESOLVING' && (
-                    <>
-                      <span className="text-[10px] uppercase font-bold text-tactical-text-secondary flex items-center gap-1">
-                        Memuatkan Semakan
-                      </span>
-                      <span className="text-xs font-mono text-tactical-text-muted animate-pulse">Sila tunggu...</span>
-                    </>
-                  )}
-                  {revisionState === 'UNAVAILABLE' && (
-                    <>
-                      <span className="text-[10px] uppercase font-bold text-tactical-text-muted flex items-center gap-1">
-                        Tidak Ditemui
-                      </span>
-                      <span className="text-xs font-mono text-tactical-text-muted">Tiada Semakan Sah</span>
-                    </>
-                  )}
-                  {revisionState === 'ERROR' && (
-                    <>
-                      <span className="text-[10px] uppercase font-bold text-tactical-state-destructive flex items-center gap-1">
-                        Ralat Semakan
-                      </span>
-                      <span className="text-xs font-mono text-tactical-state-destructive">Gagal Memuatkan</span>
-                    </>
-                  )}
-                  {revisionState === 'IDLE' && (
-                    <>
-                      <span className="text-[10px] uppercase font-bold text-tactical-text-muted flex items-center gap-1">
-                        Sedia
-                      </span>
-                      <span className="text-xs font-mono text-tactical-text-muted">-</span>
-                    </>
-                  )}
-                </div>
+              {/* Right: revision authority — always visible */}
+              <div className="shrink-0 flex items-center gap-1.5">
+                {revisionState === 'RESOLVED' && revisionId && (
+                  <span className="text-xs font-bold text-tactical-state-valid flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-tactical-state-valid animate-pulse shrink-0"></span>
+                    <span className="uppercase tracking-wide">Semakan Sah</span>
+                    <span aria-hidden="true" className="text-tactical-text-muted font-normal">·</span>
+                    <span className="font-mono text-tactical-text-secondary font-normal">Semakan Semasa</span>
+                  </span>
+                )}
+                {revisionState === 'RESOLVING' && (
+                  <span className="text-xs font-bold text-tactical-text-secondary flex items-center gap-1">
+                    <span className="uppercase tracking-wide">Memuatkan Semakan</span>
+                  </span>
+                )}
+                {revisionState === 'UNAVAILABLE' && (
+                  <span className="text-xs font-bold text-tactical-text-muted flex items-center gap-1">
+                    <span className="uppercase tracking-wide">Tiada Semakan</span>
+                  </span>
+                )}
+                {revisionState === 'ERROR' && (
+                  <span className="text-xs font-bold text-tactical-state-destructive flex items-center gap-1">
+                    <span className="uppercase tracking-wide">Ralat Semakan</span>
+                  </span>
+                )}
+                {revisionState === 'IDLE' && (
+                  <span className="text-xs font-mono text-tactical-text-muted">—</span>
+                )}
               </div>
             </div>
           </div>
