@@ -22,6 +22,9 @@ audit.txt
 *-audit.txt
 test-*.js
 .temp/
+/scripts/artifacts/*.log
+/supabase/snippets/
+/samples/*.xml
 
 # logs
 npm-debug.log*
