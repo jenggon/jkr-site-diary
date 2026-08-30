@@ -147,10 +147,7 @@ export default function SiteDiaryWorkspace() {
   return (
     <div className="flex-1 flex flex-col md:flex-row w-full h-full min-h-0 overflow-hidden relative">
       {/* Desktop Sidebar Rail */}
-      <nav
-        aria-label="Navigasi Buku Harian Tapak"
-        className="hidden md:flex flex-col w-20 lg:w-64 shrink-0 bg-zinc-950 border-r border-zinc-800/60 overflow-y-auto"
-      >
+      <nav aria-label="Navigasi Buku Harian Tapak" className="hidden md:flex flex-col w-20 lg:w-64 shrink-0 bg-surface-canvas border-r border-surface-border overflow-y-auto">
         <div className="flex-1 py-4 px-2 lg:px-3 space-y-1 lg:space-y-2">
           {tabs.map((item) => {
             const isSelected = tab === item.id;
@@ -161,21 +158,17 @@ export default function SiteDiaryWorkspace() {
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setTab(item.id)}
-                className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  isSelected
-                    ? 'bg-zinc-800/80 text-blue-400 border-l-4 border-blue-500 shadow-sm'
-                    : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 border-l-4 border-transparent'
+                className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-accent-selected ${
+                  isSelected 
+                    ? 'bg-surface-raised text-accent-selected border-l-4 border-accent-selected shadow-sm' 
+                    : 'text-tactical-text-secondary hover:bg-surface-primary hover:text-tactical-text-primary border-l-4 border-transparent'
                 }`}
                 title={item.label}
               >
-                <div
-                  className={`shrink-0 flex items-center justify-center ${isSelected ? 'text-blue-500' : 'text-zinc-500'}`}
-                >
+                <div className={`shrink-0 flex items-center justify-center ${isSelected ? 'text-accent-selected' : 'text-tactical-text-muted'}`}>
                   {item.icon}
                 </div>
-                <span
-                  className={`ml-3 hidden lg:block text-sm font-semibold tracking-wide ${isSelected ? 'text-zinc-100' : ''}`}
-                >
+                <span className={`ml-3 hidden lg:block text-sm font-semibold tracking-wide ${isSelected ? 'text-tactical-text-primary' : ''}`}>
                   {item.label}
                 </span>
               </button>
@@ -186,13 +179,15 @@ export default function SiteDiaryWorkspace() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col w-full h-full min-w-0 overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto bg-zinc-950 w-full px-2 sm:px-4 md:px-6 py-4 pb-24 md:pb-6">
-          <div className="w-full max-w-5xl mx-auto">{renderContent()}</div>
+        <div className="flex-1 overflow-y-auto bg-surface-canvas w-full px-2 sm:px-4 md:px-6 py-4 pb-24 md:pb-6">
+          <div className="w-full max-w-5xl mx-auto">
+            {renderContent()}
+          </div>
         </div>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden absolute bottom-0 left-0 right-0 z-40 bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-800/80 shadow-[0_-4px_12px_rgba(0,0,0,0.3)] pb-safe">
+      <nav className="md:hidden absolute bottom-0 left-0 right-0 z-40 bg-surface-primary/95 backdrop-blur-xl border-t border-surface-border shadow-[0_-4px_12px_rgba(0,0,0,0.3)] pb-safe">
         <div className="flex items-center justify-around px-1 py-2">
           {tabs.map((item) => {
             const isSelected = tab === item.id;
@@ -204,15 +199,13 @@ export default function SiteDiaryWorkspace() {
                 aria-selected={isSelected}
                 onClick={() => setTab(item.id)}
                 className={`flex flex-col items-center justify-center flex-1 min-h-[56px] rounded-lg transition-all duration-200 ${
-                  isSelected ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-300'
+                  isSelected ? 'text-accent-selected' : 'text-tactical-text-muted hover:text-tactical-text-secondary'
                 }`}
               >
                 <div className={`mb-1 transition-transform ${isSelected ? 'scale-110' : ''}`}>
                   {item.icon}
                 </div>
-                <span
-                  className={`text-[10px] font-bold tracking-tight ${isSelected ? 'text-zinc-100' : ''}`}
-                >
+                <span className={`text-[10px] font-bold tracking-tight ${isSelected ? 'text-tactical-text-primary' : ''}`}>
                   {item.label}
                 </span>
               </button>

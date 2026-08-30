@@ -248,20 +248,20 @@ export default function DailyEntryShell({
         refreshContext: loadProgrammes,
       }}
     >
-      <div className="h-[100dvh] w-full bg-zinc-950 text-white flex flex-col overflow-hidden">
+      <div className="h-[100dvh] w-full bg-surface-canvas text-tactical-text-primary flex flex-col overflow-hidden">
         {/* Sticky top navigation bar */}
-        <header className="shrink-0 z-40 w-full bg-zinc-900 border-b border-zinc-800 shadow-sm">
+        <header className="shrink-0 z-40 w-full bg-surface-primary border-b border-surface-border shadow-sm">
           <div className="mx-auto w-full px-4 py-3 flex items-center justify-between gap-3">
             {/* Logo and branding */}
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-inner text-sm tracking-wider">
+              <div className="w-9 h-9 rounded-lg bg-accent-operational flex items-center justify-center font-bold text-white shadow-inner text-sm tracking-wider">
                 JKR
               </div>
               <div>
-                <h1 className="text-sm sm:text-base font-bold text-zinc-100 tracking-tight leading-tight">
+                <h1 className="text-sm sm:text-base font-bold text-tactical-text-primary tracking-tight leading-tight">
                   Buku Harian Tapak
                 </h1>
-                <p className="text-[11px] text-zinc-400 font-medium leading-none">
+                <p className="text-[11px] text-tactical-text-secondary font-medium leading-none">
                   Sistem Pengurusan Tapak Digital
                 </p>
               </div>
@@ -272,14 +272,14 @@ export default function DailyEntryShell({
               {user && (
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-300 flex items-center justify-center text-xs font-bold"
+                    className="w-8 h-8 rounded-full bg-surface-raised border border-surface-border text-tactical-text-secondary flex items-center justify-center text-xs font-bold"
                     title={user.email ?? ''}
                   >
                     {userInitials}
                   </div>
                   <button
                     onClick={() => signOut()}
-                    className="text-[11px] text-zinc-400 hover:text-red-400 transition-colors px-1"
+                    className="text-[11px] text-tactical-text-secondary hover:text-tactical-state-destructive transition-colors px-1"
                     title="Log Keluar"
                   >
                     Keluar
@@ -292,30 +292,30 @@ export default function DailyEntryShell({
 
         {/* Dynamic Project & Active Revision Context Header (when programme is selected) */}
         {programmeId && (
-          <div className="shrink-0 w-full bg-zinc-900/50 border-b border-zinc-800/80 px-4 py-3">
+          <div className="shrink-0 w-full bg-surface-primary/50 border-b border-surface-border px-4 py-3">
             <div className="mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-950/80 border border-blue-800/50 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-tactical-state-pending bg-surface-raised border border-surface-border px-2 py-0.5 rounded">
                     {programmeCode || 'Program Aktif'}
                   </span>
                   {availableProgrammes.length > 1 && (
                     <button
                       onClick={() => changeProgramme(null)}
                       style={{ minHeight: 44 }}
-                      className="text-[10px] text-zinc-400 hover:text-blue-400 underline transition-colors"
+                      className="text-[10px] text-tactical-text-secondary hover:text-accent-operational underline transition-colors"
                       title="Pilih projek lain"
                     >
                       Tukar Projek
                     </button>
                   )}
                   {loading && (
-                    <span className="text-[11px] text-zinc-500 animate-pulse">
+                    <span className="text-[11px] text-tactical-text-muted animate-pulse">
                       Memuatkan...
                     </span>
                   )}
                 </div>
-                <h2 className="text-sm sm:text-base font-semibold text-zinc-200 truncate mt-1" title={programmeName || ''}>
+                <h2 className="text-sm sm:text-base font-semibold text-tactical-text-primary truncate mt-1" title={programmeName || ''}>
                   {programmeName || 'Nama Program'}
                 </h2>
               </div>
@@ -323,17 +323,47 @@ export default function DailyEntryShell({
               {/* Authorised Revision badge */}
               <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                 <div className="flex flex-col items-start sm:items-end">
-                  <span className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Semakan Sah
-                  </span>
-                  <span className="text-xs font-mono text-zinc-400">
-                    {revisionState === 'RESOLVING'
-                      ? 'Memuat Semakan'
-                      : revisionId
-                        ? 'Semakan Semasa'
-                        : 'Tiada Semakan'}
-                  </span>
+                  {revisionState === 'RESOLVED' && revisionId && (
+                    <>
+                      <span className="text-[10px] uppercase font-bold text-tactical-state-valid flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-tactical-state-valid animate-pulse"></span>
+                        Semakan Sah
+                      </span>
+                      <span className="text-xs font-mono text-tactical-text-secondary">Semakan Semasa</span>
+                    </>
+                  )}
+                  {revisionState === 'RESOLVING' && (
+                    <>
+                      <span className="text-[10px] uppercase font-bold text-tactical-text-secondary flex items-center gap-1">
+                        Memuatkan Semakan
+                      </span>
+                      <span className="text-xs font-mono text-tactical-text-muted animate-pulse">Sila tunggu...</span>
+                    </>
+                  )}
+                  {revisionState === 'UNAVAILABLE' && (
+                    <>
+                      <span className="text-[10px] uppercase font-bold text-tactical-text-muted flex items-center gap-1">
+                        Tidak Ditemui
+                      </span>
+                      <span className="text-xs font-mono text-tactical-text-muted">Tiada Semakan Sah</span>
+                    </>
+                  )}
+                  {revisionState === 'ERROR' && (
+                    <>
+                      <span className="text-[10px] uppercase font-bold text-tactical-state-destructive flex items-center gap-1">
+                        Ralat Semakan
+                      </span>
+                      <span className="text-xs font-mono text-tactical-state-destructive">Gagal Memuatkan</span>
+                    </>
+                  )}
+                  {revisionState === 'IDLE' && (
+                    <>
+                      <span className="text-[10px] uppercase font-bold text-tactical-text-muted flex items-center gap-1">
+                        Sedia
+                      </span>
+                      <span className="text-xs font-mono text-tactical-text-muted">-</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

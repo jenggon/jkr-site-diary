@@ -170,7 +170,7 @@ describe('Site Diary runtime workspace navigation', () => {
       expect(
         currentTabs.filter((item) => item.getAttribute('aria-selected') === 'true'),
       ).toHaveLength(2); // One desktop, one mobile
-      expect(currentTabs[index]?.className).toContain('text-blue-400');
+      expect(currentTabs[index]?.className).toContain('text-accent-selected');
     }
     expect(container.textContent).not.toContain('Cetak / PDF');
   });
