@@ -23,7 +23,7 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the mobile-first shell structure and branding without artificial phone frames', () => {
+  it('renders the mobile-first shell structure and DATUM identity without artificial phone frames', () => {
     const html = renderToString(
       React.createElement(
         DailyEntryShell,
@@ -32,10 +32,12 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
       )
     );
 
-    // Verify JKR branding and title
-    expect(html).toContain('JKR');
-    expect(html).toContain('Buku Harian Tapak');
-    expect(html).toContain('Sistem Pengurusan Tapak Digital');
+    // DATUM is the product identity; contractual JKR terminology remains downstream where required.
+    expect(html).toContain('DATUM');
+    expect(html).toContain('Digital Fieldbook · Project Ground Truth');
+    expect(html).toContain('datum-shell');
+    expect(html).toContain('datum-mark');
+    expect(html).not.toContain('Sistem Pengurusan Tapak Digital');
 
     // Verify mobile-responsive classes
     expect(html).toContain('h-[100dvh]');
