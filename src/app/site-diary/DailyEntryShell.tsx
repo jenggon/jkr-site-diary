@@ -248,21 +248,21 @@ export default function DailyEntryShell({
         refreshContext: loadProgrammes,
       }}
     >
-      <div className="h-[100dvh] w-full bg-surface-canvas text-tactical-text-primary flex flex-col overflow-hidden">
+      <div className="datum-shell h-[100dvh] w-full bg-surface-canvas text-tactical-text-primary flex flex-col overflow-hidden">
         {/* Sticky top navigation bar */}
-        <header className="shrink-0 z-40 w-full bg-surface-primary border-b border-surface-border shadow-sm">
+        <header className="datum-app-header shrink-0 z-40 w-full bg-surface-primary border-b border-surface-border shadow-sm">
           <div className="mx-auto w-full px-4 py-3 flex items-center justify-between gap-3">
-            {/* Logo and branding */}
+            {/* DATUM product identity */}
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-accent-operational flex items-center justify-center font-bold text-white shadow-inner text-sm tracking-wider">
-                JKR
+              <div className="datum-mark w-9 h-9 rounded-lg bg-accent-operational flex items-center justify-center font-bold text-white shadow-inner text-sm tracking-wider" aria-hidden="true">
+                D
               </div>
               <div>
-                <h1 className="text-sm sm:text-base font-bold text-tactical-text-primary tracking-tight leading-tight">
-                  Buku Harian Tapak
+                <h1 className="datum-brand-title text-sm sm:text-base font-bold text-tactical-text-primary tracking-tight leading-tight">
+                  DATUM
                 </h1>
-                <p className="text-[11px] text-tactical-text-secondary font-medium leading-none">
-                  Sistem Pengurusan Tapak Digital
+                <p className="datum-brand-subtitle text-[11px] text-tactical-text-secondary font-medium leading-none">
+                  Digital Fieldbook · Project Ground Truth
                 </p>
               </div>
             </div>
@@ -292,11 +292,11 @@ export default function DailyEntryShell({
 
         {/* Dynamic Project & Active Revision Context Header (when programme is selected) */}
         {programmeId && (
-          <div className="shrink-0 w-full bg-surface-primary/50 border-b border-surface-border px-4 py-1.5">
+          <div className="datum-project-strip shrink-0 w-full bg-surface-primary/50 border-b border-surface-border px-4 py-1.5">
             <div className="mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
               {/* Left: code + name on one tight row */}
               <div className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold uppercase tracking-wider text-tactical-state-pending bg-surface-raised border border-surface-border px-2 py-0.5 rounded leading-tight shrink-0">
+                <span className="datum-project-code text-xs font-bold uppercase tracking-wider text-tactical-state-pending bg-surface-raised border border-surface-border px-2 py-0.5 rounded leading-tight shrink-0">
                   {programmeCode || 'Program Aktif'}
                 </span>
                 <h2 className="text-sm font-semibold text-tactical-text-primary truncate leading-tight" title={programmeName || ''}>
@@ -322,8 +322,8 @@ export default function DailyEntryShell({
               {/* Right: revision authority — always visible */}
               <div className="shrink-0 flex items-center gap-1.5">
                 {revisionState === 'RESOLVED' && revisionId && (
-                  <span className="text-xs font-bold text-tactical-state-valid flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-tactical-state-valid animate-pulse shrink-0"></span>
+                  <span className="datum-revision-stamp text-xs font-bold text-tactical-state-valid flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-tactical-state-valid shrink-0"></span>
                     <span className="uppercase tracking-wide">Semakan Sah</span>
                     <span aria-hidden="true" className="text-tactical-text-muted font-normal">·</span>
                     <span className="font-mono text-tactical-text-secondary font-normal">Semakan Semasa</span>
