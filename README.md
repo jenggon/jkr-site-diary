@@ -1,126 +1,95 @@
-# JKR Site Diary Platform - Backend Infrastructure
+# JKR Site Diary Platform
 
-Backend infrastructure, architecture baseline, and bootstrap setup for the JKR Site Diary Platform.
+Next.js and Supabase implementation of the JKR Site Diary Platform.
 
-## Architecture Baseline
+## Architecture guardrails
 
-- **Baseline Version:** ARCH-000 through DEV-012Z (LOCKED)
-- **Specifications:** DEV-020A, DEV-020B, DEV-021A, DEV-021B (LOCKED)
-- **Module Architecture Lock:**
-  - `site_diary`: Single row represents active activity; UPDATE updates existing row.
-  - `site_diary_logs`: Append-only event history (NEW, UPDATE events).
-  - **LHI Engine (Log Hari Ini):** Displays current activities only from `site_diary`.
-  - **TRE Engine:** Priority order: 1. MSP Resource -> 2. Knowledge Engine -> 3. Trade Library.
-  - **Knowledge Engine:** Recommendation scoring uses AHI, Subtask, Frequency, Recency.
-  - **Edit Engine:** `editingReportId === site_diary.id` (Never use `site_diary_logs.id`).
+The repository is under architecture lock. `AGENTS.md` and the accepted REM-007 / DB-014 /
+DB-015 specifications are authoritative.
 
-## Technology Stack
+- `activity` owns operational Activity state.
+- `site_diary` owns one daily execution record for one Activity and one operational date.
+- `site_diary_logs` is append-only Site Diary history.
+- Operational work uses only the latest authorised Programme/CPM Revision. Cross-revision
+  Activity continuation is prohibited.
+- The official output remains JKR Site Diary Page 1 plus continuation pages only when required.
+- TRE priority remains MSP Resource, then Knowledge Engine, then Trade Library.
 
-- **Framework:** Next.js (App Router, Standalone build)
-- **Language:** TypeScript (Strict compliance under DEV-020B)
-- **Database / BaaS:** PostgreSQL / Supabase (`@supabase/supabase-js`)
-- **Validation & Models:** Zod (`zod`), UUID (`uuid`)
-- **Package Manager:** pnpm
-- **Code Quality:** ESLint 9, Prettier, Husky, lint-staged
-- **Testing:** Vitest (Unit / Integration / Contract), Playwright (E2E)
-- **Containerization:** Docker & Docker Compose (Multi-stage build)
-- **CI/CD:** GitHub Actions (6-step pipeline)
+Historical governance and closure documents are retained as evidence. They do not supersede the
+current locked authorities above.
 
-## Repository Structure
+## Toolchain
 
-```
-src/
-├── app/          # Next.js App Router routes & pages
-├── lib/          # Core client libraries (Supabase, DB helpers)
-├── middleware/   # Request middleware & authentication handlers
-├── repositories/ # Data access layer repositories
-├── services/     # Business logic & domain services
-├── types/        # TypeScript type declarations & DTO interfaces
-├── utils/        # Utility helpers and functions
-└── constants/    # Global configuration constants & enums
+- Node.js 22.x (`.nvmrc`)
+- pnpm 9.15.4 (`packageManager` in `package.json`)
+- Next.js App Router with standalone production output
+- TypeScript, ESLint, Prettier, Vitest, and Playwright
+- Supabase for database and authentication boundaries
 
-tests/
-├── unit/         # Unit tests (Vitest)
-├── integration/  # Integration tests (Vitest)
-└── contract/     # API/Data contract tests (Vitest)
+Do not substitute npm or generate an additional dependency lockfile.
 
-supabase/
-└── migrations/   # Supabase SQL database migrations
+## Local setup
 
-scripts/          # Maintenance and setup scripts
-public/           # Static web assets
-```
-
-## Development Commands
+Copy `.env.example` to `.env.local` and replace the placeholders. Never commit `.env.local` or a
+service-role key.
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Start development server
+corepack enable
+pnpm install --frozen-lockfile
 pnpm run dev
+```
 
-# Production build
-pnpm run build
+Useful commands:
 
-# Start production server
-pnpm run start
-
-# Code formatting & linting
-pnpm run lint
-pnpm run lint:fix
-pnpm run format
-pnpm run format:check
+```bash
 pnpm run typecheck
-```
-
-## Testing Commands
-
-```bash
-# Run unit & integration test suite (Vitest)
+pnpm run typecheck:api
+pnpm run lint
 pnpm run test
-
-# Watch mode for unit tests
-pnpm run test:watch
-
-# Specific test categories
-pnpm run test:unit
-pnpm run test:integration
-pnpm run test:contract
-
-# End-to-end tests (Playwright)
 pnpm run test:e2e
+pnpm run build
 ```
 
-## Docker Usage
-
-Build and launch containerized services (PostgreSQL & Next.js App):
+Before any implementation is presented as commit-, push-, or PR-ready, run the mandatory gate:
 
 ```bash
-# Build & start containers in detached mode
-docker-compose up -d --build
-
-# View container logs
-docker-compose logs -f
-
-# Stop containers
-docker-compose down
+pnpm run verify
 ```
 
-## CI Workflow
+The local gate is intentionally non-mutating. GitHub CI owns the single frozen dependency install,
+then runs the same verification command.
 
-The GitHub Actions workflow (`.github/workflows/ci.yml`) executes a 6-step validation pipeline:
+## Container build
 
-1. **Install:** Dependencies installation (`pnpm install`)
-2. **Type Check:** Strict TypeScript validation (`pnpm run typecheck`)
-3. **Lint:** ESLint rule compliance (`pnpm run lint`)
-4. **Unit Test:** Automated test execution (`pnpm run test`)
-5. **Build:** Next.js production build (`pnpm run build`)
-6. **Upload Artifact:** Build artifact storage for release pipeline
+The standalone image requires the public Supabase URL and anonymous key at build time because
+Next.js embeds `NEXT_PUBLIC_*` values into the client bundle. The service-role key is never a build
+argument; supply it only to the running server when required.
 
-## Reference Documents
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=replace-with-anon-key \
+  -t jkr-site-diary .
 
-- `AGENTS.md` - System instructions & LOCKED Architecture Rules
-- `.env.example` - Environment configuration schema reference
-- `docker-compose.yml` - Local development database and container topology
-- `Dockerfile` - Multi-stage container image specification
+docker run --rm -p 3000:3000 --env-file .env.local jkr-site-diary
+```
+
+`docker-compose.yml` is retained as local infrastructure scaffolding, not as an approved RC
+deployment topology. Deployment selection and production environment wiring belong to F5.
+
+## Repository map
+
+```text
+src/app/          Next.js pages and route handlers
+src/composition/  Composition roots
+src/repositories/ Persistence adapters and read repositories
+src/services/     Domain/application services
+src/types/        Domain and transport types
+supabase/         Migrations, seed data, and database verification
+tests/            Unit, integration, contract, security, and end-to-end tests
+scripts/          Optional maintenance and local proof utilities
+docs/             Architecture, governance, domain, and implementation evidence
+```
+
+Start with `AGENTS.md`, `docs/10_Development/CI-HARDEN-001.md`, and
+`CI-HARDEN-002-NON-MUTATING-VERIFY.md` before changing implementation or release configuration.

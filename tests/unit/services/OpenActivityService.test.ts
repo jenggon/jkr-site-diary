@@ -124,17 +124,12 @@ describe('OpenActivityService', () => {
       createdBy: 'user-1',
     });
 
-    if (isFailure(result)) {
-      console.log('FAIL RESULT:', result);
-    }
     expect(isSuccess(result)).toBe(true);
     if (isSuccess(result)) {
       expect(result.value.subtask).toBe('Kerja-kerja Memasang Tetulang');
       expect(result.value.status).toBe(ActivityStatus.New);
       expect(result.value.programmeId).toBe('prog-1');
       expect(result.value.revisionId).toBe('rev-001');
-    } else {
-      console.log('FAIL RESULT:', result);
     }
   });
 
