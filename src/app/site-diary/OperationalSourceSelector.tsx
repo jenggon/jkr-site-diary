@@ -96,7 +96,7 @@ export default function OperationalSourceSelector({
     setError(null);
     try {
       const res = await fetch(
-        `/api/vo-items?programmeId=${encodeURIComponent(progId)}&revisionId=${encodeURIComponent(revId)}`
+        `/api/vo-items?programmeId=${encodeURIComponent(progId)}&revisionId=${encodeURIComponent(revId)}`,
       );
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
@@ -254,7 +254,7 @@ export default function OperationalSourceSelector({
     <section className={`w-full ${className}`} aria-label="Pemilih Sumber Operasi">
       {/* Selected Source Summary Banner (when an item is selected and list is collapsed) */}
       {currentSelection && !isExpanded && (
-        <div className="rounded-2xl border border-zinc-700/80 bg-zinc-900/90 p-4 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="mobile-entry-selected-source rounded-2xl border border-zinc-700/80 bg-zinc-900/90 p-4 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs ${
@@ -289,13 +289,14 @@ export default function OperationalSourceSelector({
                   </span>
                 )}
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-zinc-100 mt-1 truncate" title={currentSelection.title}>
+              <h3
+                className="text-sm sm:text-base font-semibold text-zinc-100 mt-1 truncate"
+                title={currentSelection.title}
+              >
                 {currentSelection.title}
               </h3>
               {currentSelection.subtitle && (
-                <p className="text-xs text-zinc-400 mt-0.5 truncate">
-                  {currentSelection.subtitle}
-                </p>
+                <p className="text-xs text-zinc-400 mt-0.5 truncate">{currentSelection.subtitle}</p>
               )}
             </div>
           </div>
@@ -316,8 +317,17 @@ export default function OperationalSourceSelector({
               className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-800/60 transition-colors"
               title="Padam pilihan"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
             </button>
           </div>
@@ -326,14 +336,18 @@ export default function OperationalSourceSelector({
 
       {/* Expanded Source Selector Surface */}
       {(!currentSelection || isExpanded) && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
+        <div className="mobile-entry-spike-panel rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-400 md:hidden">
+                Sumber operasi
+              </p>
               <h3 className="text-sm sm:text-base font-bold text-zinc-100">
                 Pilih Sumber Aktiviti Harian
               </h3>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Setiap aktiviti tapak mestilah berpunca daripada <strong>Kerja Jadual (MSP)</strong> atau <strong>Kerja Tambahan / VO (APK)</strong>.
+                Setiap aktiviti tapak mestilah berpunca daripada <strong>Kerja Jadual (MSP)</strong>{' '}
+                atau <strong>Kerja Tambahan / VO (APK)</strong>.
               </p>
             </div>
             {currentSelection && (
@@ -348,33 +362,67 @@ export default function OperationalSourceSelector({
           </div>
 
           {/* Operational Source XOR Switcher Tabs */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-zinc-950 border border-zinc-800 mb-4">
+          <div
+            role="tablist"
+            aria-label="Jenis sumber aktiviti harian"
+            className="mobile-entry-source-switcher grid grid-cols-2 gap-2 p-1 rounded-xl bg-zinc-950 border border-zinc-800 mb-4"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'MSP'}
+              data-active={activeTab === 'MSP'}
               onClick={() => handleTabChange('MSP')}
-              className={`min-h-[44px] py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+              disabled={disabled}
+              className={`mobile-entry-source-control min-h-[44px] py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
                 activeTab === 'MSP'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
               }`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
               <span>Kerja Jadual (MSP)</span>
             </button>
 
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'VO'}
+              data-active={activeTab === 'VO'}
               onClick={() => handleTabChange('VO')}
-              className={`min-h-[44px] py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+              disabled={disabled}
+              className={`mobile-entry-source-control min-h-[44px] py-2.5 px-3 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
                 activeTab === 'VO'
-                  ? 'bg-amber-600 text-white shadow-md'
+                  ? 'bg-blue-600 text-white shadow-md md:bg-amber-600'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
               }`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
               <span>Kerja Tambahan / VO (APK)</span>
             </button>
@@ -382,17 +430,33 @@ export default function OperationalSourceSelector({
 
           {/* Search bar & actions */}
           <div className="flex items-center gap-2 mb-3">
-            <div className="relative flex-1">
+            <div className="mobile-entry-search-shell relative flex-1">
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                />
+              </svg>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label={activeTab === 'MSP' ? 'Cari tugasan MSP' : 'Cari kerja VO atau APK'}
                 placeholder={
                   activeTab === 'MSP'
                     ? 'Cari nama tugasan, WBS, atau UID...'
                     : 'Cari no rujukan VO, item, atau perihalan...'
                 }
-                className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-3.5 py-2 text-xs sm:text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
+                className="mobile-entry-search-input w-full rounded-xl bg-zinc-950 border border-zinc-800 px-3.5 py-2 text-xs sm:text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
               />
               {searchQuery && (
                 <button
@@ -422,7 +486,11 @@ export default function OperationalSourceSelector({
               <span>{error}</span>
               <button
                 type="button"
-                onClick={() => (activeTab === 'MSP' ? fetchTasks(revisionId) : fetchVoItems(programmeId, revisionId))}
+                onClick={() =>
+                  activeTab === 'MSP'
+                    ? fetchTasks(revisionId)
+                    : fetchVoItems(programmeId, revisionId)
+                }
                 className="px-2 py-0.5 rounded bg-red-900 hover:bg-red-800 text-white font-semibold"
               >
                 Cuba Semula
@@ -440,50 +508,59 @@ export default function OperationalSourceSelector({
               ) : filteredMspTasks.length === 0 ? (
                 <div className="py-8 text-center rounded-xl border border-zinc-800/60 bg-zinc-950/40 p-4">
                   <p className="text-xs sm:text-sm font-semibold text-zinc-300">
-                    {searchQuery ? 'Tiada tugasan sepadan dengan carian.' : 'Tiada tugasan ditemui untuk semakan aktif ini.'}
+                    {searchQuery
+                      ? 'Tiada tugasan sepadan dengan carian.'
+                      : 'Tiada tugasan ditemui untuk semakan aktif ini.'}
                   </p>
                   <p className="text-[11px] text-zinc-500 mt-1">
                     Pastikan Program Kerja MSP telah diimport dan diluluskan.
                   </p>
                 </div>
               ) : (
-                <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                <div className="mobile-entry-task-list max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                   {filteredMspTasks.map((task) => (
                     <button
                       key={task.task_id}
                       type="button"
                       onClick={() => handleSelectMspTask(task)}
-                      className="w-full text-left p-3 rounded-xl border border-zinc-800 bg-zinc-950/80 hover:bg-zinc-800/80 hover:border-blue-600/50 transition-all group flex flex-col gap-1"
+                      className="mobile-entry-task-row w-full text-left p-3 rounded-xl border border-zinc-800 bg-zinc-950/80 hover:bg-zinc-800/80 hover:border-blue-600/50 transition-all group flex flex-col gap-1 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={disabled}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {task.wbs && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                            <span className="text-[11px] md:text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
                               WBS {task.wbs}
                             </span>
                           )}
                           {task.task_uid && (
-                            <span className="text-[10px] font-mono text-zinc-500">
+                            <span className="text-[11px] md:text-[10px] font-mono text-zinc-500">
                               #{task.task_uid}
                             </span>
                           )}
                           {task.trade_name && (
-                            <span className="text-[10px] text-blue-400 font-medium">
+                            <span className="text-[11px] md:text-[10px] text-blue-400 font-medium">
                               {task.trade_name}
                             </span>
                           )}
                         </div>
-                        <span className="text-[11px] text-zinc-500 group-hover:text-blue-400 transition-colors font-semibold">
-                          Pilih &rarr;
+                        <span
+                          className="mobile-entry-row-action text-[11px] text-zinc-500 group-hover:text-blue-400 transition-colors font-semibold"
+                          aria-hidden="true"
+                        >
+                          <span className="md:hidden">&rarr;</span>
+                          <span className="hidden md:inline">Pilih &rarr;</span>
                         </span>
                       </div>
 
-                      <div className="text-xs sm:text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors leading-snug">
+                      <div className="text-[13px] sm:text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors leading-snug">
                         {task.task_name}
                       </div>
 
-                      {(task.planned_start || task.planned_finish || task.planned_duration_days) && (
-                        <div className="flex items-center gap-3 text-[10px] text-zinc-500 mt-0.5">
+                      {(task.planned_start ||
+                        task.planned_finish ||
+                        task.planned_duration_days) && (
+                        <div className="flex items-center gap-3 text-[11px] md:text-[10px] text-zinc-500 mt-0.5">
                           {task.planned_start && <span>Mula: {task.planned_start}</span>}
                           {task.planned_finish && <span>Tamat: {task.planned_finish}</span>}
                           {task.planned_duration_days !== null && (
@@ -524,40 +601,45 @@ export default function OperationalSourceSelector({
                   </button>
                 </div>
               ) : (
-                <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                <div className="mobile-entry-task-list max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                   {filteredVoItems.map((vo) => (
                     <button
                       key={vo.vo_item_id}
                       type="button"
                       onClick={() => handleSelectVoItem(vo)}
-                      className="w-full text-left p-3 rounded-xl border border-zinc-800 bg-zinc-950/80 hover:bg-zinc-800/80 hover:border-amber-600/50 transition-all group flex flex-col gap-1"
+                      className="mobile-entry-task-row w-full text-left p-3 rounded-xl border border-zinc-800 bg-zinc-950/80 hover:bg-zinc-800/80 hover:border-amber-600/50 transition-all group flex flex-col gap-1 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={disabled}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                          <span className="text-[11px] md:text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
                             {vo.vo_reference}
                           </span>
                           {vo.is_omission ? (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">
+                            <span className="text-[11px] md:text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">
                               Pengurangan
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                            <span className="text-[11px] md:text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
                               Penambahan
                             </span>
                           )}
                         </div>
-                        <span className="text-[11px] text-zinc-500 group-hover:text-amber-400 transition-colors font-semibold">
-                          Pilih &rarr;
+                        <span
+                          className="mobile-entry-row-action text-[11px] text-zinc-500 group-hover:text-amber-400 transition-colors font-semibold"
+                          aria-hidden="true"
+                        >
+                          <span className="md:hidden">&rarr;</span>
+                          <span className="hidden md:inline">Pilih &rarr;</span>
                         </span>
                       </div>
 
-                      <div className="text-xs sm:text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors leading-snug">
+                      <div className="text-[13px] sm:text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors leading-snug">
                         {vo.line_item}
                       </div>
 
                       {vo.description && (
-                        <p className="text-[11px] text-zinc-400 line-clamp-2 mt-0.5">
+                        <p className="text-xs md:text-[11px] text-zinc-400 line-clamp-2 mt-0.5">
                           {vo.description}
                         </p>
                       )}
@@ -643,7 +725,10 @@ export default function OperationalSourceSelector({
                   onChange={(e) => setNewIsOmission(e.target.checked)}
                   className="rounded border-zinc-700 bg-zinc-950 text-amber-600 focus:ring-amber-500"
                 />
-                <label htmlFor="isOmissionCheckbox" className="text-xs text-zinc-300 cursor-pointer">
+                <label
+                  htmlFor="isOmissionCheckbox"
+                  className="text-xs text-zinc-300 cursor-pointer"
+                >
                   Kerja Pengurangan (Omission)
                 </label>
               </div>

@@ -5,6 +5,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface-field-workspace: #111216;
+  --surface-field-control: #0d0e11;
+  --surface-field-engaged: #111b2c;
+  --edge-field-control: #34363d;
+  --rail-operational: #3b82f6;
+  --rail-authoritative: #34d399;
+  --rail-warning: #fbbf24;
+  --rail-destructive: #f87171;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,4 +33,213 @@ body {
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* F4.5-B01C-A: mobile-only visual spike for the New Entry operational workflow. */
+@media (max-width: 767px) {
+  .mobile-entry-spike-panel,
+  .mobile-entry-selected-source {
+    position: relative;
+    overflow: hidden;
+    border-color: var(--edge-field-control);
+    border-radius: 0.75rem;
+    background: var(--surface-field-workspace);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.035),
+      0 14px 32px rgb(0 0 0 / 0.24);
+  }
+
+  .mobile-entry-spike-panel::before,
+  .mobile-entry-selected-source::before {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 3px;
+    background: var(--rail-operational);
+    content: '';
+  }
+
+  .mobile-entry-source-switcher {
+    gap: 0;
+    padding: 3px;
+    border-color: var(--edge-field-control);
+    border-radius: 0.625rem;
+    background: #090a0d;
+    box-shadow: inset 0 1px 4px rgb(0 0 0 / 0.55);
+  }
+
+  .mobile-entry-source-control {
+    position: relative;
+    min-height: 48px;
+    border: 1px solid transparent;
+    border-radius: 0.4375rem;
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      box-shadow 140ms ease,
+      color 140ms ease,
+      transform 100ms ease;
+  }
+
+  .mobile-entry-source-control[data-active='true'] {
+    border-color: rgb(59 130 246 / 0.48);
+    background: var(--surface-field-engaged);
+    box-shadow:
+      inset 0 1px 5px rgb(0 0 0 / 0.75),
+      inset 0 -1px 0 rgb(96 165 250 / 0.16);
+    color: #f4f4f5;
+    transform: translateY(1px);
+  }
+
+  .mobile-entry-source-control[data-active='true']::before {
+    position: absolute;
+    inset-block: 7px;
+    left: 0;
+    width: 3px;
+    background: var(--rail-operational);
+    content: '';
+  }
+
+  .mobile-entry-source-control:active {
+    transform: translateY(2px) scale(0.985);
+  }
+
+  .mobile-entry-search-shell {
+    border: 1px solid var(--edge-field-control);
+    border-radius: 0.625rem;
+    background: var(--surface-field-control);
+    box-shadow:
+      inset 0 2px 6px rgb(0 0 0 / 0.5),
+      inset 0 1px 0 rgb(255 255 255 / 0.025);
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .mobile-entry-search-shell:focus-within {
+    border-color: var(--rail-operational);
+    box-shadow:
+      inset 0 2px 6px rgb(0 0 0 / 0.5),
+      0 0 0 2px rgb(59 130 246 / 0.18);
+  }
+
+  .mobile-entry-search-input {
+    min-height: 46px;
+    border: 0;
+    border-radius: 0.625rem;
+    background: transparent;
+    padding-left: 2.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .mobile-entry-task-list {
+    overflow: hidden;
+    border: 1px solid var(--edge-field-control);
+    border-radius: 0.625rem;
+    background: var(--surface-field-control);
+    box-shadow: inset 0 1px 4px rgb(0 0 0 / 0.42);
+  }
+
+  .mobile-entry-task-list > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  .mobile-entry-task-row {
+    position: relative;
+    min-height: 82px;
+    border-width: 0 0 1px 3px;
+    border-color: #27272a;
+    border-left-color: transparent;
+    border-radius: 0;
+    background: transparent;
+    padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      transform 100ms ease;
+  }
+
+  .mobile-entry-task-row:last-child {
+    border-bottom-width: 0;
+  }
+
+  .mobile-entry-task-row:hover,
+  .mobile-entry-task-row:focus-visible {
+    border-left-color: var(--rail-operational);
+    background: #151821;
+  }
+
+  .mobile-entry-task-row:focus-visible {
+    z-index: 1;
+    outline: 2px solid rgb(59 130 246 / 0.72);
+    outline-offset: -2px;
+  }
+
+  .mobile-entry-task-row:active {
+    border-left-color: var(--rail-operational);
+    background: var(--surface-field-engaged);
+    transform: translateY(1px) scale(0.992);
+  }
+
+  .mobile-entry-row-action {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #3f3f46;
+    border-radius: 0.375rem;
+    background: #18181b;
+    color: #a1a1aa;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
+
+  .mobile-entry-task-row:hover .mobile-entry-row-action,
+  .mobile-entry-task-row:focus-visible .mobile-entry-row-action {
+    border-color: rgb(59 130 246 / 0.52);
+    color: #60a5fa;
+  }
+
+  .mobile-entry-bottom-nav {
+    border-color: var(--edge-field-control);
+    background: rgb(17 18 22 / 0.96);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.03),
+      0 -8px 24px rgb(0 0 0 / 0.34);
+  }
+
+  .mobile-entry-nav-item {
+    position: relative;
+    border-radius: 0.375rem;
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      transform 100ms ease;
+  }
+
+  .mobile-entry-nav-item[aria-selected='true'] {
+    border-top-color: var(--rail-operational);
+    background: var(--surface-field-engaged);
+    box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.48);
+  }
+
+  .mobile-entry-nav-item:active {
+    transform: translateY(1px) scale(0.975);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-entry-source-control,
+  .mobile-entry-search-shell,
+  .mobile-entry-task-row,
+  .mobile-entry-nav-item {
+    transition: none;
+  }
+
+  .mobile-entry-source-control:active,
+  .mobile-entry-task-row:active,
+  .mobile-entry-nav-item:active {
+    transform: none;
+  }
 }
