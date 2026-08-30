@@ -248,10 +248,10 @@ export default function DailyEntryShell({
         refreshContext: loadProgrammes,
       }}
     >
-      <div className="min-h-screen w-full bg-zinc-950 text-white flex flex-col items-center">
+      <div className="h-[100dvh] w-full bg-zinc-950 text-white flex flex-col overflow-hidden">
         {/* Sticky top navigation bar */}
-        <header className="sticky top-0 z-40 w-full bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 shadow-md">
-          <div className="mx-auto w-full max-w-3xl px-4 py-3 flex items-center justify-between gap-3">
+        <header className="shrink-0 z-40 w-full bg-zinc-900 border-b border-zinc-800 shadow-sm">
+          <div className="mx-auto w-full px-4 py-3 flex items-center justify-between gap-3">
             {/* Logo and branding */}
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-inner text-sm tracking-wider">
@@ -292,8 +292,8 @@ export default function DailyEntryShell({
 
         {/* Dynamic Project & Active Revision Context Header (when programme is selected) */}
         {programmeId && (
-          <div className="w-full bg-zinc-900 border-b border-zinc-800/80 px-4 py-3">
-            <div className="mx-auto w-full max-w-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="shrink-0 w-full bg-zinc-900/50 border-b border-zinc-800/80 px-4 py-3">
+            <div className="mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-950/80 border border-blue-800/50 px-2 py-0.5 rounded">
@@ -342,8 +342,8 @@ export default function DailyEntryShell({
 
         {/* Error Banner */}
         {error && (
-          <div className="w-full max-w-3xl px-4 mt-3">
-            <div className="rounded-xl border border-red-800/60 bg-red-950/40 p-3.5 text-red-200 flex items-center justify-between gap-3 text-xs sm:text-sm">
+          <div className="w-full px-4 py-3 shrink-0">
+            <div className="max-w-3xl mx-auto rounded-xl border border-red-800/60 bg-red-950/40 p-3.5 text-red-200 flex items-center justify-between gap-3 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -370,10 +370,11 @@ export default function DailyEntryShell({
         )}
 
         {/* Main Body */}
-        <main className="w-full max-w-3xl flex-1 px-2 sm:px-4 py-4">
+        <main className="flex-1 w-full min-h-0 flex flex-col relative">
           {/* Zero Active Programmes State */}
           {!loading && availableProgrammes.length === 0 && (
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center my-6">
+            <div className="flex-1 overflow-y-auto px-4 py-6">
+              <div className="max-w-3xl mx-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center my-6">
               <div className="w-12 h-12 rounded-full bg-zinc-800 text-zinc-400 flex items-center justify-center mx-auto mb-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -390,11 +391,13 @@ export default function DailyEntryShell({
                 Muat Semula
               </button>
             </div>
+            </div>
           )}
 
           {/* Multiple Active Programmes Selector (when none is selected yet) */}
           {!loading && availableProgrammes.length > 1 && !programmeId && (
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 my-4">
+            <div className="flex-1 overflow-y-auto px-4 py-6">
+              <div className="max-w-3xl mx-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-5 my-4">
               <div className="mb-4">
                 <h3 className="text-sm sm:text-base font-bold text-zinc-100">Pilih Projek / Program Tapak</h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
@@ -428,6 +431,7 @@ export default function DailyEntryShell({
                   </button>
                 ))}
               </div>
+            </div>
             </div>
           )}
 

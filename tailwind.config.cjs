@@ -9,6 +9,9 @@ module.exports = {
           850: '#202023',
         },
       },
+      spacing: {
+        'safe': 'env(safe-area-inset-bottom)',
+      },
     },
   },
   plugins: [],
