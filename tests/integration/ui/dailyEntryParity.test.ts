@@ -510,10 +510,10 @@ describe('F2.1-C Executable Behavioural Parity & Lifecycle Failure Safety Suite'
       React.createElement(DailyEntryForm, { initialTab: 'NEW_ACTIVITY' })
     );
 
-    expect(html).toContain('Tarikh &amp; Status Kerja');
-    expect(html).toContain('Maklumat Tapak &amp; Cuaca (Format JKR Page 1)');
-    expect(html).toContain('Tenaga Kerja di Tapak (Workforce)');
-    expect(html).toContain('Catatan &amp; Huraian Kemajuan Kerja');
-    expect(html).toContain('Hantar &amp; Simpan Buku Harian Tapak');
+    expect(html).toContain('Harian');
+    expect(html).toContain('Tapak');
+    expect(html).toContain('Pekerja');
+    expect(html).toContain('Catatan');
+    expect(html).toContain('Simpan');
   });
 });

@@ -82,10 +82,10 @@ describe('Site Diary runtime workspace navigation', () => {
     expect(container.textContent).toContain('PRODUCTION_RECORDS');
     const tabs = [...container.querySelectorAll('[role="tab"]')].slice(0, 4);
     expect(tabs.map((tab) => tab.textContent)).toEqual([
-      'Laporan Baharu',
-      'Aktiviti Terbuka',
-      'Rekod / Sejarah',
-      'Kelulusan',
+      'Baharu',
+      'Aktiviti',
+      'Rekod',
+      'Semak',
     ]);
     expect(tabs[2]?.getAttribute('aria-selected')).toBe('true');
 

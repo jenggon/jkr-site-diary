@@ -9,6 +9,7 @@ import "./ngamsoi-n05.css";
 import "./ngamsoi-n05r.css";
 import "./ngamsoi-n05r-spine.css";
 import "./ngamsoi-n04r.css";
+import "./ngamsoi-n05r2-type.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,7 +23,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "NGAMSOI | JKR Site Diary",
-  description: "NGAMSOI digital engineer fieldbook for authoritative JKR site records",
+  description: "NGAMSOI buku tapak digital JKR",
   icons: {
     icon: "/ngamsoi-mark.svg",
   },
@@ -35,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ms"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

@@ -140,7 +140,7 @@ export default function OpenActivitiesList({
             ></path>
           </svg>
           <span className="text-sm font-medium text-zinc-300">
-            Memuatkan senarai aktiviti terbuka...
+            Muat…
           </span>
         </div>
       </div>
@@ -179,7 +179,7 @@ export default function OpenActivitiesList({
               aria-label="Cuba semula muat aktiviti"
               className="px-4 py-2 rounded-xl bg-red-900 hover:bg-red-800 text-white text-xs font-bold transition-colors shrink-0 min-h-[44px] flex items-center justify-center"
             >
-              Cuba Semula
+              Ulang
             </button>
           )}
         </div>
@@ -213,10 +213,10 @@ export default function OpenActivitiesList({
 
         <div className="space-y-1 max-w-md mx-auto">
           <h3 className="text-base sm:text-lg font-bold text-zinc-100">
-            Tiada Aktiviti Terbuka
+            Tiada
           </h3>
           <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-            Tiada aktiviti kerja terbuka untuk disambung pada masa ini. Sila cipta laporan baharu untuk memulakan aktiviti kerja.
+
           </p>
         </div>
 
@@ -237,7 +237,7 @@ export default function OpenActivitiesList({
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>+ Cipta Laporan Baharu</span>
+            <span>Baharu</span>
           </button>
         </div>
       </div>
@@ -253,7 +253,7 @@ export default function OpenActivitiesList({
       {/* Header with Counter and Refresh button */}
       <div className="flex items-center justify-between gap-2 px-1">
         <div className="text-xs sm:text-sm font-semibold text-zinc-300">
-          Senarai Aktiviti Terbuka ({activities.length})
+          Aktiviti · {activities.length}
         </div>
         {programmeId && (
           <button
@@ -277,7 +277,7 @@ export default function OpenActivitiesList({
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            <span>Muat Semula</span>
+            <span>Muat</span>
           </button>
         )}
       </div>

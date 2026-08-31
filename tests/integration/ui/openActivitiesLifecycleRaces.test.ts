@@ -495,7 +495,7 @@ describe('F2.2-B03R3 — Real Component Race & Invalidation Lifecycle Suite', ()
     expect(container.querySelector('[data-testid="continuation-banner"]')).toBeNull();
     expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (STALE LATE)');
 
-    // 5. User switches to "+ Laporan Baharu" tab
+    // 5. User switches to "Baharu" tab
     const newTabBtn = container.querySelector('[data-testid="tab-new-activity"]') as HTMLButtonElement;
     await act(async () => {
       newTabBtn.click();
@@ -507,7 +507,7 @@ describe('F2.2-B03R3 — Real Component Race & Invalidation Lifecycle Suite', ()
     expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (STALE LATE)');
 
     // B. Operational source selector is present (not locked/bypassed)
-    expect(container.querySelector('[data-testid="operational-source-selector"]') || container.innerHTML.includes('Sumber Aktiviti')).toBeTruthy();
+    expect(container.querySelector('[data-testid="operational-source-selector"]') || container.innerHTML.includes('Sumber')).toBeTruthy();
 
     // C. Tarikh Laporan Harian & Tarikh Mula Sebenar start with todayIso
     const dateInputs = container.querySelectorAll('input[type="date"]');
@@ -653,7 +653,7 @@ describe('F2.2-B03R3 — Real Component Race & Invalidation Lifecycle Suite', ()
     expect(container.innerHTML).not.toContain('Aktiviti A - Cerucuk RC (OLD PROG SELANGOR)');
     expect(container.innerHTML).toContain('Aktiviti Program B (Kerja Kumbahan)');
 
-    // 5. Expose form by switching to "+ Laporan Baharu" under Programme Kedah
+    // 5. Expose form by switching to "Baharu" under Programme Kedah
     const newTabBtn = container.querySelector('[data-testid="tab-new-activity"]') as HTMLButtonElement;
     await act(async () => {
       newTabBtn.click();

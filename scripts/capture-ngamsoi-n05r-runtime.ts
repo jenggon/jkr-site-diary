@@ -111,8 +111,8 @@ async function main(): Promise<void> {
     await page.goto(`${BASE_URL}/site-diary`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Projek FPTV UPSI (Tawaran Semula)').first()).toBeVisible();
-    await page.getByRole('tab', { name: 'Laporan Baharu' }).click();
-    await expect(page.getByText('Pilih Sumber Aktiviti Harian')).toBeVisible();
+    await page.getByRole('tab', { name: 'Baharu' }).click();
+    await expect(page.getByRole('heading', { name: 'Sumber' })).toBeVisible();
     await expect(page.getByText('Kerja konkrit rasuk aras bawah · Zon B')).toBeVisible();
     await page.getByText('Kerja konkrit rasuk aras bawah · Zon B').click();
     await expect(page.locator('.mobile-entry-selected-source')).toBeVisible();
@@ -180,8 +180,8 @@ async function main(): Promise<void> {
     });
 
     expect(topMetrics.scrollWidth).toBeLessThanOrEqual(topMetrics.viewportWidth);
-    expect(topMetrics.sourcePrimitive.label).toBe('RECORD LOADED');
-    expect(topMetrics.sourcePrimitive.labelWidth).toBeGreaterThan(60);
+    expect(topMetrics.sourcePrimitive.label).toBe('SUMBER');
+    expect(topMetrics.sourcePrimitive.labelWidth).toBeGreaterThan(40);
     expect(topMetrics.sourcePrimitive.labelHeight).toBeLessThan(20);
     expect(topMetrics.sourcePrimitive.labelBackground).toBe('rgba(0, 0, 0, 0)');
     expect(topMetrics.sourcePrimitive.labelWhiteSpace).toBe('nowrap');
@@ -189,7 +189,8 @@ async function main(): Promise<void> {
     expect(topMetrics.sourcePrimitive.notchWidth).toBeGreaterThan(20);
 
     expect(topMetrics.typography.headingFamily).toBe(topMetrics.typography.inputFamily);
-    expect(topMetrics.typography.referenceFamily).not.toBe(topMetrics.typography.inputFamily);
+    expect(topMetrics.typography.referenceFamily).toBe(topMetrics.typography.inputFamily);
+    expect(topMetrics.typography.inputSize).toBeGreaterThanOrEqual(15);
     expect(topMetrics.typography.headingSize).toBeGreaterThan(topMetrics.typography.inputSize);
 
     expect(topMetrics.spine.railWidth).toBeGreaterThanOrEqual(2);

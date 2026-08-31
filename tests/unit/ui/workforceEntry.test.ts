@@ -30,7 +30,7 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
       })
     );
 
-    expect(html).toContain('Tenaga Kerja di Tapak (Workforce)');
+    expect(html).toContain('Pekerja');
     expect(html).toContain('Pekerja Am');
     expect(html).toContain('Tukang Kayu');
     expect(html).toContain('Bumiputera');
@@ -90,7 +90,7 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
       })
     );
 
-    expect(html).toContain('Tiada tred tenaga kerja ditambah');
+    expect(html).toContain('Tiada');
     expect(html).toContain('0 Orang');
   });
 

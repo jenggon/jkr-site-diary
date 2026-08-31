@@ -51,10 +51,10 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
     );
 
     // Should render selected source summary
-    expect(html).toContain('Kerja Jadual (MSP)');
+    expect(html).toContain('MSP');
     expect(html).toContain('Kerja Asas Bangunan (Footing)');
     expect(html).toContain('WBS 1.1');
-    expect(html).toContain('Tukar Sumber');
+    expect(html).toContain('Tukar');
   });
 
   // 2. Selected source summary remains visible before submission
@@ -75,7 +75,7 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
 
     expect(html).toContain('VO-01-03');
     expect(html).toContain('VO 01 / Item 3: Tambahan Tangki Air');
-    expect(html).toContain('Kerja Tambahan / VO (APK)');
+    expect(html).toContain('VO');
   });
 
   // 3. Save success exposes only authorised F2.1 next actions
@@ -93,7 +93,7 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
     expect(html).toContain('Simpanan Berjaya');
     expect(html).toContain('Buku Harian Tapak berjaya disimpan.');
     expect(html).toContain('/site-diary/print?id=sd-saved-8888');
-    expect(html).toContain('+ Laporan Baharu');
+    expect(html).toContain('Baharu');
 
     // Asserts no unauthorised scope links (F2.2 Open Activities, F2.3 History, F2.4 Approval)
     expect(html).not.toContain('/open-activities');
@@ -101,7 +101,7 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
     expect(html).not.toContain('/history');
   });
 
-  // 4. Edit success exposes coherent next action without + Laporan Baharu confusion
+  // 4. Edit success exposes coherent next action without Baharu confusion
   it('4. Edit success exposes print link without showing misleading "Laporan Baharu" button', () => {
     const html = renderToString(
       React.createElement(DailyEntryFeedback, {
@@ -115,7 +115,7 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
     expect(html).toContain('Kemaskini Berjaya');
     expect(html).toContain('Buku Harian Tapak berjaya dikemaskini.');
     expect(html).toContain('/site-diary/print?id=sd-edit-9999');
-    expect(html).not.toContain('+ Laporan Baharu');
+    expect(html).not.toContain('Baharu');
   });
 
   // 5. Print link points to existing /site-diary/print route with saved ID
@@ -138,7 +138,7 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
 
     expect(html).not.toContain('mockup-phone');
     expect(html).not.toContain('iphone-frame');
-    expect(html).toContain('Tarikh &amp; Status Kerja');
+    expect(html).toContain('Harian');
   });
 
   // 7. Navigation links contain no hardcoded Programme UUIDs

@@ -21,7 +21,7 @@ export default function SiteDiaryWorkspace() {
   const tabs: Array<{ id: WorkspaceTab; label: string; icon: React.ReactNode }> = [
     {
       id: 'NEW',
-      label: 'Laporan Baharu',
+      label: 'Baharu',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -41,7 +41,7 @@ export default function SiteDiaryWorkspace() {
     },
     {
       id: 'OPEN',
-      label: 'Aktiviti Terbuka',
+      label: 'Aktiviti',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -61,7 +61,7 @@ export default function SiteDiaryWorkspace() {
     },
     {
       id: 'RECORDS',
-      label: 'Rekod / Sejarah',
+      label: 'Rekod',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -81,7 +81,7 @@ export default function SiteDiaryWorkspace() {
     },
     {
       id: 'APPROVALS',
-      label: 'Kelulusan',
+      label: 'Semak',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"

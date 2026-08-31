@@ -275,8 +275,8 @@ export default function OperationalSourceSelector({
                   }`}
                 >
                   {currentSelection.sourceType === 'MSP'
-                    ? 'Kerja Jadual (MSP)'
-                    : 'Kerja Tambahan / VO (APK)'}
+                    ? 'MSP'
+                    : 'VO'}
                 </span>
                 {currentSelection.code && (
                   <span className="text-[10px] font-mono text-zinc-400">
@@ -285,7 +285,7 @@ export default function OperationalSourceSelector({
                 )}
                 {currentSelection.isOmission && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">
-                    Pengurangan (Omission)
+                    Gugur
                   </span>
                 )}
               </div>
@@ -308,7 +308,7 @@ export default function OperationalSourceSelector({
               disabled={disabled}
               className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700 transition-colors"
             >
-              Tukar Sumber
+              Tukar
             </button>
             <button
               type="button"
@@ -340,15 +340,11 @@ export default function OperationalSourceSelector({
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-400 md:hidden">
-                Sumber operasi
+                Sumber
               </p>
               <h3 className="text-sm sm:text-base font-bold text-zinc-100">
-                Pilih Sumber Aktiviti Harian
+                Sumber
               </h3>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Setiap aktiviti tapak mestilah berpunca daripada <strong>Kerja Jadual (MSP)</strong>{' '}
-                atau <strong>Kerja Tambahan / VO (APK)</strong>.
-              </p>
             </div>
             {currentSelection && (
               <button
@@ -394,7 +390,7 @@ export default function OperationalSourceSelector({
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              <span>Kerja Jadual (MSP)</span>
+              <span>MSP</span>
             </button>
 
             <button
@@ -424,7 +420,7 @@ export default function OperationalSourceSelector({
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
-              <span>Kerja Tambahan / VO (APK)</span>
+              <span>VO</span>
             </button>
           </div>
 
@@ -453,8 +449,8 @@ export default function OperationalSourceSelector({
                 aria-label={activeTab === 'MSP' ? 'Cari tugasan MSP' : 'Cari kerja VO atau APK'}
                 placeholder={
                   activeTab === 'MSP'
-                    ? 'Cari nama tugasan, WBS, atau UID...'
-                    : 'Cari no rujukan VO, item, atau perihalan...'
+                    ? 'Cari'
+                    : 'Cari'
                 }
                 className="mobile-entry-search-input w-full rounded-xl bg-zinc-950 border border-zinc-800 px-3.5 py-2 text-xs sm:text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
               />
@@ -475,7 +471,7 @@ export default function OperationalSourceSelector({
                 onClick={() => setShowVoModal(true)}
                 className="px-3 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-600/50 text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-colors"
               >
-                <span>+ Daftar VO</span>
+                <span>Tambah</span>
               </button>
             )}
           </div>
@@ -493,7 +489,7 @@ export default function OperationalSourceSelector({
                 }
                 className="px-2 py-0.5 rounded bg-red-900 hover:bg-red-800 text-white font-semibold"
               >
-                Cuba Semula
+                Ulang
               </button>
             </div>
           )}
@@ -503,17 +499,17 @@ export default function OperationalSourceSelector({
             <div>
               {loadingTasks ? (
                 <div className="py-8 text-center text-xs text-zinc-500 animate-pulse">
-                  Memuatkan tugasan jadual kerja...
+                  Muat…
                 </div>
               ) : filteredMspTasks.length === 0 ? (
                 <div className="py-8 text-center rounded-xl border border-zinc-800/60 bg-zinc-950/40 p-4">
                   <p className="text-xs sm:text-sm font-semibold text-zinc-300">
                     {searchQuery
-                      ? 'Tiada tugasan sepadan dengan carian.'
-                      : 'Tiada tugasan ditemui untuk semakan aktif ini.'}
+                      ? 'Tiada'
+                      : 'Tiada'}
                   </p>
                   <p className="text-[11px] text-zinc-500 mt-1">
-                    Pastikan Program Kerja MSP telah diimport dan diluluskan.
+
                   </p>
                 </div>
               ) : (
@@ -580,24 +576,24 @@ export default function OperationalSourceSelector({
             <div>
               {loadingVo ? (
                 <div className="py-8 text-center text-xs text-zinc-500 animate-pulse">
-                  Memuatkan rekod VO / APK...
+                  Muat…
                 </div>
               ) : filteredVoItems.length === 0 ? (
                 <div className="py-8 text-center rounded-xl border border-zinc-800/60 bg-zinc-950/40 p-4">
                   <p className="text-xs sm:text-sm font-semibold text-zinc-300">
                     {searchQuery
-                      ? 'Tiada rekod VO sepadan dengan carian.'
-                      : 'Tiada rekod kerja VO / APK didaftarkan bagi projek ini.'}
+                      ? 'Tiada'
+                      : 'Tiada'}
                   </p>
                   <p className="text-[11px] text-zinc-500 mt-1">
-                    Anda boleh menambah item VO baharu menggunakan butang &quot;+ Daftar VO&quot;.
+
                   </p>
                   <button
                     type="button"
                     onClick={() => setShowVoModal(true)}
                     className="mt-3 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-colors inline-block"
                   >
-                    + Daftar VO Sekarang
+                    Tambah
                   </button>
                 </div>
               ) : (
@@ -617,11 +613,11 @@ export default function OperationalSourceSelector({
                           </span>
                           {vo.is_omission ? (
                             <span className="text-[11px] md:text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800">
-                              Pengurangan
+                              Gugur
                             </span>
                           ) : (
                             <span className="text-[11px] md:text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                              Penambahan
+                              Tambah
                             </span>
                           )}
                         </div>
@@ -658,7 +654,7 @@ export default function OperationalSourceSelector({
           <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h4 className="text-sm sm:text-base font-bold text-zinc-100">
-                Daftar Item VO / APK Baharu
+                VO Baharu
               </h4>
               <button
                 type="button"
@@ -678,41 +674,41 @@ export default function OperationalSourceSelector({
             <form onSubmit={handleCreateVoItem} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                  No Rujukan VO / Arahan Perubahan Kerja *
+                  Rujukan *
                 </label>
                 <input
                   type="text"
                   required
                   value={newVoRef}
                   onChange={(e) => setNewVoRef(e.target.value)}
-                  placeholder="cth: VO 01 / APK-01"
+                  placeholder="VO / APK"
                   className="w-full rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                  Item Baris / Tajuk Kerja *
+                  Kerja *
                 </label>
                 <input
                   type="text"
                   required
                   value={newLineItem}
                   onChange={(e) => setNewLineItem(e.target.value)}
-                  placeholder="cth: Kerja Tambahan Paip HDPE 150mm"
+                  placeholder="Tajuk kerja"
                   className="w-full rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                  Perihalan Terperinci (Pilihan)
+                  Huraian
                 </label>
                 <textarea
                   rows={3}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Huraian skop kerja tambahan / pengurangan..."
+                  placeholder="Huraian"
                   className="w-full rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -729,7 +725,7 @@ export default function OperationalSourceSelector({
                   htmlFor="isOmissionCheckbox"
                   className="text-xs text-zinc-300 cursor-pointer"
                 >
-                  Kerja Pengurangan (Omission)
+                  Kerja Gugur
                 </label>
               </div>
 
@@ -746,7 +742,7 @@ export default function OperationalSourceSelector({
                   disabled={creatingVo}
                   className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white transition-colors disabled:opacity-50"
                 >
-                  {creatingVo ? 'Menyimpan...' : 'Daftar & Simpan'}
+                  {creatingVo ? 'Simpan…' : 'Simpan'}
                 </button>
               </div>
             </form>

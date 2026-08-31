@@ -36,9 +36,9 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
     );
 
     // Verify Bahasa Malaysia labels
-    expect(html).toContain('Kerja Jadual (MSP)');
-    expect(html).toContain('Kerja Tambahan / VO (APK)');
-    expect(html).toContain('Pilih Sumber Aktiviti Harian');
+    expect(html).toContain('MSP');
+    expect(html).toContain('VO');
+    expect(html).toContain('Sumber');
 
     // Verify technical identifiers are NOT the primary user-facing terminology
     expect(html).not.toContain('MSP_TASK');
@@ -60,10 +60,10 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
     );
 
     expect(html).toContain('Kerja-kerja Struktur Bawah (Substructure)');
-    expect(html).toContain('Kerja Jadual (MSP)');
+    expect(html).toContain('MSP');
     expect(html).toContain('WBS: 1.1.2');
     expect(html).toContain('UID: 12');
-    expect(html).toContain('Tukar Sumber');
+    expect(html).toContain('Tukar');
   });
 
   it('renders selected VO source summary card cleanly when a VO item is selected', () => {
@@ -81,9 +81,9 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
     );
 
     expect(html).toContain('VO 01: Pemasangan Paip Tambahan 150mm HDPE');
-    expect(html).toContain('Kerja Tambahan / VO (APK)');
+    expect(html).toContain('VO');
     expect(html).toContain('Skop tambahan mengikut kelulusan SO');
-    expect(html).toContain('Tukar Sumber');
+    expect(html).toContain('Tukar');
   });
 
   it('enforces strict XOR behavior in selection handlers (MSP selection clears VO, VO clears MSP)', () => {
@@ -129,15 +129,15 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
     const source = read('src/app/site-diary/OperationalSourceSelector.tsx');
 
     // Zero states
-    expect(source).toContain('Tiada tugasan ditemui untuk semakan aktif ini.');
-    expect(source).toContain('Tiada rekod kerja VO / APK didaftarkan bagi projek ini.');
+    expect(source).toContain('Tiada');
+    expect(source).toContain('Tiada');
 
     // Search filters
     expect(source).toContain('filteredMspTasks');
     expect(source).toContain('filteredVoItems');
 
     // Retry handling
-    expect(source).toContain('Cuba Semula');
+    expect(source).toContain('Ulang');
   });
 
   it('preserves integration inside DailyEntryForm without duplicate mutations', () => {

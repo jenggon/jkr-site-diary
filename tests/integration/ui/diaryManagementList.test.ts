@@ -149,10 +149,10 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     await click('Lihat Butiran');
     await click('Edit Rekod');
     expect(container.querySelector('form[aria-label="Borang Buku Harian Tapak"]')).toBeTruthy();
-    expect(container.textContent).toContain('Batal Suntingan');
+    expect(container.textContent).toContain('Batal');
     expect(detailReads).toHaveLength(3);
     expect(detailReads.every((url) => url === '/api/site-diary/raw-site-diary-uuid')).toBe(true);
-    await click('Batal Suntingan');
+    await click('Batal');
     expect(container.textContent).toContain('Canonical edit evidence');
   });
 

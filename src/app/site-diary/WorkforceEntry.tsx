@@ -45,7 +45,7 @@ type ActiveCountCell = {
 
 const CLASSIFICATIONS: Array<{ field: CountField; short: string; label: string }> = [
   { field: 'bumi_count', short: 'BUMI', label: 'Bumiputera' },
-  { field: 'non_bumi_count', short: 'NON-B', label: 'Bukan Bumiputera' },
+  { field: 'non_bumi_count', short: 'BUKAN', label: 'Bukan Bumiputera' },
   { field: 'foreign_count', short: 'ASING', label: 'Bukan Warganegara' },
 ];
 
@@ -145,11 +145,11 @@ export default function WorkforceEntry({
     >
       <header className="ng-workforce__header">
         <div className="min-w-0">
-          <div className="ng-workforce__kicker">WORKFORCE / SITE ROSTER</div>
-          <h3 className="ng-workforce__title" aria-label="Tenaga Kerja di Tapak (Workforce)">
-            Tenaga Kerja di Tapak
+          <div className="ng-workforce__kicker">PEKERJA</div>
+          <h3 className="ng-workforce__title" aria-label="Tenaga Kerja Tapak">
+            Pekerja
           </h3>
-          <p className="ng-workforce__hint">Tap angka untuk laras pekerja mengikut tred dan kerakyatan.</p>
+          <p className="ng-workforce__hint">Tap angka</p>
         </div>
         <div className="ng-workforce__overall" aria-label={`${overallTotal} Orang`}>
           <span>JUMLAH</span>
@@ -165,14 +165,14 @@ export default function WorkforceEntry({
       <div className="ng-workforce__matrix-head" aria-hidden="true">
         <span>TRED</span>
         <span>BUMI</span>
-        <span>NON-B</span>
+        <span>BUKAN</span>
         <span>ASING</span>
         <span>Σ</span>
       </div>
 
       <div className="ng-workforce__rows">
         {manpower.length === 0 ? (
-          <div className="ng-workforce__empty">Tiada tred tenaga kerja ditambah.</div>
+          <div className="ng-workforce__empty">Tiada</div>
         ) : (
           manpower.map((row, idx) => {
             const rowTotal =
@@ -256,7 +256,7 @@ export default function WorkforceEntry({
                   >
                     <div className="ng-workforce__controller-meta">
                       <span>{activeClassification.short}</span>
-                      <strong>{activeClassification.label} · {compactTradeName}</strong>
+                      <strong>{compactTradeName}</strong>
                     </div>
                     <div className="ng-workforce__controller-stepper">
                       <button
@@ -288,7 +288,7 @@ export default function WorkforceEntry({
       </div>
 
       <div className="ng-workforce__add">
-        <div className="ng-workforce__add-title">ADD TRADE</div>
+        <div className="ng-workforce__add-title">TRED</div>
         <select
           value={selectedCatalogTrade}
           onChange={(event) => {
@@ -299,9 +299,9 @@ export default function WorkforceEntry({
           disabled={disabled || availableCatalogTrades.length === 0}
           aria-label="Pilih dari katalog tred piawai"
         >
-          <option value="">Pilih dari katalog tred piawai</option>
+          <option value="">Pilih tred</option>
           {availableCatalogTrades.map((trade) => (
-            <option key={trade} value={trade}>{trade}</option>
+            <option key={trade} value={trade}>{rosterTradeLabel(trade)}</option>
           ))}
         </select>
 
@@ -316,7 +316,7 @@ export default function WorkforceEntry({
                 handleAddTrade(customTradeInput);
               }
             }}
-            placeholder="Atau taip nama tred khusus..."
+            placeholder="Tred baharu"
             disabled={disabled}
             aria-label="Nama tred khusus"
           />
@@ -325,7 +325,7 @@ export default function WorkforceEntry({
             onClick={() => handleAddTrade(customTradeInput)}
             disabled={disabled || !customTradeInput.trim()}
           >
-            + TAMBAH
+            Tambah
           </button>
         </div>
       </div>
