@@ -154,8 +154,10 @@
 }
 
 .ng-completion-action {
+  display: grid;
   min-width: 0;
   min-height: 44px;
+  place-items: center;
   border: 0;
   border-right: 1px solid var(--ng-graphite-700);
   border-radius: 0 !important;
@@ -196,8 +198,6 @@
 }
 
 .ng-completion-action--pending {
-  display: grid;
-  place-items: center;
   color: var(--ng-warning);
 }
 
