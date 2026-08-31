@@ -136,6 +136,7 @@ async function main(): Promise<void> {
       const sourceSegment = getComputedStyle(sourceSection, '::after');
       const locationNode = getComputedStyle(locationSection, '::before');
       const locationSegment = getComputedStyle(locationSection, '::after');
+      const locationSectionStyle = getComputedStyle(locationSection);
       const rail = getComputedStyle(form, '::before');
       const formRect = form.getBoundingClientRect();
       const sourceRect = sourceSection.getBoundingClientRect();
@@ -172,6 +173,8 @@ async function main(): Promise<void> {
           locationNodeContent: locationNode.content.replaceAll('"', '').replace(/^none$/, ''),
           locationNodeBorder: locationNode.borderColor,
           locationSegmentBackground: locationSegment.backgroundImage || locationSegment.backgroundColor,
+          activeSectionBackgroundImage: locationSectionStyle.backgroundImage,
+          activeSectionBoxShadow: locationSectionStyle.boxShadow,
         },
       };
     });
@@ -199,6 +202,8 @@ async function main(): Promise<void> {
     expect(topMetrics.spine.locationSegmentBackground).toContain('linear-gradient');
     expect(topMetrics.spine.sourceNodeBorder).not.toBe(topMetrics.spine.locationNodeBorder);
     expect(topMetrics.spine.sourceSegmentBackground).not.toBe(topMetrics.spine.locationSegmentBackground);
+    expect(topMetrics.spine.activeSectionBackgroundImage).toBe('none');
+    expect(topMetrics.spine.activeSectionBoxShadow).toBe('none');
 
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, 'n05r1-live-new-entry-fluid-top-390x844.png'),
@@ -206,38 +211,50 @@ async function main(): Promise<void> {
     });
 
     const workforce = page.locator('.ng-workforce');
+    const firstRow = workforce.getByTestId('workforce-row-0');
     const figure = workforce.getByTestId('workforce-cell-0-bumi_count');
     const controller = workforce.getByTestId('workforce-active-controller');
-    const activeValue = workforce.getByTestId('workforce-active-value');
 
     await figure.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
     await page.waitForTimeout(80);
 
-    await expect(controller).toHaveAttribute('aria-disabled', 'true');
-    await expect(controller.getByRole('button', { name: 'Kurangkan bilangan pekerja' })).toBeDisabled();
-    await expect(controller.getByRole('button', { name: 'Tambah bilangan pekerja' })).toBeDisabled();
+    expect(await controller.count()).toBe(0);
 
     const compactRoster = await workforce.evaluate((element) => {
       const row = element.querySelector<HTMLElement>('.ng-workforce__row');
+      const trade = element.querySelector<HTMLElement>('.ng-workforce__trade > span');
       return {
         rowHeight: row?.getBoundingClientRect().height ?? 0,
         countCellButtons: element.querySelectorAll('.ng-workforce__count-cell > button').length,
         embeddedSteppers: element.querySelectorAll('.ng-workforce__count-cell .ng-workforce__stepper').length,
+        tradeWhiteSpace: trade ? getComputedStyle(trade).whiteSpace : '',
       };
     });
-    expect(compactRoster.rowHeight).toBeLessThanOrEqual(62);
+    expect(compactRoster.rowHeight).toBeLessThanOrEqual(50);
     expect(compactRoster.countCellButtons).toBeGreaterThanOrEqual(3);
     expect(compactRoster.embeddedSteppers).toBe(0);
+    expect(compactRoster.tradeWhiteSpace).toBe('nowrap');
 
     await figure.click();
     await expect(figure).toHaveAttribute('aria-pressed', 'true');
-    await expect(controller).toHaveAttribute('aria-disabled', 'false');
+    await expect(controller).toBeVisible();
+
+    const activeValue = workforce.getByTestId('workforce-active-value');
     await expect(activeValue).toHaveText('0');
 
     const minus = controller.getByRole('button', { name: /Tolak 1 Bumiputera/i });
     const plus = controller.getByRole('button', { name: /Tambah 1 Bumiputera/i });
     await expect(minus).toBeDisabled();
     await expect(plus).toBeEnabled();
+
+    const contextAttachment = await page.evaluate(() => {
+      const row = document.querySelector<HTMLElement>('[data-testid="workforce-row-0"]')!;
+      const controller = document.querySelector<HTMLElement>('[data-testid="workforce-active-controller"]')!;
+      const rowRect = row.getBoundingClientRect();
+      const controllerRect = controller.getBoundingClientRect();
+      return Math.abs(controllerRect.top - rowRect.bottom);
+    });
+    expect(contextAttachment).toBeLessThanOrEqual(1.5);
 
     await plus.click();
     await plus.click();
@@ -248,25 +265,31 @@ async function main(): Promise<void> {
     const workforceEditing = await workforce.evaluate((element) => {
       const node = getComputedStyle(element, '::before');
       const segment = getComputedStyle(element, '::after');
+      const section = getComputedStyle(element);
       return {
         content: node.content.replaceAll('"', '').replace(/^none$/, ''),
         borderColor: node.borderColor,
         segmentBackground: segment.backgroundImage || segment.backgroundColor,
+        backgroundImage: section.backgroundImage,
+        boxShadow: section.boxShadow,
       };
     });
     expect(workforceEditing.content).toBe('');
     expect(workforceEditing.segmentBackground).toContain('linear-gradient');
+    expect(workforceEditing.backgroundImage).toBe('none');
+    expect(workforceEditing.boxShadow).toBe('none');
 
+    await firstRow.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
+    await page.waitForTimeout(60);
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, 'n04r-workforce-active-cell-390x844.png'),
       fullPage: false,
     });
 
-    /* Tap the active figure again to close the adjustment bay, then leave the section.
-       This validates the visible revise -> untick -> recompile loop. */
+    /* Close the same active figure, leave the section, and prove visible recompile. */
     await figure.click();
     await expect(figure).toHaveAttribute('aria-pressed', 'false');
-    await expect(controller).toHaveAttribute('aria-disabled', 'true');
+    expect(await controller.count()).toBe(0);
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 
     const workforceCompiled = await workforce.evaluate((element) => {
@@ -288,7 +311,7 @@ async function main(): Promise<void> {
     });
 
     console.log(
-      `N04R/N05R.1 live gate captured ${MOBILE.width}x${MOBILE.height}: fluid compile rail, normalized type scale, figures-only roster, active-cell +/- and revise/recompile signalling`,
+      `N04R/N05R.1 live gate captured ${MOBILE.width}x${MOBILE.height}: clean fluid datum, normalized type scale, compact figures-only roster, row-local +/- and revise/recompile signalling`,
     );
   } finally {
     await context.close();
