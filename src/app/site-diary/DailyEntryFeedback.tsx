@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import NgamsoiCompletionRitual from '@/components/brand/NgamsoiCompletionRitual';
 
 export interface DailyEntryFeedbackProps {
   error: string | null;
@@ -132,108 +133,69 @@ export default function DailyEntryFeedback({
   };
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      {/* Error Alert */}
+    <div className={`${className}`}>
       {error && (
         <div
           role="alert"
           aria-live="assertive"
-          className="rounded-2xl border border-red-800/80 bg-red-950/70 p-4 text-xs sm:text-sm text-red-200 shadow-lg flex items-start gap-3"
+          className="border-y border-red-800/70 bg-red-950/45 px-4 py-3 text-xs sm:text-sm text-red-200"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5 text-red-400 shrink-0 mt-0.5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <div className="flex-1 space-y-1">
-            <h4 className="font-bold text-red-300">Ralat Semasa Memproses Borang</h4>
-            <p className="leading-relaxed text-red-200">{error}</p>
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-red-400" aria-hidden="true">!</span>
+            <div className="min-w-0 flex-1">
+              <h4 className="font-semibold text-red-300">Ralat</h4>
+              <p className="mt-1 leading-relaxed text-red-200">{error}</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Success Status */}
       {success && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-2xl border border-emerald-800/80 bg-emerald-950/70 p-4 text-xs sm:text-sm text-emerald-200 shadow-lg space-y-3"
-        >
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div className="flex-1 space-y-0.5">
-              <h4 className="font-bold text-emerald-300">
-                {isEditMode ? 'Kemaskini Berjaya' : 'Simpanan Berjaya'}
-              </h4>
-              <p className="leading-relaxed text-emerald-200">{success}</p>
-            </div>
-          </div>
+        <div data-testid="post-save-feedback">
+          <NgamsoiCompletionRitual
+            savedSiteDiaryId={savedSiteDiaryId}
+            isEditMode={isEditMode}
+            successText={success}
+          />
 
-          {/* Post-Save Actions */}
           {savedSiteDiaryId && (
-            <div className="pt-2 border-t border-emerald-800/50 flex flex-wrap items-center gap-2.5">
-              <span className="text-[11px] text-emerald-400/80 font-mono">
-                ID: {savedSiteDiaryId.slice(0, 8)}...
-              </span>
-
-              <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <>
+              <div className="ng-completion-actions" aria-label="Tindakan selepas simpan">
                 {hasValidApprovalContext && (
-                  <>
-                    {approvalStatus === 'PENDING' ? (
-                      <span
-                        data-testid="approval-status-pending"
-                        data-approval-id={approvalId ?? undefined}
-                        className="px-3 py-1.5 rounded-xl bg-amber-950/80 text-amber-300 text-xs font-semibold border border-amber-700/60 shadow-sm flex items-center gap-1.5"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" aria-hidden="true"></span>
-                        <span>Menunggu Kelulusan</span>
+                  approvalStatus === 'PENDING' ? (
+                    <span
+                      data-testid="approval-status-pending"
+                      data-approval-id={approvalId ?? undefined}
+                      className="ng-completion-action ng-completion-action--pending"
+                      aria-label="Menunggu kelulusan"
+                    >
+                      <span className="sr-only">Menunggu Kelulusan</span>
+                      <span aria-hidden="true">Menunggu</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleRequestApproval}
+                      disabled={approvalStatus === 'REQUESTING'}
+                      data-testid="request-approval-btn"
+                      className="ng-completion-action ng-completion-action--primary"
+                      aria-label="Mohon kelulusan"
+                    >
+                      <span className="sr-only">
+                        {approvalStatus === 'REQUESTING' ? 'Memohon...' : 'Mohon Kelulusan'}
                       </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleRequestApproval}
-                        disabled={approvalStatus === 'REQUESTING'}
-                        data-testid="request-approval-btn"
-                        className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-colors border border-amber-500 shadow-sm disabled:opacity-50 flex items-center gap-1.5"
-                      >
-                        {approvalStatus === 'REQUESTING' ? (
-                          <>
-                            <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true"></span>
-                            <span>Memohon...</span>
-                          </>
-                        ) : (
-                          <span>Mohon Kelulusan</span>
-                        )}
-                      </button>
-                    )}
-                  </>
+                      <span aria-hidden="true">{approvalStatus === 'REQUESTING' ? 'Mohon…' : 'Mohon'}</span>
+                    </button>
+                  )
                 )}
 
                 <Link
                   href={`/site-diary/print?id=${encodeURIComponent(savedSiteDiaryId)}`}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 text-xs font-semibold transition-colors border border-emerald-600/50 shadow-sm"
+                  className="ng-completion-action"
+                  aria-label="Lihat format JKR"
                 >
-                  Lihat Format JKR (Print)
+                  <span className="sr-only">Lihat Format JKR (Print)</span>
+                  <span aria-hidden="true">Cetak</span>
                 </Link>
 
                 {onBackToOpenActivities && !isEditMode && (
@@ -241,9 +203,11 @@ export default function DailyEntryFeedback({
                     type="button"
                     onClick={onBackToOpenActivities}
                     data-testid="post-save-back-to-open-activities-btn"
-                    className="px-3 py-1.5 rounded-xl bg-blue-900/80 hover:bg-blue-800 text-blue-100 text-xs font-semibold transition-colors border border-blue-700/60 shadow-sm"
+                    className="ng-completion-action"
+                    aria-label="Aktiviti terbuka"
                   >
-                    Aktiviti Terbuka
+                    <span className="sr-only">Aktiviti Terbuka</span>
+                    <span aria-hidden="true">Aktiviti</span>
                   </button>
                 )}
 
@@ -251,19 +215,21 @@ export default function DailyEntryFeedback({
                   <button
                     type="button"
                     onClick={onResetForNewEntry}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-colors border border-zinc-700 shadow-sm"
+                    className="ng-completion-action"
+                    aria-label="Laporan baharu"
                   >
-                    + Laporan Baharu
+                    <span className="sr-only">+ Laporan Baharu</span>
+                    <span aria-hidden="true">Baharu</span>
                   </button>
                 )}
               </div>
 
               {approvalError && (
-                <div role="alert" className="w-full text-xs text-red-300 mt-1">
+                <div role="alert" className="ng-completion-approval-error">
                   {approvalError}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       )}
