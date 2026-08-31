@@ -160,6 +160,7 @@ async function main(): Promise<void> {
     const ritual = page.getByTestId('ngamsoi-completion');
     const signature = ritual.locator('.ng-completion__signature');
     await expect(ritual).toBeVisible();
+    await expect(saveButton).toBeHidden();
     await expect(signature).toContainText('Kena boh!');
     await expect(signature).toContainText('Ngamsoi.');
     await expect(ritual.locator('.sr-only').filter({ hasText: 'Simpanan Berjaya' })).toHaveCount(1);
