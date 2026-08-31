@@ -89,23 +89,27 @@ async function main(): Promise<void> {
     </main>
   </body></html>`, { waitUntil: 'load' });
 
-  await expect(page.getByText('RECORD LOADED', { exact: true })).toBeVisible();
   await expect(page.getByText('Kerja konkrit rasuk aras bawah · Zon B', { exact: true })).toBeVisible();
 
-  const metrics = await page.evaluate(() => ({
-    viewportWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-    viewportHeight: window.innerHeight,
-    loadedTop: document.querySelector('.mobile-entry-selected-source')?.getBoundingClientRect().top ?? 0,
-    loadedHeight: document.querySelector('.mobile-entry-selected-source')?.getBoundingClientRect().height ?? 0,
-  }));
+  const metrics = await page.evaluate(() => {
+    const loaded = document.querySelector('.mobile-entry-selected-source');
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportHeight: window.innerHeight,
+      loadedTop: loaded?.getBoundingClientRect().top ?? 0,
+      loadedHeight: loaded?.getBoundingClientRect().height ?? 0,
+      pseudoLabel: loaded ? getComputedStyle(loaded, '::before').content.replaceAll('"', '') : '',
+    };
+  });
 
+  expect(metrics.pseudoLabel).toBe('RECORD LOADED');
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.loadedHeight).toBeGreaterThan(100);
   expect(metrics.loadedTop).toBeLessThan(260);
 
   await page.screenshot({ path: path.join(EVIDENCE_DIR, 'n02-record-loaded-375x812.png') });
-  console.log(`N02 visual gate captured: ${metrics.viewportWidth}x${metrics.viewportHeight}px loadedTop=${metrics.loadedTop.toFixed(1)} loadedHeight=${metrics.loadedHeight.toFixed(1)}`);
+  console.log(`N02 visual gate captured: ${metrics.viewportWidth}x${metrics.viewportHeight}px loadedTop=${metrics.loadedTop.toFixed(1)} loadedHeight=${metrics.loadedHeight.toFixed(1)} pseudo=${metrics.pseudoLabel}`);
 
   await context.close();
   await browser.close();
