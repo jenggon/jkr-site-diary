@@ -67,23 +67,55 @@ async function main(): Promise<void> {
     await page.locator('#location').focus();
 
     const metrics = await page.evaluate(() => {
-      const state = (id: string) => {
-        const el = document.querySelector<HTMLElement>(id)!;
-        return {
-          after: getComputedStyle(el, '::after').content.replaceAll('"', ''),
-          afterDisplay: getComputedStyle(el, '::after').display,
-          beforeBorder: getComputedStyle(el, '::before').borderTopColor,
-          marginLeft: getComputedStyle(el).marginLeft,
-        };
-      };
+      const source = document.querySelector<HTMLElement>('#source')!;
+      const dates = document.querySelector<HTMLElement>('#dates')!;
+      const site = document.querySelector<HTMLElement>('#site')!;
+      const workforce = document.querySelector<HTMLElement>('#workforce')!;
+      const warning = document.querySelector<HTMLElement>('#warning')!;
+      const sourceAfter = getComputedStyle(source, '::after');
+      const datesAfter = getComputedStyle(dates, '::after');
+      const siteAfter = getComputedStyle(site, '::after');
+      const workforceAfter = getComputedStyle(workforce, '::after');
+      const warningAfter = getComputedStyle(warning, '::after');
+      const sourceBefore = getComputedStyle(source, '::before');
+      const datesBefore = getComputedStyle(dates, '::before');
+      const siteBefore = getComputedStyle(site, '::before');
+      const workforceBefore = getComputedStyle(workforce, '::before');
+      const warningBefore = getComputedStyle(warning, '::before');
+
       return {
         viewportWidth: document.documentElement.clientWidth,
         scrollWidth: document.documentElement.scrollWidth,
-        source: state('#source'),
-        dates: state('#dates'),
-        site: state('#site'),
-        workforce: state('#workforce'),
-        warning: state('#warning'),
+        source: {
+          after: sourceAfter.content.replaceAll('"', ''),
+          afterDisplay: sourceAfter.display,
+          beforeBorder: sourceBefore.borderTopColor,
+          marginLeft: getComputedStyle(source).marginLeft,
+        },
+        dates: {
+          after: datesAfter.content.replaceAll('"', ''),
+          afterDisplay: datesAfter.display,
+          beforeBorder: datesBefore.borderTopColor,
+          marginLeft: getComputedStyle(dates).marginLeft,
+        },
+        site: {
+          after: siteAfter.content.replaceAll('"', ''),
+          afterDisplay: siteAfter.display,
+          beforeBorder: siteBefore.borderTopColor,
+          marginLeft: getComputedStyle(site).marginLeft,
+        },
+        workforce: {
+          after: workforceAfter.content.replaceAll('"', ''),
+          afterDisplay: workforceAfter.display,
+          beforeBorder: workforceBefore.borderTopColor,
+          marginLeft: getComputedStyle(workforce).marginLeft,
+        },
+        warning: {
+          after: warningAfter.content.replaceAll('"', ''),
+          afterDisplay: warningAfter.display,
+          beforeBorder: warningBefore.borderTopColor,
+          marginLeft: getComputedStyle(warning).marginLeft,
+        },
       };
     });
 
