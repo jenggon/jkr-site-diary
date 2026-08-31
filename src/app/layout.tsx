@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "NGAMSOI | JKR Site Diary",
   description: "NGAMSOI digital engineer fieldbook for authoritative JKR site records",
+  icons: {
+    icon: "/ngamsoi-mark.svg",
+  },
 };
 
 export default function RootLayout({
