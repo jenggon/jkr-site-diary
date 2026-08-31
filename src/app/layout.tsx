@@ -5,6 +5,7 @@ import "./globals.css";
 import "./ngamsoi.css";
 import "./ngamsoi-n03.css";
 import "./ngamsoi-n04.css";
+import "./ngamsoi-n05.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
