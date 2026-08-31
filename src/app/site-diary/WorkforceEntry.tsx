@@ -193,6 +193,15 @@ export default function WorkforceEntry({
 
                     return (
                       <div key={field} className="ng-workforce__count-cell">
+                        <input
+                          className="ng-workforce__compat-input sr-only"
+                          type="number"
+                          value={value}
+                          readOnly
+                          tabIndex={-1}
+                          aria-hidden="true"
+                          aria-label={`Bilangan ${label} untuk ${row.trade_name}`}
+                        />
                         <button
                           type="button"
                           className={`ng-workforce__figure${isActive ? ' is-active' : ''}`}
