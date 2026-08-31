@@ -45,8 +45,20 @@ jobs:
 
       - name: Verify
         run: |
-          git diff --check
-          pnpm run verify
+          set -o pipefail
+          git diff --check 2>&1 | tee /tmp/n05r2-diff-check.log
+          pnpm run verify 2>&1 | tee /tmp/n05r2-verify.log
+
+      - name: Verify diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n05r2-verify-diagnostic
+          path: |
+            /tmp/n05r2-diff-check.log
+            /tmp/n05r2-verify.log
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Chromium
         run: pnpm exec playwright install --with-deps chromium
