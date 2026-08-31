@@ -131,6 +131,9 @@ async function main(): Promise<void> {
       const firstSection = form.querySelector<HTMLElement>(':scope > section')!;
       const firstMarker = getComputedStyle(firstSection, '::before');
       const firstTick = getComputedStyle(firstSection, '::after');
+      const currentSection = document.activeElement?.closest('section') as HTMLElement | null;
+      const currentMarker = currentSection ? getComputedStyle(currentSection, '::before') : null;
+      const currentTick = currentSection ? getComputedStyle(currentSection, '::after') : null;
       const rail = getComputedStyle(form, '::before');
       return {
         viewportWidth: root.clientWidth,
@@ -152,6 +155,11 @@ async function main(): Promise<void> {
           tickHeight: firstTick.height,
           railWidth: rail.width,
         },
+        current: {
+          markerBackground: currentMarker?.backgroundColor ?? '',
+          tickBackground: currentTick?.backgroundColor ?? '',
+          markerClip: currentMarker?.clipPath ?? '',
+        },
       };
     });
 
@@ -169,6 +177,8 @@ async function main(): Promise<void> {
     expect(topMetrics.ledger.markerClip).toContain('polygon');
     expect(parseFloat(topMetrics.ledger.tickHeight)).toBeGreaterThanOrEqual(2);
     expect(parseFloat(topMetrics.ledger.railWidth)).toBeGreaterThanOrEqual(2);
+    expect(topMetrics.current.markerClip).toContain('polygon');
+    expect(topMetrics.current.markerBackground).toBe(topMetrics.current.tickBackground);
 
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-top-390x844.png'),
@@ -193,7 +203,7 @@ async function main(): Promise<void> {
     });
 
     console.log(
-      `N05R live runtime gate captured ${MOBILE.width}x${MOBILE.height}: actual /site-diary route, selected-source pseudo reset, integrated ledger + NGAM datum, workforce pointer controls`,
+      `N05R live runtime gate captured ${MOBILE.width}x${MOBILE.height}: actual /site-diary route, selected-source pseudo reset, coherent CURRENT NGAM datum, workforce pointer controls`,
     );
   } finally {
     await context.close();
