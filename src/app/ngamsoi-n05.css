@@ -45,7 +45,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="bu
   height: 0.58rem;
   border: 1px solid var(--ng-step-color);
   border-radius: 50%;
-  background: var(--ng-graphite-950);
+  background-color: var(--ng-graphite-950) !important;
   box-shadow:
     0 0 0 3px var(--ng-graphite-950),
     0 0 0 4px color-mix(in srgb, var(--ng-step-color) 38%, transparent),
@@ -93,7 +93,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"])::b
 form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown))::before,
 form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__stepper > button:first-child:not(:disabled))::before,
 form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown))::before {
-  background: var(--ng-established);
+  background-color: var(--ng-established) !important;
   box-shadow:
     0 0 0 3px var(--ng-graphite-950),
     0 0 0 4px color-mix(in srgb, var(--ng-established) 46%, transparent);
@@ -118,7 +118,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="bu
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):focus-within::before {
-  background: var(--ng-current);
+  background-color: var(--ng-current) !important;
   box-shadow:
     0 0 0 3px var(--ng-graphite-950),
     0 0 0 4px color-mix(in srgb, var(--ng-current) 62%, transparent),
@@ -140,7 +140,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workf
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):has([role="alert"])::before,
 form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert)::before {
-  background: var(--ng-destructive);
+  background-color: var(--ng-destructive) !important;
   box-shadow:
     0 0 0 3px var(--ng-graphite-950),
     0 0 0 4px color-mix(in srgb, var(--ng-destructive) 54%, transparent),
