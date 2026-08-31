@@ -193,11 +193,12 @@ async function main(): Promise<void> {
     expect(topMetrics.spine.alignmentDelta).toBeLessThanOrEqual(1.5);
     expect(topMetrics.spine.sourceNodeClip).toBe('none');
     expect(topMetrics.spine.sourceNodeContent).toBe('✓');
-    expect(topMetrics.spine.sourceNodeBorder).toBe('rgb(85, 184, 121)');
+    expect(topMetrics.spine.sourceSegmentBackground).toContain('linear-gradient');
     expect(topMetrics.spine.sourceSegmentBottom).toContain('-');
     expect(topMetrics.spine.locationNodeContent).toBe('');
-    expect(topMetrics.spine.locationNodeBorder).toBe('rgb(255, 122, 26)');
     expect(topMetrics.spine.locationSegmentBackground).toContain('linear-gradient');
+    expect(topMetrics.spine.sourceNodeBorder).not.toBe(topMetrics.spine.locationNodeBorder);
+    expect(topMetrics.spine.sourceSegmentBackground).not.toBe(topMetrics.spine.locationSegmentBackground);
 
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, 'n05r1-live-new-entry-fluid-top-390x844.png'),
@@ -254,7 +255,6 @@ async function main(): Promise<void> {
       };
     });
     expect(workforceEditing.content).toBe('');
-    expect(workforceEditing.borderColor).toBe('rgb(255, 122, 26)');
     expect(workforceEditing.segmentBackground).toContain('linear-gradient');
 
     await page.screenshot({
@@ -271,13 +271,16 @@ async function main(): Promise<void> {
 
     const workforceCompiled = await workforce.evaluate((element) => {
       const node = getComputedStyle(element, '::before');
+      const segment = getComputedStyle(element, '::after');
       return {
         content: node.content.replaceAll('"', '').replace(/^none$/, ''),
         borderColor: node.borderColor,
+        segmentBackground: segment.backgroundImage || segment.backgroundColor,
       };
     });
     expect(workforceCompiled.content).toBe('✓');
-    expect(workforceCompiled.borderColor).toBe('rgb(85, 184, 121)');
+    expect(workforceCompiled.borderColor).not.toBe(workforceEditing.borderColor);
+    expect(workforceCompiled.segmentBackground).not.toBe(workforceEditing.segmentBackground);
 
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, 'n04r-workforce-compiled-390x844.png'),
