@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { Fragment, useMemo, useState } from 'react';
 
 export interface ManpowerRow {
   trade_name: string;
@@ -46,8 +46,14 @@ type ActiveCountCell = {
 const CLASSIFICATIONS: Array<{ field: CountField; short: string; label: string }> = [
   { field: 'bumi_count', short: 'BUMI', label: 'Bumiputera' },
   { field: 'non_bumi_count', short: 'NON-B', label: 'Bukan Bumiputera' },
-  { field: 'foreign_count', short: 'FOREIGN', label: 'Bukan Warganegara' },
+  { field: 'foreign_count', short: 'ASING', label: 'Bukan Warganegara' },
 ];
+
+function rosterTradeLabel(tradeName: string): string {
+  const trimmed = tradeName.trim();
+  const localLabel = trimmed.match(/\(([^()]+)\)\s*$/)?.[1]?.trim();
+  return localLabel || trimmed;
+}
 
 export default function WorkforceEntry({
   manpower,
@@ -139,7 +145,9 @@ export default function WorkforceEntry({
       <header className="ng-workforce__header">
         <div className="min-w-0">
           <div className="ng-workforce__kicker">WORKFORCE / SITE ROSTER</div>
-          <h3 className="ng-workforce__title">Tenaga Kerja di Tapak (Workforce)</h3>
+          <h3 className="ng-workforce__title" aria-label="Tenaga Kerja di Tapak (Workforce)">
+            Tenaga Kerja di Tapak
+          </h3>
           <p className="ng-workforce__hint">Tap angka untuk laras pekerja mengikut tred dan kerakyatan.</p>
         </div>
         <div className="ng-workforce__overall" aria-label={`${overallTotal} Orang`}>
@@ -157,7 +165,7 @@ export default function WorkforceEntry({
         <span>TRED</span>
         <span>BUMI</span>
         <span>NON-B</span>
-        <span>FOREIGN</span>
+        <span>ASING</span>
         <span>Σ</span>
       </div>
 
@@ -170,107 +178,112 @@ export default function WorkforceEntry({
               Math.max(0, row.bumi_count || 0) +
               Math.max(0, row.non_bumi_count || 0) +
               Math.max(0, row.foreign_count || 0);
+            const compactTradeName = rosterTradeLabel(row.trade_name);
+            const rowIsActive = activeCell?.rowIndex === idx;
 
             return (
-              <div key={`${row.trade_name}-${idx}`} data-testid={`workforce-row-${idx}`} className="ng-workforce__row">
-                <div className="ng-workforce__trade">
-                  <span title={row.trade_name}>{row.trade_name}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTrade(idx)}
-                    disabled={disabled}
-                    aria-label={`Padam tred ${row.trade_name}`}
-                    className="ng-workforce__remove"
+              <Fragment key={`${row.trade_name}-${idx}`}>
+                <div
+                  data-testid={`workforce-row-${idx}`}
+                  className={`ng-workforce__row${rowIsActive ? ' is-active' : ''}`}
+                >
+                  <div className="ng-workforce__trade">
+                    <span title={row.trade_name}>{compactTradeName}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTrade(idx)}
+                      disabled={disabled}
+                      aria-label={`Padam tred ${row.trade_name}`}
+                      className="ng-workforce__remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="ng-workforce__counts">
+                    {CLASSIFICATIONS.map(({ field, short, label }) => {
+                      const isActive = activeCell?.rowIndex === idx && activeCell.field === field;
+                      const value = Math.max(0, row[field] || 0);
+
+                      return (
+                        <div key={field} className="ng-workforce__count-cell">
+                          <input
+                            className="ng-workforce__compat-input sr-only"
+                            type="number"
+                            value={value}
+                            readOnly
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            aria-label={`Bilangan ${label} untuk ${row.trade_name}`}
+                          />
+                          <button
+                            type="button"
+                            className={`ng-workforce__figure${isActive ? ' is-active' : ''}`}
+                            onClick={() => {
+                              if (disabled) return;
+                              setActiveCell((current) =>
+                                current?.rowIndex === idx && current.field === field
+                                  ? null
+                                  : { rowIndex: idx, field },
+                              );
+                            }}
+                            disabled={disabled}
+                            aria-pressed={isActive}
+                            aria-label={`${label}, ${row.trade_name}: ${value} orang. Tekan untuk laras.`}
+                            title={`${label}: ${value}`}
+                            data-testid={`workforce-cell-${idx}-${field}`}
+                          >
+                            {value}
+                            <span className="sr-only"> {short}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="ng-workforce__row-total" data-testid={`trade-total-${idx}`}>
+                    <span>Σ</span>
+                    <strong>{rowTotal}</strong>
+                  </div>
+                </div>
+
+                {rowIsActive && activeRow && activeClassification && (
+                  <div
+                    className="ng-workforce__controller is-active"
+                    data-testid="workforce-active-controller"
+                    aria-label={`Laras ${activeClassification.label} untuk ${row.trade_name}`}
                   >
-                    ×
-                  </button>
-                </div>
-
-                <div className="ng-workforce__counts">
-                  {CLASSIFICATIONS.map(({ field, short, label }) => {
-                    const isActive = activeCell?.rowIndex === idx && activeCell.field === field;
-                    const value = Math.max(0, row[field] || 0);
-
-                    return (
-                      <div key={field} className="ng-workforce__count-cell">
-                        <input
-                          className="ng-workforce__compat-input sr-only"
-                          type="number"
-                          value={value}
-                          readOnly
-                          tabIndex={-1}
-                          aria-hidden="true"
-                          aria-label={`Bilangan ${label} untuk ${row.trade_name}`}
-                        />
-                        <button
-                          type="button"
-                          className={`ng-workforce__figure${isActive ? ' is-active' : ''}`}
-                          onClick={() => {
-                            if (disabled) return;
-                            setActiveCell((current) =>
-                              current?.rowIndex === idx && current.field === field
-                                ? null
-                                : { rowIndex: idx, field },
-                            );
-                          }}
-                          disabled={disabled}
-                          aria-pressed={isActive}
-                          aria-label={`${label}, ${row.trade_name}: ${value} orang. Tekan untuk laras.`}
-                          title={`${label}: ${value}`}
-                          data-testid={`workforce-cell-${idx}-${field}`}
-                        >
-                          {value}
-                          <span className="sr-only"> {short}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="ng-workforce__row-total" data-testid={`trade-total-${idx}`}>
-                  <span>Σ</span>
-                  <strong>{rowTotal}</strong>
-                </div>
-              </div>
+                    <div className="ng-workforce__controller-meta">
+                      <span>{activeClassification.short}</span>
+                      <strong>{activeClassification.label} · {compactTradeName}</strong>
+                    </div>
+                    <div className="ng-workforce__controller-stepper">
+                      <button
+                        type="button"
+                        onClick={() => handleActiveStep(-1)}
+                        disabled={disabled || (activeValue ?? 0) <= 0}
+                        aria-label={`Tolak 1 ${activeClassification.label}`}
+                      >
+                        −
+                      </button>
+                      <output aria-live="polite" data-testid="workforce-active-value">
+                        {activeValue ?? 0}
+                      </output>
+                      <button
+                        type="button"
+                        onClick={() => handleActiveStep(1)}
+                        disabled={disabled}
+                        aria-label={`Tambah 1 ${activeClassification.label}`}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </Fragment>
             );
           })
         )}
-      </div>
-
-      <div
-        className={`ng-workforce__controller${activeCell && activeRow ? ' is-active' : ''}`}
-        aria-disabled={!activeCell || disabled}
-        data-testid="workforce-active-controller"
-      >
-        <div className="ng-workforce__controller-meta">
-          <span>{activeClassification ? activeClassification.short : 'ADJUST'}</span>
-          <strong>
-            {activeRow && activeClassification
-              ? `${activeClassification.label} · ${activeRow.trade_name}`
-              : 'Pilih angka untuk laras'}
-          </strong>
-        </div>
-        <div className="ng-workforce__controller-stepper">
-          <button
-            type="button"
-            onClick={() => handleActiveStep(-1)}
-            disabled={!activeCell || disabled || (activeValue ?? 0) <= 0}
-            aria-label={activeClassification ? `Tolak 1 ${activeClassification.label}` : 'Kurangkan bilangan pekerja'}
-          >
-            −
-          </button>
-          <output aria-live="polite" data-testid="workforce-active-value">
-            {activeValue ?? '—'}
-          </output>
-          <button
-            type="button"
-            onClick={() => handleActiveStep(1)}
-            disabled={!activeCell || disabled}
-            aria-label={activeClassification ? `Tambah 1 ${activeClassification.label}` : 'Tambah bilangan pekerja'}
-          >
-            +
-          </button>
-        </div>
       </div>
 
       <div className="ng-workforce__add">
