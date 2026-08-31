@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -13,6 +14,13 @@ def replace(path: str, old: str, new: str, *, required: bool = False) -> None:
     target.write_text(text.replace(old, new), encoding="utf-8")
 
 
+def regex_replace(path: str, pattern: str, new: str) -> None:
+    target = ROOT / path
+    text = target.read_text(encoding="utf-8")
+    updated = re.sub(pattern, new, text, flags=re.DOTALL)
+    target.write_text(updated, encoding="utf-8")
+
+
 # One action word is enough for both create and edit; state context already explains the operation.
 replace(
     "src/app/site-diary/DailyEntryForm.tsx",
@@ -21,9 +29,9 @@ replace(
 )
 
 # Source selector: remove instructional prose; the MSP/VO switch itself is the explanation.
-replace(
+regex_replace(
     "src/app/site-diary/OperationalSourceSelector.tsx",
-    """<p className=\"text-xs text-zinc-400 mt-0.5\">\n              Setiap aktiviti tapak mestilah berpunca daripada <strong>Kerja Jadual (MSP)</strong>{' '}\n              atau <strong>Kerja Tambahan / VO (APK)</strong>.\n            </p>""",
+    r'\s*<p className="text-xs text-zinc-400 mt-0\.5">\s*Setiap aktiviti tapak mestilah berpunca daripada <strong>Kerja Jadual \(MSP\)</strong>\{\x27 \x27\}\s*atau <strong>Kerja Tambahan / VO \(APK\)</strong>\.\s*</p>',
     "",
 )
 
@@ -43,7 +51,7 @@ for old, new in [
 # Workforce action is already contextual; no decorative plus or shout-case copy.
 replace("src/app/site-diary/WorkforceEntry.tsx", ">\n            + TAMBAH\n          </button>", ">\n            Tambah\n          </button>")
 
-# Remaining presentation assertions from the first contract migration.
+# Remaining presentation assertions from the contract migration.
 for path, pairs in {
     "tests/integration/ui/dailyEntryNavigationFlow.test.ts": [
         ("Tukar Sumber", "Tukar"),
@@ -51,6 +59,7 @@ for path, pairs in {
     "tests/integration/ui/dailyEntryParity.test.ts": [
         ("Tenaga Kerja di Tapak (Workforce)", "Pekerja"),
         ("Kemaskini Laporan Buku Harian Tapak", "Simpan"),
+        ("Catatan &amp; Huraian Kemajuan Kerja", "Catatan"),
     ],
     "tests/integration/ui/diaryManagementList.test.ts": [
         ("Kemas Kini", "Simpan"),
@@ -62,6 +71,8 @@ for path, pairs in {
         ("Tenaga Kerja di Tapak (Workforce)", "Pekerja"),
         ("Muat Semula", "Muat"),
         ("Cuba Semula", "Ulang"),
+        ("Tiada Aktiviti", "Tiada"),
+        ("Memuatkan senarai aktiviti terbuka...", "Muat…"),
     ],
     "tests/unit/ui/operationalSourceSelector.test.ts": [
         ("Tukar Sumber", "Tukar"),
