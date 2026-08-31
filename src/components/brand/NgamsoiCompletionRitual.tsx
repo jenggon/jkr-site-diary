@@ -21,7 +21,10 @@ export default function NgamsoiCompletionRitual({
     hapticKeyRef.current = savedSiteDiaryId;
 
     if (typeof window === 'undefined') return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const prefersReducedMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
 
     const navigatorWithVibration = navigator as Navigator & {
       vibrate?: (pattern: number | number[]) => boolean;
