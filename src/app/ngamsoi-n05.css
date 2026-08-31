@@ -177,6 +177,45 @@ form[aria-label="Borang Buku Harian Tapak"] > .ng-workforce:focus-within .ng-wor
   color: var(--ng-current);
 }
 
+/* Cumulative QA correction: frozen DATUM pseudo-element geometry leaked into N02's NGAMSOI
+   selected-source primitive. Own the full pseudo box here so RECORD LOADED cannot collapse
+   into the legacy 3px rail and the top-right notch cannot inherit the old left anchor. */
+.mobile-entry-selected-source::before {
+  content: "RECORD LOADED" !important;
+  top: 0.58rem !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: 1rem !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ng-current) !important;
+  font-family: var(--ng-font-reference) !important;
+  font-size: 0.55rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em !important;
+  line-height: 1 !important;
+}
+
+.mobile-entry-selected-source::after {
+  content: "" !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 1.35rem !important;
+  height: 0.42rem !important;
+  border: 0 !important;
+  border-left: 1px solid var(--ng-rule) !important;
+  border-bottom: 1px solid var(--ng-rule) !important;
+  border-radius: 0 !important;
+  background: var(--ng-graphite-950) !important;
+  box-shadow: none !important;
+}
+
 @media (max-width: 767px) {
   form[aria-label="Borang Buku Harian Tapak"] {
     --ng-spine-gutter: 0.92rem;
