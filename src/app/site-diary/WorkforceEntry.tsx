@@ -141,6 +141,7 @@ export default function WorkforceEntry({
       className={`ng-workforce ${className}`}
       aria-label="Bahagian Tenaga Kerja Tapak"
       data-workforce-has-entry={overallTotal > 0 ? 'true' : 'false'}
+      data-workforce-editing={activeCell ? 'true' : 'false'}
     >
       <header className="ng-workforce__header">
         <div className="min-w-0">
