@@ -73,6 +73,8 @@ for path, pairs in {
         ("Cuba Semula", "Ulang"),
         ("Tiada Aktiviti", "Tiada"),
         ("Memuatkan senarai aktiviti terbuka...", "Muat…"),
+        ("Kerja Jadual (MSP)", "MSP"),
+        ("Kerja Tambahan / VO (APK)", "VO"),
     ],
     "tests/unit/ui/operationalSourceSelector.test.ts": [
         ("Tukar Sumber", "Tukar"),
