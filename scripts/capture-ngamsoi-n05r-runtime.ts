@@ -176,8 +176,12 @@ async function main(): Promise<void> {
     });
 
     const workforce = page.locator('.ng-workforce');
-    await workforce.scrollIntoViewIfNeeded();
     const firstAddButton = workforce.getByRole('button', { name: /Tambah 1 Bumiputera/i }).first();
+    await firstAddButton.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
+    await page.waitForTimeout(80);
+
+    // Use real pointer clicks: this catches actual mobile control overlap/interception rather than
+    // bypassing it with DOM-dispatched or force clicks.
     await firstAddButton.click();
     await firstAddButton.click();
     await firstAddButton.click();
@@ -189,7 +193,7 @@ async function main(): Promise<void> {
     });
 
     console.log(
-      `N05R live runtime gate captured ${MOBILE.width}x${MOBILE.height}: actual /site-diary route, selected-source pseudo reset, integrated ledger + NGAM datum, workforce state`,
+      `N05R live runtime gate captured ${MOBILE.width}x${MOBILE.height}: actual /site-diary route, selected-source pseudo reset, integrated ledger + NGAM datum, workforce pointer controls`,
     );
   } finally {
     await context.close();
