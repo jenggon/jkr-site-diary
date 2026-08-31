@@ -68,6 +68,9 @@
     background: color-mix(in srgb, var(--ng-grey-600) 64%, var(--ng-graphite-950)) !important;
     clip-path: none !important;
     box-shadow: none !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    letter-spacing: 0 !important;
     writing-mode: initial !important;
   }
 
@@ -95,7 +98,12 @@
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__stepper > button:first-child:not(:disabled)):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after {
+    content: "" !important;
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
     background: color-mix(in srgb, var(--ng-established) 72%, var(--ng-grey-600)) !important;
+    color: transparent !important;
+    font-size: 0 !important;
   }
 
   /* EDITING / REVISION: orange open node = the prior check is currently invalidated locally. */
@@ -112,6 +120,9 @@
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section:focus-within::after {
+    content: "" !important;
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
     background: linear-gradient(
       180deg,
       var(--ng-current) 0,
@@ -119,23 +130,9 @@
       color-mix(in srgb, var(--ng-grey-600) 64%, var(--ng-graphite-950)) 5.4rem
     ) !important;
     box-shadow: none !important;
-  }
-
-  form[aria-label="Borang Buku Harian Tapak"] > section:focus-within > h3 {
-    position: relative;
-  }
-
-  form[aria-label="Borang Buku Harian Tapak"] > section:focus-within > h3::after {
-    content: "EDITING";
-    position: absolute;
-    top: 0.06rem;
-    right: 0;
-    color: var(--ng-current);
-    font-family: var(--ng-font-reference);
-    font-size: 0.44rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    line-height: 1;
+    color: transparent !important;
+    font-size: 0 !important;
+    letter-spacing: 0 !important;
   }
 
   /* CHECK overrides both compiled and current. */
@@ -153,12 +150,17 @@
 
   form[aria-label="Borang Buku Harian Tapak"] > section:has([role="alert"])::after,
   form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert)::after {
+    content: "" !important;
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
     background: linear-gradient(
       180deg,
       var(--ng-destructive) 0,
       color-mix(in srgb, var(--ng-destructive) 70%, var(--ng-grey-600)) 2.2rem,
       color-mix(in srgb, var(--ng-grey-600) 64%, var(--ng-graphite-950)) 5.6rem
     ) !important;
+    color: transparent !important;
+    font-size: 0 !important;
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section:last-of-type::after {
