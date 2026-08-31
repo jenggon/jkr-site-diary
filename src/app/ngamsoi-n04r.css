@@ -1,15 +1,10 @@
-/* N04R — Workforce active-cell input + mobile typography normalization.
- * Scan first, edit second:
- * - the matrix shows figures only;
- * - exactly one count cell can become active;
- * - +/- lives in one contextual controller and is disabled by default.
- *
- * Brand font is reserved for identity. Operational headings return to work voice;
- * reference labels remain mono/reference voice.
+/* N04R — scan-first Workforce + normalized mobile typography.
+ * The roster is data by default. Controls appear only under the row whose figure is active.
+ * Brand voice stays in identity; operational reading uses Work voice; compact metadata uses Reference voice.
  */
 
 @media (max-width: 767px) {
-  /* Typography hierarchy: work voice carries operational reading; reference voice stays quiet. */
+  /* Typography hierarchy. */
   form[aria-label="Borang Buku Harian Tapak"] > section > h3 {
     color: var(--ng-ivory-100) !important;
     font-family: var(--ng-font-work) !important;
@@ -35,83 +30,97 @@
     line-height: 1.38 !important;
   }
 
-  /* Workforce header should read as one compact authority band. */
+  /* Compact workforce authority header. */
   .ng-workforce__header {
     align-items: center;
-    gap: 0.72rem;
-    padding: 0.72rem 0.62rem 0.64rem;
+    gap: 0.66rem;
+    padding: 0.66rem 0.56rem 0.58rem;
   }
 
   .ng-workforce__kicker {
-    font-size: 0.46rem;
-    letter-spacing: 0.09em;
+    font-size: 0.44rem;
+    letter-spacing: 0.085em;
   }
 
   .ng-workforce__title {
-    margin-top: 0.24rem;
+    margin-top: 0.22rem;
     font-family: var(--ng-font-work);
-    font-size: 0.86rem;
+    font-size: 0.83rem;
     font-weight: 620;
     letter-spacing: -0.012em;
-    line-height: 1.18;
+    line-height: 1.16;
+    white-space: nowrap;
   }
 
   .ng-workforce__hint {
-    max-width: 13.5rem;
-    margin-top: 0.2rem;
-    font-size: 0.59rem;
-    line-height: 1.25;
+    max-width: 14rem;
+    margin-top: 0.18rem;
+    font-size: 0.56rem;
+    line-height: 1.22;
   }
 
   .ng-workforce__overall {
-    min-width: 4.25rem;
-    column-gap: 0.24rem;
-    padding-left: 0.5rem;
+    min-width: 3.92rem;
+    column-gap: 0.2rem;
+    padding-left: 0.44rem;
     border-left-width: 1px;
   }
 
   .ng-workforce__overall > span,
   .ng-workforce__overall > small {
-    font-size: 0.42rem;
-    letter-spacing: 0.08em;
-  }
-
-  .ng-workforce__overall > strong {
-    font-size: 1.18rem;
-  }
-
-  /* Matrix geometry is shared by header and rows so figures vertically register. */
-  .ng-workforce__matrix-head {
-    grid-template-columns: minmax(0, 1fr) repeat(3, 3.2rem) 1.75rem;
-    gap: 0;
-    padding: 0.42rem 0.5rem;
-    font-size: 0.43rem;
+    font-size: 0.4rem;
     letter-spacing: 0.075em;
   }
 
-  .ng-workforce__row {
-    grid-template-columns: minmax(0, 1fr) 9.6rem 1.75rem;
+  .ng-workforce__overall > strong {
+    font-size: 1.12rem;
+  }
+
+  /* 44.8px citizenship columns: thumb-safe without wasting horizontal field width. */
+  .ng-workforce__matrix-head {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 2.8rem) 1.65rem;
     gap: 0;
-    min-height: 3.25rem;
+    padding: 0.38rem 0.42rem;
+    font-size: 0.4rem;
+    letter-spacing: 0.065em;
+  }
+
+  .ng-workforce__row {
+    grid-template-columns: minmax(0, 1fr) 8.4rem 1.65rem;
+    gap: 0;
+    min-height: 2.95rem;
+    transition: background-color 110ms ease;
+  }
+
+  .ng-workforce__row.is-active {
+    background: color-mix(in srgb, var(--ng-current) 2.5%, var(--ng-graphite-925));
   }
 
   .ng-workforce__trade {
-    gap: 0.2rem;
-    padding: 0.45rem 0.12rem 0.45rem 0.5rem;
+    gap: 0.12rem;
+    padding: 0 0 0 0.48rem;
   }
 
   .ng-workforce__trade > span {
-    font-size: 0.66rem;
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ng-grey-200);
+    font-family: var(--ng-font-work);
+    font-size: 0.64rem;
     font-weight: 540;
-    line-height: 1.2;
-    -webkit-line-clamp: 2;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: initial;
   }
 
   .ng-workforce__remove {
-    width: 2.25rem;
-    height: 2.75rem;
+    width: 2.65rem;
+    height: 2.95rem;
     color: var(--ng-grey-700);
-    font-size: 0.86rem;
+    font-size: 0.8rem;
   }
 
   .ng-workforce__counts {
@@ -124,27 +133,28 @@
     background: var(--ng-graphite-950);
   }
 
-  /* Figures are the table. No permanent steppers inside cells. */
+  /* Figures are the normal table state. */
   .ng-workforce__figure {
     position: relative;
     width: 100%;
     min-width: 0;
-    min-height: 3.25rem;
+    min-height: 2.95rem;
     border: 0;
     border-radius: 0;
-    background: transparent;
+    background: transparent !important;
     color: var(--ng-grey-300);
     font-family: var(--ng-font-reference);
-    font-size: 0.96rem;
+    font-size: 0.9rem;
     font-weight: 720;
     font-variant-numeric: tabular-nums;
     line-height: 1;
     text-align: center;
+    box-shadow: none !important;
     transition:
-      color 120ms ease,
-      background-color 120ms ease,
-      box-shadow 120ms ease,
-      transform 90ms ease;
+      color 110ms ease,
+      background-color 110ms ease,
+      box-shadow 110ms ease,
+      transform 80ms ease;
   }
 
   .ng-workforce__figure::after {
@@ -157,19 +167,19 @@
     background: transparent;
   }
 
-  .ng-workforce__figure:hover:not(:disabled) {
+  .ng-workforce__figure:hover:not(:disabled):not(.is-active) {
     color: var(--ng-ivory-100);
-    background: color-mix(in srgb, var(--ng-current) 3%, transparent);
+    background: color-mix(in srgb, var(--ng-current) 2.5%, transparent) !important;
   }
 
   .ng-workforce__figure.is-active {
     color: var(--ng-ivory-100);
     background:
-      linear-gradient(180deg, rgb(0 0 0 / 0.12), transparent 45%),
-      color-mix(in srgb, var(--ng-current) 7%, var(--ng-graphite-950));
+      linear-gradient(180deg, rgb(0 0 0 / 0.1), transparent 45%),
+      color-mix(in srgb, var(--ng-current) 7%, var(--ng-graphite-950)) !important;
     box-shadow:
       inset 0 0 0 1px color-mix(in srgb, var(--ng-current) 38%, var(--ng-rule)),
-      inset 0 2px 4px rgb(0 0 0 / 0.36);
+      inset 0 2px 4px rgb(0 0 0 / 0.32) !important;
   }
 
   .ng-workforce__figure.is-active::after {
@@ -178,6 +188,12 @@
 
   .ng-workforce__figure:active:not(:disabled) {
     transform: translateY(1px);
+  }
+
+  .ng-workforce__figure:focus:not(:focus-visible):not(.is-active) {
+    outline: 0;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
   .ng-workforce__figure:focus-visible {
@@ -190,28 +206,25 @@
   }
 
   .ng-workforce__row-total > span {
-    font-size: 0.37rem;
+    font-size: 0.35rem;
   }
 
   .ng-workforce__row-total > strong {
-    margin-top: 0.18rem;
-    font-size: 0.76rem;
+    margin-top: 0.14rem;
+    font-size: 0.72rem;
   }
 
-  /* Single contextual adjustment bay. It exists in the layout but is inert until a figure is selected. */
+  /* Context stays physically attached to the active trade row. */
   .ng-workforce__controller {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 7.85rem;
+    grid-template-columns: minmax(0, 1fr) 7.55rem;
     align-items: stretch;
-    min-height: 3.15rem;
-    border-top: 1px solid var(--ng-rule);
-    border-bottom: 1px solid var(--ng-rule);
-    background: var(--ng-graphite-925);
-    color: var(--ng-grey-600);
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      box-shadow 120ms ease;
+    min-height: 2.95rem;
+    border-top: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--ng-current) 34%, var(--ng-rule));
+    background: color-mix(in srgb, var(--ng-current) 3%, var(--ng-graphite-925));
+    box-shadow: inset 2px 0 0 var(--ng-current);
+    animation: ng-workforce-controller-open 110ms ease-out both;
   }
 
   .ng-workforce__controller-meta {
@@ -219,33 +232,33 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 0.18rem;
-    padding: 0.48rem 0.58rem;
+    gap: 0.14rem;
+    padding: 0.42rem 0.5rem;
   }
 
   .ng-workforce__controller-meta > span {
-    color: var(--ng-grey-600);
+    color: var(--ng-current);
     font-family: var(--ng-font-reference);
-    font-size: 0.42rem;
+    font-size: 0.39rem;
     font-weight: 700;
-    letter-spacing: 0.09em;
+    letter-spacing: 0.085em;
     line-height: 1;
   }
 
   .ng-workforce__controller-meta > strong {
     overflow: hidden;
-    color: var(--ng-grey-500);
+    color: var(--ng-grey-300);
     font-family: var(--ng-font-work);
-    font-size: 0.62rem;
+    font-size: 0.59rem;
     font-weight: 540;
-    line-height: 1.15;
+    line-height: 1.12;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .ng-workforce__controller-stepper {
     display: grid;
-    grid-template-columns: 2.55rem minmax(2.6rem, 1fr) 2.55rem;
+    grid-template-columns: 2.4rem minmax(2.7rem, 1fr) 2.4rem;
     align-items: stretch;
     border-left: 1px solid var(--ng-rule);
     background: var(--ng-graphite-950);
@@ -256,7 +269,7 @@
     display: grid;
     place-items: center;
     min-width: 0;
-    min-height: 3.15rem;
+    min-height: 2.95rem;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -265,65 +278,60 @@
   }
 
   .ng-workforce__controller-stepper > button {
-    color: var(--ng-graphite-650);
+    color: var(--ng-current);
     font-size: 1rem;
-    font-weight: 720;
+    font-weight: 740;
+  }
+
+  .ng-workforce__controller-stepper > button:disabled {
+    color: var(--ng-graphite-650);
   }
 
   .ng-workforce__controller-stepper > output {
     border-right: 1px solid var(--ng-rule);
     border-left: 1px solid var(--ng-rule);
-    color: var(--ng-grey-600);
-    font-size: 1rem;
-    font-weight: 760;
-  }
-
-  .ng-workforce__controller.is-active {
-    border-color: color-mix(in srgb, var(--ng-current) 34%, var(--ng-rule));
-    background: color-mix(in srgb, var(--ng-current) 3%, var(--ng-graphite-925));
-    box-shadow: inset 2px 0 0 var(--ng-current);
-  }
-
-  .ng-workforce__controller.is-active .ng-workforce__controller-meta > span {
-    color: var(--ng-current);
-  }
-
-  .ng-workforce__controller.is-active .ng-workforce__controller-meta > strong {
-    color: var(--ng-grey-300);
-  }
-
-  .ng-workforce__controller.is-active .ng-workforce__controller-stepper > output {
     color: var(--ng-ivory-100);
-  }
-
-  .ng-workforce__controller.is-active .ng-workforce__controller-stepper > button:not(:disabled) {
-    color: var(--ng-current);
+    font-size: 0.96rem;
+    font-weight: 760;
   }
 
   .ng-workforce__controller-stepper > button:active:not(:disabled) {
     background: color-mix(in srgb, var(--ng-current) 10%, var(--ng-graphite-900));
-    box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.44);
+    box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.42);
   }
 
   .ng-workforce__add {
-    gap: 0.45rem;
-    padding: 0.62rem 0.58rem 0.68rem;
+    gap: 0.42rem;
+    padding: 0.58rem 0.52rem 0.64rem;
   }
 
   .ng-workforce__add-title {
-    font-size: 0.44rem;
+    font-size: 0.41rem;
   }
 
   .ng-workforce__add select,
   .ng-workforce__add input,
   .ng-workforce__custom-add > button {
-    font-size: 0.65rem !important;
+    font-size: 0.63rem !important;
+  }
+}
+
+@keyframes ng-workforce-controller-open {
+  from {
+    opacity: 0.72;
+    transform: translateY(-0.18rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ng-workforce__figure,
+  .ng-workforce__row,
   .ng-workforce__controller {
+    animation: none !important;
     transition-duration: 0.01ms !important;
   }
 }
