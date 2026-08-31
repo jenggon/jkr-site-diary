@@ -45,7 +45,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="bu
   height: 0.58rem;
   border: 1px solid var(--ng-step-color);
   border-radius: 50%;
-  background-color: var(--ng-graphite-950) !important;
+  background-color: var(--ng-graphite-950);
   box-shadow:
     0 0 0 3px var(--ng-graphite-950),
     0 0 0 4px color-mix(in srgb, var(--ng-step-color) 38%, transparent),
