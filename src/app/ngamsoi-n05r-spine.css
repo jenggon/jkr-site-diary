@@ -101,7 +101,6 @@
   form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::before,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::before,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::before,
-  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:focus-within)::before,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::before {
     content: "✓" !important;
     --ng-step-color: var(--ng-established);
@@ -118,7 +117,6 @@
   form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
-  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after {
     background: linear-gradient(
       180deg,
@@ -150,6 +148,70 @@
       color-mix(in srgb, var(--ng-current) 38%, var(--ng-spine-rail)) 44%,
       var(--ng-spine-rail) 80%
     ) !important;
+  }
+
+  /* Workforce has an explicit interaction state. Its compile/revise signal follows the
+     selected citizenship cell, not residual DOM focus. This makes tap-to-revise visibly
+     untick and tap-to-close visibly recompile even when the figure button retains focus. */
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::before {
+    content: "" !important;
+    --ng-step-color: var(--ng-current);
+    border-color: var(--ng-current) !important;
+    background: var(--ng-graphite-950) !important;
+    color: var(--ng-current) !important;
+    transform: scale(1.06) translateZ(0) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-current) 30%, transparent),
+      0 0 0.42rem color-mix(in srgb, var(--ng-current) 15%, transparent) !important;
+    animation: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::after {
+    background: linear-gradient(
+      180deg,
+      var(--ng-current) 0%,
+      color-mix(in srgb, var(--ng-current) 84%, var(--ng-grey-600)) 14%,
+      color-mix(in srgb, var(--ng-current) 38%, var(--ng-spine-rail)) 44%,
+      var(--ng-spine-rail) 80%
+    ) !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::before {
+    content: "✓" !important;
+    --ng-step-color: var(--ng-established);
+    border-color: var(--ng-established) !important;
+    background: color-mix(in srgb, var(--ng-established) 8%, var(--ng-graphite-950)) !important;
+    color: var(--ng-established) !important;
+    transform: translateZ(0) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-established) 20%, transparent) !important;
+    animation: ng-spine-compile 170ms ease-out both;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ng-established) 84%, var(--ng-grey-600)) 0%,
+      color-mix(in srgb, var(--ng-established) 70%, var(--ng-grey-600)) 76%,
+      color-mix(in srgb, var(--ng-established) 48%, var(--ng-spine-rail)) 100%
+    ) !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="false"]::before {
+    content: "" !important;
+    --ng-step-color: var(--ng-grey-600);
+    border-color: color-mix(in srgb, var(--ng-grey-600) 82%, var(--ng-graphite-950)) !important;
+    background: var(--ng-graphite-950) !important;
+    color: var(--ng-grey-600) !important;
+    transform: translateZ(0) !important;
+    box-shadow: 0 0 0 2px var(--ng-graphite-950) !important;
+    animation: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="false"]::after {
+    background: var(--ng-spine-rail) !important;
   }
 
   /* CHECK always wins over compiled/current. */
