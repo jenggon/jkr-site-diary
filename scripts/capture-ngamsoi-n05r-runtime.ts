@@ -11,10 +11,6 @@ const PROGRAMME_ID = '11111111-1111-4111-8111-111111111111';
 const REVISION_ID = '22222222-2222-4222-8222-222222222222';
 const TASK_ID = '33333333-3333-4333-8333-333333333333';
 
-function cleanPseudoContent(value: string): string {
-  return value.replaceAll('"', '').replace(/^none$/, '');
-}
-
 async function main(): Promise<void> {
   await mkdir(EVIDENCE_DIR, { recursive: true });
 
@@ -179,8 +175,6 @@ async function main(): Promise<void> {
     expect(topMetrics.sourcePrimitive.notchRight).toBe('0px');
     expect(topMetrics.sourcePrimitive.notchWidth).toBeGreaterThan(20);
 
-    // Compile-flow contract: node is aligned to the actual rail, old triangle is gone,
-    // completed source is checked green, and the field currently being revised is unticked orange.
     expect(topMetrics.spine.railWidth).toBeGreaterThanOrEqual(2);
     expect(topMetrics.spine.alignmentDelta).toBeLessThanOrEqual(1.5);
     expect(topMetrics.spine.sourceNodeClip).toBe('none');
@@ -220,7 +214,6 @@ async function main(): Promise<void> {
       fullPage: false,
     });
 
-    // Blur models leaving a valid revised section: it recompiles to the green check.
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     const workforceCompiled = await workforce.evaluate((element) => {
       const node = getComputedStyle(element, '::before');
