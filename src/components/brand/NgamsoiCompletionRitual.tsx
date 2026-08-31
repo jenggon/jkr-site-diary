@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { NgamsoiMark } from './NgamsoiBrand';
 
 interface NgamsoiCompletionRitualProps {
-  savedSiteDiaryId?: string | null;
+  savedSiteDiaryId?: string | null | undefined;
   isEditMode?: boolean;
   successText: string;
 }
