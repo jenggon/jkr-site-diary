@@ -65,7 +65,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]),
 form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)),
 form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__stepper > button:first-child:not(:disabled)),
 form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)) {
-  --ng-step-color: var(--ng-established);
+  --ng-step-color: var(--ng-established) !important;
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source)::after,
@@ -74,14 +74,14 @@ form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"])::a
 form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown))::after,
 form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__stepper > button:first-child:not(:disabled))::after,
 form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown))::after {
-  content: "EST";
-  color: var(--ng-established);
+  content: "EST" !important;
+  color: var(--ng-established) !important;
 }
 
 /* CURRENT — focus is the user's present working position and overrides established/next. */
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):focus-within {
-  --ng-step-color: var(--ng-current);
-  --ng-step-glow: color-mix(in srgb, var(--ng-current) 34%, transparent);
+  --ng-step-color: var(--ng-current) !important;
+  --ng-step-glow: color-mix(in srgb, var(--ng-current) 34%, transparent) !important;
   border-left-color: var(--ng-current) !important;
   background-image: linear-gradient(90deg, color-mix(in srgb, var(--ng-current) 4%, transparent), transparent 32%);
 }
@@ -92,22 +92,22 @@ form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="bu
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):focus-within::after {
-  content: "CURRENT";
-  color: var(--ng-current);
+  content: "CURRENT" !important;
+  color: var(--ng-current) !important;
 }
 
 /* WARNING — explicit validation/server alerts take precedence over working focus. */
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):has([role="alert"]),
 form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert) {
-  --ng-step-color: var(--ng-destructive);
-  --ng-step-glow: color-mix(in srgb, var(--ng-destructive) 26%, transparent);
+  --ng-step-color: var(--ng-destructive) !important;
+  --ng-step-glow: color-mix(in srgb, var(--ng-destructive) 26%, transparent) !important;
   border-left-color: var(--ng-destructive) !important;
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):has([role="alert"])::after,
 form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert)::after {
-  content: "CHECK";
-  color: var(--ng-destructive);
+  content: "CHECK" !important;
+  color: var(--ng-destructive) !important;
 }
 
 /* Continuation is an established authority record, not a blue SaaS alert card. */
