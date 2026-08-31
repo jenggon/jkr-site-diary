@@ -74,6 +74,7 @@ async function main(): Promise<void> {
       const site = document.querySelector<HTMLElement>('#site')!;
       const workforce = document.querySelector<HTMLElement>('#workforce')!;
       const warning = document.querySelector<HTMLElement>('#warning')!;
+      const selectedSource = document.querySelector<HTMLElement>('.mobile-entry-selected-source')!;
       const date = document.querySelector<HTMLInputElement>('#date')!;
       const location = document.querySelector<HTMLInputElement>('#location')!;
       const note = document.querySelector<HTMLTextAreaElement>('#note')!;
@@ -87,6 +88,8 @@ async function main(): Promise<void> {
       const siteBefore = getComputedStyle(site, '::before');
       const workforceBefore = getComputedStyle(workforce, '::before');
       const warningBefore = getComputedStyle(warning, '::before');
+      const selectedSourceBefore = getComputedStyle(selectedSource, '::before');
+      const selectedSourceAfter = getComputedStyle(selectedSource, '::after');
       const rail = getComputedStyle(form, '::before');
 
       return {
@@ -97,6 +100,14 @@ async function main(): Promise<void> {
           content: rail.content.replaceAll('"', ''),
           width: rail.width,
           backgroundColor: rail.backgroundColor,
+        },
+        selectedSource: {
+          beforeContent: selectedSourceBefore.content.replaceAll('"', ''),
+          beforeWidth: selectedSourceBefore.width,
+          beforeHeight: selectedSourceBefore.height,
+          beforeBackground: selectedSourceBefore.backgroundColor,
+          afterLeft: selectedSourceAfter.left,
+          afterRight: selectedSourceAfter.right,
         },
         typography: {
           date: getComputedStyle(date).fontFamily,
@@ -157,6 +168,14 @@ async function main(): Promise<void> {
     expect(metrics.typography.date).toBe(metrics.typography.location);
     expect(metrics.typography.note).toBe(metrics.typography.location);
 
+    // The NGAMSOI loaded-record treatment must fully own its pseudo-elements; legacy DATUM geometry must not leak through.
+    expect(metrics.selectedSource.beforeContent).toBe('RECORD LOADED');
+    expect(parseFloat(metrics.selectedSource.beforeWidth)).toBeGreaterThan(3);
+    expect(parseFloat(metrics.selectedSource.beforeHeight)).toBeLessThan(20);
+    expect(metrics.selectedSource.beforeBackground).toBe('rgba(0, 0, 0, 0)');
+    expect(metrics.selectedSource.afterLeft).toBe('auto');
+    expect(metrics.selectedSource.afterRight).not.toBe('auto');
+
     // Mobile suppresses tiny state words, but the filled authority nodes remain visibly distinct.
     expect(metrics.source.afterDisplay).toBe('none');
     expect(metrics.site.afterDisplay).toBe('none');
@@ -169,7 +188,7 @@ async function main(): Promise<void> {
     expect(parseFloat(metrics.site.marginLeft)).toBeGreaterThan(0);
 
     await page.screenshot({ path: path.join(EVIDENCE_DIR, 'n05-spine-states-375x812.png'), fullPage: true });
-    console.log(`N05 gate captured ${metrics.viewportWidth}px cumulative typography + continuous EST/CURRENT/NEXT/WARNING datum with no horizontal overflow`);
+    console.log(`N05 gate captured ${metrics.viewportWidth}px cumulative typography + continuous EST/CURRENT/NEXT/WARNING datum + loaded-record pseudo reset with no horizontal overflow`);
   } finally {
     await context.close();
     await browser.close();
