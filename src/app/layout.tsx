@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
+import "./ngamsoi.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JKR Site Diary",
-  description: "Sistem Pengurusan Log Tapak Bina Digital",
+  title: "NGAMSOI | JKR Site Diary",
+  description: "NGAMSOI digital engineer fieldbook for authoritative JKR site records",
 };
 
 export default function RootLayout({
