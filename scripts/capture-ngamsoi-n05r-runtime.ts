@@ -238,6 +238,7 @@ async function main(): Promise<void> {
     await figure.click();
     await expect(figure).toHaveAttribute('aria-pressed', 'true');
     await expect(controller).toBeVisible();
+    await page.waitForTimeout(140);
 
     const activeValue = workforce.getByTestId('workforce-active-value');
     await expect(activeValue).toHaveText('0');
