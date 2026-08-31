@@ -22,9 +22,9 @@
   --ng-warning: #d4a64f;
   --ng-destructive: #e46d72;
 
-  --ng-font-work: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --ng-font-reference: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --ng-font-brand: Bahnschrift, "Arial Narrow", "Aptos Display", var(--font-geist-sans), sans-serif;
+  --ng-font-work: var(--font-geist-sans, ui-sans-serif), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ng-font-reference: var(--font-geist-mono, ui-monospace), SFMono-Regular, Menlo, Consolas, monospace;
+  --ng-font-brand: Bahnschrift, "Arial Narrow", "Aptos Display", var(--font-geist-sans, ui-sans-serif), sans-serif;
 
   --ng-rule: var(--ng-graphite-700);
   --ng-inset: var(--ng-graphite-925);
