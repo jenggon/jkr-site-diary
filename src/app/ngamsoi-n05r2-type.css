@@ -60,7 +60,7 @@ form[aria-label="Borang Buku Harian Tapak"] {
   .mobile-entry-spike-panel h3,
   .mobile-entry-selected-source h3 {
     font-family: var(--ng-font-work) !important;
-    font-size: 0.95rem !important;
+    font-size: 1rem !important;
     font-weight: 630 !important;
     letter-spacing: -0.018em !important;
     line-height: 1.18 !important;
