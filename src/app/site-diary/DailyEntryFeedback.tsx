@@ -143,7 +143,10 @@ export default function DailyEntryFeedback({
           <div className="flex items-start gap-3">
             <span className="mt-0.5 text-red-400" aria-hidden="true">!</span>
             <div className="min-w-0 flex-1">
-              <h4 className="font-semibold text-red-300">Ralat</h4>
+              <h4 className="font-semibold text-red-300">
+                <span className="sr-only">Ralat Semasa Memproses Borang</span>
+                <span aria-hidden="true">Ralat</span>
+              </h4>
               <p className="mt-1 leading-relaxed text-red-200">{error}</p>
             </div>
           </div>
