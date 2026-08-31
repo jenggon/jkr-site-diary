@@ -128,6 +128,8 @@ async function main(): Promise<void> {
       const sourceSection = selected.closest<HTMLElement>('section')!;
       const locationInput = document.querySelector<HTMLInputElement>('input[placeholder="cth: Aras 2, Blok Pentadbiran, Grid 4-8"]')!;
       const locationSection = locationInput.closest<HTMLElement>('section')!;
+      const sectionHeading = form.querySelector<HTMLElement>('section > h3');
+      const referenceLabel = form.querySelector<HTMLElement>('label');
       const sourceBefore = getComputedStyle(selected, '::before');
       const sourceAfter = getComputedStyle(selected, '::after');
       const sourceNode = getComputedStyle(sourceSection, '::before');
@@ -152,6 +154,13 @@ async function main(): Promise<void> {
           notchRight: sourceAfter.right,
           notchWidth: parseFloat(sourceAfter.width),
         },
+        typography: {
+          headingFamily: sectionHeading ? getComputedStyle(sectionHeading).fontFamily : '',
+          inputFamily: getComputedStyle(locationInput).fontFamily,
+          referenceFamily: referenceLabel ? getComputedStyle(referenceLabel).fontFamily : '',
+          headingSize: sectionHeading ? parseFloat(getComputedStyle(sectionHeading).fontSize) : 0,
+          inputSize: parseFloat(getComputedStyle(locationInput).fontSize),
+        },
         spine: {
           railWidth: parseFloat(rail.width),
           alignmentDelta: Math.abs(sourceNodeCenter - railCenter),
@@ -159,6 +168,7 @@ async function main(): Promise<void> {
           sourceNodeClip: sourceNode.clipPath,
           sourceNodeBorder: sourceNode.borderColor,
           sourceSegmentBackground: sourceSegment.backgroundImage || sourceSegment.backgroundColor,
+          sourceSegmentBottom: sourceSegment.bottom,
           locationNodeContent: locationNode.content.replaceAll('"', '').replace(/^none$/, ''),
           locationNodeBorder: locationNode.borderColor,
           locationSegmentBackground: locationSegment.backgroundImage || locationSegment.backgroundColor,
@@ -175,46 +185,90 @@ async function main(): Promise<void> {
     expect(topMetrics.sourcePrimitive.notchRight).toBe('0px');
     expect(topMetrics.sourcePrimitive.notchWidth).toBeGreaterThan(20);
 
+    expect(topMetrics.typography.headingFamily).toBe(topMetrics.typography.inputFamily);
+    expect(topMetrics.typography.referenceFamily).not.toBe(topMetrics.typography.inputFamily);
+    expect(topMetrics.typography.headingSize).toBeGreaterThan(topMetrics.typography.inputSize);
+
     expect(topMetrics.spine.railWidth).toBeGreaterThanOrEqual(2);
     expect(topMetrics.spine.alignmentDelta).toBeLessThanOrEqual(1.5);
     expect(topMetrics.spine.sourceNodeClip).toBe('none');
     expect(topMetrics.spine.sourceNodeContent).toBe('✓');
     expect(topMetrics.spine.sourceNodeBorder).toBe('rgb(85, 184, 121)');
+    expect(topMetrics.spine.sourceSegmentBottom).toContain('-');
     expect(topMetrics.spine.locationNodeContent).toBe('');
     expect(topMetrics.spine.locationNodeBorder).toBe('rgb(255, 122, 26)');
     expect(topMetrics.spine.locationSegmentBackground).toContain('linear-gradient');
 
     await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-top-390x844.png'),
+      path: path.join(EVIDENCE_DIR, 'n05r1-live-new-entry-fluid-top-390x844.png'),
       fullPage: false,
     });
 
     const workforce = page.locator('.ng-workforce');
-    const firstAddButton = workforce.getByRole('button', { name: /Tambah 1 Bumiputera/i }).first();
-    await firstAddButton.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
+    const figure = workforce.getByTestId('workforce-cell-0-bumi_count');
+    const controller = workforce.getByTestId('workforce-active-controller');
+    const activeValue = workforce.getByTestId('workforce-active-value');
+
+    await figure.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
     await page.waitForTimeout(80);
 
-    await firstAddButton.click();
-    await firstAddButton.click();
-    await firstAddButton.click();
+    await expect(controller).toHaveAttribute('aria-disabled', 'true');
+    await expect(controller.getByRole('button', { name: 'Kurangkan bilangan pekerja' })).toBeDisabled();
+    await expect(controller.getByRole('button', { name: 'Tambah bilangan pekerja' })).toBeDisabled();
+
+    const compactRoster = await workforce.evaluate((element) => {
+      const row = element.querySelector<HTMLElement>('.ng-workforce__row');
+      return {
+        rowHeight: row?.getBoundingClientRect().height ?? 0,
+        countCellButtons: element.querySelectorAll('.ng-workforce__count-cell > button').length,
+        embeddedSteppers: element.querySelectorAll('.ng-workforce__count-cell .ng-workforce__stepper').length,
+      };
+    });
+    expect(compactRoster.rowHeight).toBeLessThanOrEqual(62);
+    expect(compactRoster.countCellButtons).toBeGreaterThanOrEqual(3);
+    expect(compactRoster.embeddedSteppers).toBe(0);
+
+    await figure.click();
+    await expect(figure).toHaveAttribute('aria-pressed', 'true');
+    await expect(controller).toHaveAttribute('aria-disabled', 'false');
+    await expect(activeValue).toHaveText('0');
+
+    const minus = controller.getByRole('button', { name: /Tolak 1 Bumiputera/i });
+    const plus = controller.getByRole('button', { name: /Tambah 1 Bumiputera/i });
+    await expect(minus).toBeDisabled();
+    await expect(plus).toBeEnabled();
+
+    await plus.click();
+    await plus.click();
+    await plus.click();
+    await expect(activeValue).toHaveText('3');
     await expect(workforce.getByTestId('overall-workforce-total')).toHaveText('3');
 
     const workforceEditing = await workforce.evaluate((element) => {
       const node = getComputedStyle(element, '::before');
+      const segment = getComputedStyle(element, '::after');
       return {
         content: node.content.replaceAll('"', '').replace(/^none$/, ''),
         borderColor: node.borderColor,
+        segmentBackground: segment.backgroundImage || segment.backgroundColor,
       };
     });
     expect(workforceEditing.content).toBe('');
     expect(workforceEditing.borderColor).toBe('rgb(255, 122, 26)');
+    expect(workforceEditing.segmentBackground).toContain('linear-gradient');
 
     await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-workforce-editing-390x844.png'),
+      path: path.join(EVIDENCE_DIR, 'n04r-workforce-active-cell-390x844.png'),
       fullPage: false,
     });
 
+    /* Tap the active figure again to close the adjustment bay, then leave the section.
+       This validates the visible revise -> untick -> recompile loop. */
+    await figure.click();
+    await expect(figure).toHaveAttribute('aria-pressed', 'false');
+    await expect(controller).toHaveAttribute('aria-disabled', 'true');
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
     const workforceCompiled = await workforce.evaluate((element) => {
       const node = getComputedStyle(element, '::before');
       return {
@@ -226,12 +280,12 @@ async function main(): Promise<void> {
     expect(workforceCompiled.borderColor).toBe('rgb(85, 184, 121)');
 
     await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-workforce-compiled-390x844.png'),
+      path: path.join(EVIDENCE_DIR, 'n04r-workforce-compiled-390x844.png'),
       fullPage: false,
     });
 
     console.log(
-      `N05R compile-flow gate captured ${MOBILE.width}x${MOBILE.height}: aligned datum, compiled check, revise untick, downstream recompile`,
+      `N04R/N05R.1 live gate captured ${MOBILE.width}x${MOBILE.height}: fluid compile rail, normalized type scale, figures-only roster, active-cell +/- and revise/recompile signalling`,
     );
   } finally {
     await context.close();
