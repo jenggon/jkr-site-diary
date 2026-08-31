@@ -8,6 +8,7 @@ import "./ngamsoi-n04.css";
 import "./ngamsoi-n05.css";
 import "./ngamsoi-n05r.css";
 import "./ngamsoi-n05r-spine.css";
+import "./ngamsoi-n04r.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
