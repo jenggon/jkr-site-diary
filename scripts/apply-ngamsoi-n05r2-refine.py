@@ -51,6 +51,18 @@ for old, new in [
 # Workforce action is already contextual; no decorative plus or shout-case copy.
 replace("src/app/site-diary/WorkforceEntry.tsx", ">\n            + TAMBAH\n          </button>", ">\n            Tambah\n          </button>")
 
+# Runtime capture uses the same concise labels as the real UI.
+replace(
+    "scripts/capture-ngamsoi-n05r-runtime.ts",
+    "await page.getByRole('tab', { name: 'Laporan Baharu' }).click();",
+    "await page.getByRole('tab', { name: 'Baharu' }).click();",
+)
+replace(
+    "scripts/capture-ngamsoi-n05r-runtime.ts",
+    "await expect(page.getByText('Pilih Sumber Aktiviti Harian')).toBeVisible();",
+    "await expect(page.getByRole('heading', { name: 'Sumber' })).toBeVisible();",
+)
+
 # Remaining presentation assertions from the contract migration.
 for path, pairs in {
     "tests/integration/ui/dailyEntryNavigationFlow.test.ts": [
