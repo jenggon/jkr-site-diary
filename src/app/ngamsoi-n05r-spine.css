@@ -140,7 +140,12 @@
       0 0 0.42rem color-mix(in srgb, var(--ng-current) 15%, transparent) !important;
   }
 
+  /* Explicit geometry here defeats the older N05R focus selector that expanded the
+     state segment to 1.22rem. Active state stays on the datum, never as an orange wall. */
   form[aria-label="Borang Buku Harian Tapak"] > section:focus-within::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
     background: linear-gradient(
       180deg,
       var(--ng-current) 0%,
@@ -168,6 +173,9 @@
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
     background: linear-gradient(
       180deg,
       var(--ng-current) 0%,
@@ -191,6 +199,9 @@
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
     background: linear-gradient(
       180deg,
       color-mix(in srgb, var(--ng-established) 84%, var(--ng-grey-600)) 0%,
@@ -211,6 +222,9 @@
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="false"]::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
     background: var(--ng-spine-rail) !important;
   }
 
@@ -230,6 +244,9 @@
 
   form[aria-label="Borang Buku Harian Tapak"] > section:has([role="alert"])::after,
   form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert)::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
     background: linear-gradient(
       180deg,
       var(--ng-destructive) 0%,
