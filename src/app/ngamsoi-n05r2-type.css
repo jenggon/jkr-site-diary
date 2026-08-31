@@ -1,1 +1,224 @@
-/* N05R.2 — premium Malay typography layer. */
+/* N05R.2 — premium Malay typography + concise product copy.
+ * Product voice: Geist Sans. Machine references only: Geist Mono.
+ */
+
+:root {
+  --ng-font-work: var(--font-geist-sans), "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ng-font-reference: var(--font-geist-sans), "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ng-font-brand: var(--font-geist-sans), "Segoe UI Variable Display", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ng-font-mono: var(--font-geist-mono), "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+body,
+.ngamsoi-shell,
+form[aria-label="Borang Buku Harian Tapak"] {
+  font-family: var(--ng-font-work);
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+}
+
+.ng-reference-voice {
+  font-family: var(--ng-font-reference);
+  font-weight: 560;
+  letter-spacing: 0.055em;
+}
+
+.ngamsoi-wordmark {
+  font-family: var(--ng-font-brand) !important;
+  font-weight: 690 !important;
+  letter-spacing: 0.19em !important;
+}
+
+@media (max-width: 767px) {
+  .ngamsoi-app-header .ngamsoi-tagline {
+    display: none !important;
+  }
+
+  .ngamsoi-app-header .ngamsoi-wordmark {
+    font-size: 0.86rem !important;
+    line-height: 1 !important;
+  }
+
+  .datum-project-code,
+  .datum-revision-stamp,
+  .mobile-entry-selected-source [class*="font-mono"],
+  .mobile-entry-task-row [class*="font-mono"] {
+    font-family: var(--ng-font-mono) !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .datum-project-strip h2 {
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.86rem !important;
+    font-weight: 570 !important;
+    letter-spacing: -0.012em !important;
+    line-height: 1.22 !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section > h3,
+  .ng-workforce__title,
+  .mobile-entry-spike-panel h3,
+  .mobile-entry-selected-source h3 {
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.95rem !important;
+    font-weight: 630 !important;
+    letter-spacing: -0.018em !important;
+    line-height: 1.18 !important;
+    text-transform: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] label {
+    color: var(--ng-grey-400) !important;
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.68rem !important;
+    font-weight: 610 !important;
+    letter-spacing: 0.055em !important;
+    line-height: 1.15 !important;
+    text-transform: uppercase;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] input[type="date"],
+  form[aria-label="Borang Buku Harian Tapak"] input[type="time"],
+  form[aria-label="Borang Buku Harian Tapak"] input[type="text"],
+  form[aria-label="Borang Buku Harian Tapak"] select,
+  form[aria-label="Borang Buku Harian Tapak"] textarea {
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.95rem !important;
+    font-weight: 480 !important;
+    letter-spacing: -0.012em !important;
+    line-height: 1.35 !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] input::placeholder,
+  form[aria-label="Borang Buku Harian Tapak"] textarea::placeholder {
+    color: var(--ng-grey-600) !important;
+    font-weight: 430 !important;
+    letter-spacing: -0.008em !important;
+  }
+
+  .mobile-entry-selected-source::before {
+    content: "SUMBER" !important;
+    font-family: var(--ng-font-reference) !important;
+    font-size: 0.56rem !important;
+    font-weight: 680 !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  .mobile-entry-selected-source h3 {
+    font-size: 0.93rem !important;
+    font-weight: 600 !important;
+  }
+
+  .mobile-entry-selected-source p {
+    font-size: 0.67rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .mobile-entry-selected-source button,
+  .mobile-entry-source-control,
+  .mobile-entry-row-action {
+    font-family: var(--ng-font-work) !important;
+    font-weight: 590 !important;
+    letter-spacing: -0.008em !important;
+  }
+
+  .mobile-entry-spike-panel > div:first-child > div > p:first-child,
+  .mobile-entry-spike-panel > div:first-child > div > h3 + p {
+    display: none !important;
+  }
+
+  .mobile-entry-spike-panel h3 {
+    font-size: 0.92rem !important;
+  }
+
+  .mobile-entry-search-input {
+    font-size: 0.9rem !important;
+  }
+
+  .ng-workforce__kicker,
+  .ng-workforce__hint {
+    display: none !important;
+  }
+
+  .ng-workforce__header {
+    align-items: center;
+  }
+
+  .ng-workforce__title {
+    font-size: 0.96rem !important;
+  }
+
+  .ng-workforce__matrix-head {
+    font-family: var(--ng-font-reference) !important;
+    font-size: 0.6rem !important;
+    font-weight: 660 !important;
+    letter-spacing: 0.055em !important;
+  }
+
+  .ng-workforce__trade > span {
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.76rem !important;
+    font-weight: 540 !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  .ng-workforce__figure,
+  .ng-workforce__row-total strong,
+  .ng-workforce__overall strong,
+  .ng-workforce__controller-stepper output {
+    font-family: var(--ng-font-work) !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ng-workforce__figure {
+    font-size: 1rem !important;
+    font-weight: 650 !important;
+    letter-spacing: -0.025em !important;
+  }
+
+  .ng-workforce__controller-meta > span {
+    font-family: var(--ng-font-reference) !important;
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.07em !important;
+  }
+
+  .ng-workforce__controller-meta > strong {
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.75rem !important;
+    font-weight: 580 !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  .ng-workforce__controller-stepper button {
+    font-family: var(--ng-font-work) !important;
+    font-size: 1.15rem !important;
+    font-weight: 520 !important;
+  }
+
+  .ng-workforce__controller-stepper output {
+    font-size: 1.08rem !important;
+    font-weight: 690 !important;
+  }
+
+  .ng-workforce__add-title {
+    font-family: var(--ng-font-reference) !important;
+    font-size: 0.6rem !important;
+    font-weight: 660 !important;
+    letter-spacing: 0.07em !important;
+  }
+
+  .mobile-entry-bottom-nav .mobile-entry-nav-item > span {
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.69rem !important;
+    font-weight: 570 !important;
+    letter-spacing: -0.012em !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > div:last-child > button[type="submit"] {
+    font-family: var(--ng-font-work) !important;
+    font-size: 0.9rem !important;
+    font-weight: 640 !important;
+    letter-spacing: -0.012em !important;
+  }
+}
