@@ -1,0 +1,281 @@
+/* N05R.1 — fluid compile-flow spine.
+ * The spine is the only record-state carrier:
+ *   NEXT      = hollow node + neutral rail
+ *   COMPILED  = green check + continuous green downstream segment
+ *   EDITING   = orange open node; the prior check is visibly invalidated
+ *   CHECK     = red attention node + red-to-neutral segment
+ *
+ * "Compiled" means local presentation completeness only. It never implies Saved,
+ * Approved or Verified; persisted lifecycle semantics remain owned by the domain.
+ */
+
+@media (max-width: 767px) {
+  form[aria-label="Borang Buku Harian Tapak"] {
+    --ng-spine-gutter: 1.18rem;
+    --ng-spine-x: 0.55rem;
+    --ng-spine-rail: color-mix(in srgb, var(--ng-grey-600) 58%, var(--ng-graphite-950));
+    padding-left: var(--ng-spine-x) !important;
+  }
+
+  /* One uninterrupted base datum. State segments paint over this rail instead of replacing it. */
+  form[aria-label="Borang Buku Harian Tapak"]::before {
+    left: var(--ng-spine-x) !important;
+    width: 2px !important;
+    background: var(--ng-spine-rail) !important;
+    box-shadow: none !important;
+  }
+
+  /* Legacy N05/N05R section washes are deliberately neutralised. State belongs to the datum,
+     not to a coloured slab beside the content. */
+  form[aria-label="Borang Buku Harian Tapak"] > section {
+    --ng-step-color: var(--ng-grey-600);
+    margin-left: var(--ng-spine-gutter) !important;
+    border-left-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:focus-within,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has([role="alert"]),
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert) {
+    border-left-color: transparent !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Compact datum node, mathematically centred over the shared rail. */
+  form[aria-label="Borang Buku Harian Tapak"] > section::before {
+    content: "" !important;
+    display: grid !important;
+    place-items: center;
+    top: 0.96rem !important;
+    left: calc(-1 * var(--ng-spine-gutter) - 0.36rem) !important;
+    width: 0.72rem !important;
+    height: 0.72rem !important;
+    box-sizing: border-box;
+    border: 1px solid color-mix(in srgb, var(--ng-step-color) 82%, var(--ng-grey-600)) !important;
+    border-radius: 0 !important;
+    background: var(--ng-graphite-950) !important;
+    clip-path: none !important;
+    color: var(--ng-step-color) !important;
+    font-family: var(--ng-font-reference) !important;
+    font-size: 0.49rem !important;
+    font-weight: 850 !important;
+    line-height: 1 !important;
+    transform: translateZ(0) !important;
+    box-shadow: 0 0 0 2px var(--ng-graphite-950) !important;
+    transition:
+      border-color 150ms ease,
+      color 150ms ease,
+      background-color 150ms ease,
+      box-shadow 150ms ease,
+      transform 150ms ease !important;
+  }
+
+  /* State segment deliberately over-runs the section gap: visually one rail, not many fragments. */
+  form[aria-label="Borang Buku Harian Tapak"] > section::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    z-index: 2;
+    top: 1.68rem !important;
+    bottom: -1.08rem !important;
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    height: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--ng-spine-rail) !important;
+    clip-path: none !important;
+    box-shadow: none !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    letter-spacing: 0 !important;
+    writing-mode: initial !important;
+    transition: background 170ms ease !important;
+  }
+
+  /* COMPILED: valid local content closes the node and carries authority downstream. */
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::before,
+  form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::before,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::before,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::before,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::before {
+    content: "✓" !important;
+    --ng-step-color: var(--ng-established);
+    border-color: var(--ng-established) !important;
+    background: color-mix(in srgb, var(--ng-established) 8%, var(--ng-graphite-950)) !important;
+    color: var(--ng-established) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-established) 20%, transparent) !important;
+    animation: ng-spine-compile 170ms ease-out both;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ng-established) 84%, var(--ng-grey-600)) 0%,
+      color-mix(in srgb, var(--ng-established) 70%, var(--ng-grey-600)) 76%,
+      color-mix(in srgb, var(--ng-established) 48%, var(--ng-spine-rail)) 100%
+    ) !important;
+  }
+
+  /* EDITING / REVISION: reopen = untick. Orange starts at the node then dissolves into neutral rail. */
+  form[aria-label="Borang Buku Harian Tapak"] > section:focus-within::before {
+    content: "" !important;
+    --ng-step-color: var(--ng-current);
+    border-color: var(--ng-current) !important;
+    background: var(--ng-graphite-950) !important;
+    color: var(--ng-current) !important;
+    transform: scale(1.06) translateZ(0) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-current) 30%, transparent),
+      0 0 0.42rem color-mix(in srgb, var(--ng-current) 15%, transparent) !important;
+  }
+
+  /* Explicit geometry here defeats the older N05R focus selector that expanded the
+     state segment to 1.22rem. Active state stays on the datum, never as an orange wall. */
+  form[aria-label="Borang Buku Harian Tapak"] > section:focus-within::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
+    background: linear-gradient(
+      180deg,
+      var(--ng-current) 0%,
+      color-mix(in srgb, var(--ng-current) 84%, var(--ng-grey-600)) 14%,
+      color-mix(in srgb, var(--ng-current) 38%, var(--ng-spine-rail)) 44%,
+      var(--ng-spine-rail) 80%
+    ) !important;
+  }
+
+  /* Workforce has an explicit interaction state. Its compile/revise signal follows the
+     selected citizenship cell, not residual DOM focus. This makes tap-to-revise visibly
+     untick and tap-to-close visibly recompile even when the figure button retains focus. */
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::before {
+    content: "" !important;
+    --ng-step-color: var(--ng-current);
+    border-color: var(--ng-current) !important;
+    background: var(--ng-graphite-950) !important;
+    color: var(--ng-current) !important;
+    transform: scale(1.06) translateZ(0) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-current) 30%, transparent),
+      0 0 0.42rem color-mix(in srgb, var(--ng-current) 15%, transparent) !important;
+    animation: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
+    background: linear-gradient(
+      180deg,
+      var(--ng-current) 0%,
+      color-mix(in srgb, var(--ng-current) 84%, var(--ng-grey-600)) 14%,
+      color-mix(in srgb, var(--ng-current) 38%, var(--ng-spine-rail)) 44%,
+      var(--ng-spine-rail) 80%
+    ) !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::before {
+    content: "✓" !important;
+    --ng-step-color: var(--ng-established);
+    border-color: var(--ng-established) !important;
+    background: color-mix(in srgb, var(--ng-established) 8%, var(--ng-graphite-950)) !important;
+    color: var(--ng-established) !important;
+    transform: translateZ(0) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-established) 20%, transparent) !important;
+    animation: ng-spine-compile 170ms ease-out both;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ng-established) 84%, var(--ng-grey-600)) 0%,
+      color-mix(in srgb, var(--ng-established) 70%, var(--ng-grey-600)) 76%,
+      color-mix(in srgb, var(--ng-established) 48%, var(--ng-spine-rail)) 100%
+    ) !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="false"]::before {
+    content: "" !important;
+    --ng-step-color: var(--ng-grey-600);
+    border-color: color-mix(in srgb, var(--ng-grey-600) 82%, var(--ng-graphite-950)) !important;
+    background: var(--ng-graphite-950) !important;
+    color: var(--ng-grey-600) !important;
+    transform: translateZ(0) !important;
+    box-shadow: 0 0 0 2px var(--ng-graphite-950) !important;
+    animation: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="false"]::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
+    background: var(--ng-spine-rail) !important;
+  }
+
+  /* CHECK always wins over compiled/current. */
+  form[aria-label="Borang Buku Harian Tapak"] > section:has([role="alert"])::before,
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert)::before {
+    content: "!" !important;
+    --ng-step-color: var(--ng-destructive);
+    border-color: var(--ng-destructive) !important;
+    background: color-mix(in srgb, var(--ng-destructive) 8%, var(--ng-graphite-950)) !important;
+    color: var(--ng-destructive) !important;
+    transform: none !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-destructive) 30%, transparent) !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:has([role="alert"])::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert)::after {
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    box-shadow: none !important;
+    background: linear-gradient(
+      180deg,
+      var(--ng-destructive) 0%,
+      color-mix(in srgb, var(--ng-destructive) 62%, var(--ng-grey-600)) 28%,
+      var(--ng-spine-rail) 80%
+    ) !important;
+  }
+
+  /* Rail ends deliberately inside the final record section, never in bottom navigation. */
+  form[aria-label="Borang Buku Harian Tapak"] > section:last-of-type::after {
+    bottom: 0.72rem !important;
+  }
+}
+
+@keyframes ng-spine-compile {
+  0% {
+    opacity: 0.62;
+    transform: scale(0.84) translateZ(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  form[aria-label="Borang Buku Harian Tapak"] > section::before,
+  form[aria-label="Borang Buku Harian Tapak"] > section::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

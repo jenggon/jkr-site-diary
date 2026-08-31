@@ -343,13 +343,16 @@
     align-items: center;
   }
 
+  /* Integrated mobile gate exposed that the former 2.95rem count columns were
+     narrower than their three-part steppers. Reserve real width so adjacent
+     +/- controls cannot overlap or steal pointer events. */
   .ng-workforce__matrix-head {
-    grid-template-columns: minmax(0, 1fr) 2.95rem 2.95rem 2.95rem 1.8rem;
+    grid-template-columns: minmax(0, 1fr) 4rem 4rem 4rem 1.8rem;
     padding-inline: 0.55rem;
   }
 
   .ng-workforce__row {
-    grid-template-columns: minmax(0, 1fr) 9.2rem 1.8rem;
+    grid-template-columns: minmax(0, 1fr) 12rem 1.8rem;
     gap: 0;
   }
 

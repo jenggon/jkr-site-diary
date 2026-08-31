@@ -73,7 +73,7 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
     ahi: 'VO-01',
     subtask: 'Kerja Tambahan Penstabilan Tebing Cerun',
     subtaskDisplayName: 'Penstabilan Cerun Grid 9-12 (VO 1)',
-    ahiDisplayName: 'Kerja Tambahan / VO (APK)',
+    ahiDisplayName: 'VO',
     status: ActivityStatus.New,
     isLocked: false,
     createdAt: '2026-08-17T08:00:00Z',
@@ -116,8 +116,8 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
     );
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(html).toContain('Tiada Aktiviti Terbuka');
-    expect(html).toContain('+ Cipta Laporan Baharu');
+    expect(html).toContain('Tiada');
+    expect(html).toContain('Baharu');
   });
 
   // 3. Loading state renders (role="status", aria-live="polite")
@@ -133,10 +133,10 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain('data-testid="open-activities-loading"');
-    expect(html).toContain('Memuatkan senarai aktiviti terbuka...');
+    expect(html).toContain('Muat…');
   });
 
-  // 4. Empty state renders (Tiada Aktiviti Terbuka)
+  // 4. Empty state renders (Tiada)
   it('4. Empty state renders localized empty message and create-new button', () => {
     const html = renderToString(
       React.createElement(OpenActivitiesList, {
@@ -185,7 +185,7 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
   });
 
   // 7. New Activity card renders human-readable MSP identity
-  it('7. New Activity card renders human-readable MSP identity (Kerja Jadual (MSP))', () => {
+  it('7. New Activity card renders human-readable MSP identity (MSP)', () => {
     const html = renderToString(
       React.createElement(OpenActivityCard, {
         activity: { ...sampleMspActivity, status: ActivityStatus.New },
@@ -193,7 +193,7 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
       })
     );
 
-    expect(html).toContain('Kerja Jadual (MSP)');
+    expect(html).toContain('MSP');
     expect(html).toContain('Belum Mula');
     expect(html).toContain('Pemasangan Cerucuk RC Grid 1-8');
   });
@@ -212,7 +212,7 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
   });
 
   // 9. VO card renders human-readable VO identity
-  it('9. VO card renders human-readable VO identity (Kerja Tambahan / VO (APK))', () => {
+  it('9. VO card renders human-readable VO identity (VO)', () => {
     const html = renderToString(
       React.createElement(OpenActivityCard, {
         activity: sampleVoActivity,
@@ -220,7 +220,7 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
       })
     );
 
-    expect(html).toContain('Kerja Tambahan / VO (APK)');
+    expect(html).toContain('VO');
     expect(html).toContain('Penstabilan Cerun Grid 9-12 (VO 1)');
   });
 
@@ -312,7 +312,7 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
     );
 
     expect(html).toContain('data-testid="continuation-banner"');
-    expect(html).toContain('Melanjutkan Aktiviti Sedia Ada (Continuation Mode)');
+    expect(html).toContain('Lanjut');
     expect(html).toContain('data-testid="back-to-open-activities-btn"');
   });
 
@@ -561,12 +561,12 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
     );
 
     expect(html).toContain('data-testid="back-to-open-activities-btn"');
-    expect(html).toContain('Kembali ke Aktiviti Terbuka');
-    expect(html).toContain('aria-label="Kembali ke Senarai Aktiviti Terbuka"');
+    expect(html).toContain('Kembali');
+    expect(html).toContain('aria-label="Kembali"');
   });
 
   // 21. Programme change clears selected Activity
-  it('21. Programme change clears selected Activity and resets tab to Aktiviti Terbuka', () => {
+  it('21. Programme change clears selected Activity and resets tab to Aktiviti', () => {
     mockProgrammeId = 'prog-selangor-001';
     const html1 = renderToString(
       React.createElement(DailyEntryForm, {
@@ -590,18 +590,18 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
     expect(fetchedUrls[0]).toBe('/api/activities/open?programmeId=prog-kedah-002');
   });
 
-  // 23. Laporan Baharu still mounts canonical F2.1 new-entry flow
-  it('23. Laporan Baharu tab mounts canonical F2.1 new-entry flow with source selector', () => {
+  // 23. Baharu still mounts canonical F2.1 new-entry flow
+  it('23. Baharu tab mounts canonical F2.1 new-entry flow with source selector', () => {
     const html = renderToString(
       React.createElement(DailyEntryForm, {
         initialTab: 'NEW_ACTIVITY',
       })
     );
 
-    expect(html).toContain('Kerja Jadual (MSP)');
-    expect(html).toContain('Kerja Tambahan / VO (APK)');
-    expect(html).toContain('Tarikh &amp; Status Kerja');
-    expect(html).toContain('Tenaga Kerja di Tapak (Workforce)');
+    expect(html).toContain('MSP');
+    expect(html).toContain('VO');
+    expect(html).toContain('Harian');
+    expect(html).toContain('Pekerja');
   });
 
   // 24. MSP XOR VO source selection remains intact for new entry
@@ -612,8 +612,8 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
       })
     );
 
-    expect(html).toContain('Kerja Jadual (MSP)');
-    expect(html).toContain('Kerja Tambahan / VO (APK)');
+    expect(html).toContain('MSP');
+    expect(html).toContain('VO');
   });
 
   // 25. Completed Activity disappears after canonical re-fetch

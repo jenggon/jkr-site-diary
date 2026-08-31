@@ -786,7 +786,7 @@ export default function DailyEntryForm({
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <span>Aktiviti Terbuka</span>
+              <span>Aktiviti</span>
             </button>
 
             <button
@@ -809,7 +809,7 @@ export default function DailyEntryForm({
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              <span>+ Laporan Baharu</span>
+              <span>Baharu</span>
             </button>
           </div>
         </nav>
@@ -857,7 +857,7 @@ export default function DailyEntryForm({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-blue-400">
                     <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                    <span>Melanjutkan Aktiviti Sedia Ada (Continuation Mode)</span>
+                    <span>Lanjut</span>
                   </div>
                   <button
                     type="button"
@@ -865,13 +865,13 @@ export default function DailyEntryForm({
                       invalidateContinuationContext('OPEN_ACTIVITIES');
                     }}
                     data-testid="back-to-open-activities-btn"
-                    aria-label="Kembali ke Senarai Aktiviti Terbuka"
+                    aria-label="Kembali"
                     className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 min-h-[36px]"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    <span>Kembali ke Aktiviti Terbuka</span>
+                    <span>Kembali</span>
                   </button>
                 </div>
 
@@ -895,7 +895,7 @@ export default function DailyEntryForm({
                           existingActivityInfo.sourceType === 'VO' ? 'bg-emerald-400' : 'bg-indigo-400'
                         }`}
                       ></span>
-                      {existingActivityInfo.sourceType === 'VO' ? 'Kerja Tambahan / VO (APK)' : 'Kerja Jadual (MSP)'}
+                      {existingActivityInfo.sourceType === 'VO' ? 'VO' : 'MSP'}
                     </span>
                   )}
                   {existingActivityInfo?.status && (
@@ -911,7 +911,7 @@ export default function DailyEntryForm({
                           existingActivityInfo.status === 'In Progress' ? 'bg-amber-400 animate-pulse' : 'bg-blue-400'
                         }`}
                       ></span>
-                      {existingActivityInfo.status === 'In Progress' ? 'Sedang Laksana' : 'Belum Mula'}
+                      {existingActivityInfo.status === 'In Progress' ? 'Laksana' : 'Baharu'}
                     </span>
                   )}
                 </div>
@@ -927,7 +927,7 @@ export default function DailyEntryForm({
                 disabled={isSubmitting}
                 className="min-h-[44px] rounded-xl border border-zinc-700 px-4 text-sm font-bold text-zinc-200 disabled:opacity-50"
               >
-                Batal Suntingan
+                Batal
               </button>
             </section>
           )}
@@ -936,13 +936,13 @@ export default function DailyEntryForm({
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
             <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              Tarikh & Status Kerja
+              Harian
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Tarikh Laporan Harian *
+                  Tarikh *
                 </label>
                 <input
                   type="date"
@@ -956,7 +956,7 @@ export default function DailyEntryForm({
 
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Tarikh Mula Sebenar (Known Start) *
+                  Mula *
                 </label>
                 <input
                   type="date"
@@ -970,7 +970,7 @@ export default function DailyEntryForm({
 
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Status Kemajuan Kerja *
+                  Status *
                 </label>
                 <select
                   value={workStatus}
@@ -978,8 +978,8 @@ export default function DailyEntryForm({
                   disabled={isSubmitting}
                   className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-blue-500"
                 >
-                  <option value="Sedang Laksana">Sedang Laksana (In Progress)</option>
-                  <option value="Siap">Siap (Completed)</option>
+                  <option value="Sedang Laksana">Laksana</option>
+                  <option value="Siap">Siap</option>
                 </select>
               </div>
             </div>
@@ -989,13 +989,13 @@ export default function DailyEntryForm({
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
             <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Maklumat Tapak & Cuaca (Format JKR Page 1)
+              Tapak
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Lokasi Terperinci / Grid Line *
+                  Lokasi *
                 </label>
                 <input
                   type="text"
@@ -1010,7 +1010,7 @@ export default function DailyEntryForm({
 
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Skop Pelaksanaan *
+                  Skop *
                 </label>
                 <select
                   value={contractorScope}
@@ -1018,8 +1018,8 @@ export default function DailyEntryForm({
                   disabled={isSubmitting}
                   className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="CONTRACTOR">Kontraktor Utama (Main Contractor)</option>
-                  <option value="NSC">Sub-Kontraktor Dinamakan (NSC)</option>
+                  <option value="CONTRACTOR">Utama</option>
+                  <option value="NSC">NSC</option>
                 </select>
               </div>
             </div>
@@ -1027,7 +1027,7 @@ export default function DailyEntryForm({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mt-3 pt-3 border-t border-zinc-800">
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Keadaan Cuaca Utama
+                  Cuaca
                 </label>
                 <select
                   value={weatherCondition ?? ''}
@@ -1039,17 +1039,17 @@ export default function DailyEntryForm({
                   disabled={isSubmitting}
                   className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="">-- Pilih Keadaan Cuaca (Pilihan) --</option>
-                  <option value="ELOK">Elok (Sunny/Fair)</option>
-                  <option value="HUJAN">Hujan (Rainy)</option>
-                  <option value="MENDUNG">Mendung (Cloudy)</option>
-                  <option value="RIBUT">Ribut (Stormy)</option>
+                  <option value="">Pilih</option>
+                  <option value="ELOK">Elok</option>
+                  <option value="HUJAN">Hujan</option>
+                  <option value="MENDUNG">Mendung</option>
+                  <option value="RIBUT">Ribut</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Masa Mula Kerja
+                  Kerja Mula
                 </label>
                 <input
                   type="time"
@@ -1062,7 +1062,7 @@ export default function DailyEntryForm({
 
               <div>
                 <label className="block text-zinc-400 font-semibold mb-1">
-                  Masa Tamat Kerja
+                  Kerja Tamat
                 </label>
                 <input
                   type="time"
@@ -1077,7 +1077,7 @@ export default function DailyEntryForm({
                 <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
                     <label className="block text-zinc-400 font-semibold mb-1">
-                      Masa Mula Hujan
+                      Hujan Mula
                     </label>
                     <input
                       type="time"
@@ -1090,7 +1090,7 @@ export default function DailyEntryForm({
 
                   <div>
                     <label className="block text-zinc-400 font-semibold mb-1">
-                      Masa Tamat Hujan
+                      Hujan Tamat
                     </label>
                     <input
                       type="time"
@@ -1116,7 +1116,7 @@ export default function DailyEntryForm({
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
             <h3 className="text-sm sm:text-base font-bold text-zinc-100 mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              Catatan & Huraian Kemajuan Kerja *
+              Catatan *
             </h3>
             <textarea
               required
@@ -1124,7 +1124,7 @@ export default function DailyEntryForm({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={isSubmitting}
-              placeholder="Nyatakan kemajuan fizikal, kuantiti kerja disiapkan, ujian konkrit/tetulang, atau isu tapak hari ini..."
+              placeholder="Catat kerja"
               className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-purple-500 leading-relaxed"
             />
           </section>
@@ -1165,11 +1165,11 @@ export default function DailyEntryForm({
               {isSubmitting ? (
                 <>
                   <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true"></span>
-                  <span>Menyimpan Laporan...</span>
+                  <span>Simpan…</span>
                 </>
               ) : (
                 <span>
-                  {editingSiteDiaryId ? 'Kemaskini Laporan Buku Harian Tapak' : 'Hantar & Simpan Buku Harian Tapak'}
+                  Simpan
                 </span>
               )}
             </button>

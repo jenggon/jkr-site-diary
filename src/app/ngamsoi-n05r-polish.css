@@ -1,0 +1,17 @@
+/* N05R final visual polish.
+ * N05 used ::after for textual EST/CURRENT/CHECK labels. N05R repurposes that same
+ * pseudo-element as the NGAM baseline tick, so the old words must never leak into
+ * the 390px ledger. Triple attribute specificity deliberately beats the inherited
+ * :has()/focus state selectors while leaving their state colour variables intact.
+ */
+@media (max-width: 767px) {
+  form[aria-label="Borang Buku Harian Tapak"][aria-label="Borang Buku Harian Tapak"][aria-label="Borang Buku Harian Tapak"] > section::after {
+    content: "" !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    letter-spacing: 0 !important;
+    line-height: 0 !important;
+    text-indent: -9999px !important;
+    overflow: hidden !important;
+  }
+}

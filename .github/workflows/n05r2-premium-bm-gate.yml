@@ -1,0 +1,126 @@
+name: N05R2 Premium BM Gate
+
+on:
+  push:
+    branches:
+      - feature/N05R-ngamsoi-integrated-visual-reset
+
+permissions:
+  contents: write
+
+jobs:
+  premium-bm:
+    if: ${{ !contains(github.event.head_commit.message, '[n05r2-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply typography and copy pass
+        run: |
+          python3 scripts/apply-ngamsoi-n05r2.py
+          python3 scripts/apply-ngamsoi-n05r2-refine.py
+          sed -i 's/[[:space:]]*$//' \
+            src/app/layout.tsx \
+            src/app/site-diary/DailyEntryForm.tsx \
+            src/app/site-diary/OperationalSourceSelector.tsx \
+            src/app/site-diary/OpenActivitiesList.tsx \
+            src/app/site-diary/WorkforceEntry.tsx \
+            src/app/site-diary/SiteDiaryWorkspace.tsx \
+            scripts/capture-ngamsoi-n05r-runtime.ts \
+            tests/integration/ui/dailyEntryContinuationMode.test.ts \
+            tests/integration/ui/dailyEntryNavigationFlow.test.ts \
+            tests/integration/ui/dailyEntryParity.test.ts \
+            tests/integration/ui/diaryManagementList.test.ts \
+            tests/integration/ui/openActivitiesLifecycleRaces.test.ts \
+            tests/integration/ui/openActivitiesUi.test.ts \
+            tests/integration/ui/siteDiaryWorkspace.test.ts \
+            tests/unit/ui/operationalSourceSelector.test.ts \
+            tests/unit/ui/workforceEntry.test.ts
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: |
+          set -o pipefail
+          git diff --check 2>&1 | tee /tmp/n05r2-diff-check.log
+          pnpm run verify 2>&1 | tee /tmp/n05r2-verify.log
+
+      - name: Verify diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n05r2-verify-diagnostic
+          path: |
+            /tmp/n05r2-diff-check.log
+            /tmp/n05r2-verify.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start runtime
+        run: |
+          pnpm start > /tmp/n05r2-next.log 2>&1 &
+          echo $! > /tmp/n05r2-next.pid
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000/site-diary > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/n05r2-next.log
+          exit 1
+
+      - name: Capture
+        run: pnpm exec tsx scripts/capture-ngamsoi-n05r-runtime.ts
+
+      - name: Commit pass
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/app/layout.tsx \
+            src/app/site-diary/DailyEntryForm.tsx \
+            src/app/site-diary/OperationalSourceSelector.tsx \
+            src/app/site-diary/OpenActivitiesList.tsx \
+            src/app/site-diary/WorkforceEntry.tsx \
+            src/app/site-diary/SiteDiaryWorkspace.tsx \
+            scripts/capture-ngamsoi-n05r-runtime.ts \
+            tests/integration/ui/dailyEntryContinuationMode.test.ts \
+            tests/integration/ui/dailyEntryNavigationFlow.test.ts \
+            tests/integration/ui/dailyEntryParity.test.ts \
+            tests/integration/ui/diaryManagementList.test.ts \
+            tests/integration/ui/openActivitiesLifecycleRaces.test.ts \
+            tests/integration/ui/openActivitiesUi.test.ts \
+            tests/integration/ui/siteDiaryWorkspace.test.ts \
+            tests/unit/ui/operationalSourceSelector.test.ts \
+            tests/unit/ui/workforceEntry.test.ts
+          git commit -m "feat(n05r2): premium BM typography and microcopy [n05r2-applied]"
+          git push origin HEAD:feature/N05R-ngamsoi-integrated-visual-reset
+
+      - name: Evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: n05r2-premium-bm-runtime
+          path: docs/evidence/n05r-ngamsoi/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop runtime
+        if: always()
+        run: |
+          if [ -f /tmp/n05r2-next.pid ]; then kill "$(cat /tmp/n05r2-next.pid)" || true; fi

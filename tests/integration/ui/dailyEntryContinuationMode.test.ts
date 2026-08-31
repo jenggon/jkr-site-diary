@@ -444,7 +444,7 @@ describe('F2.2-B02 — Existing Activity Continuation Mode Behavioral Suite', ()
     const html = renderToString(React.createElement(DailyEntryForm, { initialActivityId: 'act-prefill-test' }));
 
     expect(html).toContain('data-testid="continuation-banner"');
-    expect(html).toContain('Melanjutkan Aktiviti Sedia Ada (Continuation Mode)');
+    expect(html).toContain('Lanjut');
     expect(html).not.toContain('Pilih Sumber Aktiviti');
 
     // Simulated historical diaries with rich observational data
