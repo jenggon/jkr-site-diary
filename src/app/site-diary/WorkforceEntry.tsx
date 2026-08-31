@@ -117,10 +117,10 @@ export default function WorkforceEntry({
       <header className="ng-workforce__header">
         <div className="min-w-0">
           <div className="ng-workforce__kicker">WORKFORCE / SITE ROSTER</div>
-          <h3 className="ng-workforce__title">Tenaga Kerja di Tapak</h3>
+          <h3 className="ng-workforce__title">Tenaga Kerja di Tapak (Workforce)</h3>
           <p className="ng-workforce__hint">Pecahan pekerja mengikut tred dan kerakyatan</p>
         </div>
-        <div className="ng-workforce__overall" aria-label="Jumlah keseluruhan tenaga kerja">
+        <div className="ng-workforce__overall" aria-label={`${overallTotal} Orang`}>
           <span>JUMLAH</span>
           <strong data-testid="overall-workforce-total">{overallTotal}</strong>
           <small>ORANG</small>
