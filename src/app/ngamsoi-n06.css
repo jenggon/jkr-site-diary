@@ -187,12 +187,21 @@ form[aria-label="Borang Buku Harian Tapak"]:has(.ng-completion) > div:last-child
   border-right: 0;
 }
 
-.ng-completion-action:hover,
 .ng-completion-action:focus-visible {
   background: var(--ng-graphite-900);
   color: var(--ng-ivory-100);
-  outline: none;
-  box-shadow: inset 0 -2px 0 var(--ng-current);
+  outline: 1px solid var(--ng-current);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ng-completion-action:hover {
+    background: var(--ng-graphite-900);
+    color: var(--ng-ivory-100);
+    outline: none;
+    box-shadow: inset 0 -2px 0 var(--ng-current);
+  }
 }
 
 .ng-completion-action:active {
