@@ -130,4 +130,61 @@ replace(
     "expect(topMetrics.typography.referenceFamily).toBe(topMetrics.typography.inputFamily);\n    expect(topMetrics.typography.inputSize).toBeGreaterThanOrEqual(15);",
 )
 
+# Presentation tests follow the intentional BM microcopy contract. Behavioural/domain values stay unchanged.
+test_copy = {
+    "tests/integration/ui/dailyEntryContinuationMode.test.ts": [
+        ("Melanjutkan Aktiviti Sedia Ada (Continuation Mode)", "Lanjut"),
+    ],
+    "tests/integration/ui/dailyEntryNavigationFlow.test.ts": [
+        ("Kerja Jadual (MSP)", "MSP"),
+        ("Kerja Tambahan / VO (APK)", "VO"),
+        ("Tarikh &amp; Status Kerja", "Harian"),
+        ("Aktiviti Terbuka", "Aktiviti"),
+        ("+ Laporan Baharu", "Baharu"),
+    ],
+    "tests/integration/ui/dailyEntryParity.test.ts": [
+        ("Tarikh &amp; Status Kerja", "Harian"),
+        ("Maklumat Tapak &amp; Cuaca (Format JKR Page 1)", "Tapak"),
+        ("Catatan &amp; Huraian Kemajuan Kerja *", "Catatan *"),
+        ("Hantar &amp; Simpan Buku Harian Tapak", "Simpan"),
+    ],
+    "tests/integration/ui/diaryManagementList.test.ts": [
+        ("Batal Suntingan", "Batal"),
+        ("Kemaskini Laporan Buku Harian Tapak", "Kemas Kini"),
+    ],
+    "tests/integration/ui/openActivitiesLifecycleRaces.test.ts": [
+        ("+ Laporan Baharu", "Baharu"),
+        ("Sumber Aktiviti", "Sumber"),
+    ],
+    "tests/integration/ui/openActivitiesUi.test.ts": [
+        ("Melanjutkan Aktiviti Sedia Ada (Continuation Mode)", "Lanjut"),
+        ("Kembali ke Aktiviti Terbuka", "Kembali"),
+        ("Tarikh &amp; Status Kerja", "Harian"),
+        ("Laporan Baharu", "Baharu"),
+        ("Aktiviti Terbuka", "Aktiviti"),
+    ],
+    "tests/integration/ui/siteDiaryWorkspace.test.ts": [
+        ("'Laporan Baharu'", "'Baharu'"),
+        ("'Aktiviti Terbuka'", "'Aktiviti'"),
+        ("'Rekod / Sejarah'", "'Rekod'"),
+        ("'Kelulusan'", "'Semak'"),
+    ],
+    "tests/unit/ui/operationalSourceSelector.test.ts": [
+        ("Pilih Sumber Aktiviti Harian", "Sumber"),
+        ("Kerja Jadual (MSP)", "MSP"),
+        ("Kerja Tambahan / VO (APK)", "VO"),
+        ("Tiada tugasan ditemui untuk semakan aktif ini.", "Tiada"),
+        ("Tiada rekod kerja VO / APK didaftarkan bagi projek ini.", "Tiada"),
+        ("Cuba Semula", "Ulang"),
+    ],
+    "tests/unit/ui/workforceEntry.test.ts": [
+        ("Tenaga Kerja di Tapak (Workforce)", "Pekerja"),
+        ("Tiada tred tenaga kerja ditambah", "Tiada"),
+        ("NON-B", "BUKAN"),
+    ],
+}
+for test_path, replacements in test_copy.items():
+    for old, new in replacements:
+        replace(test_path, old, new, required=False)
+
 print("N05R.2 premium BM typography/microcopy pass applied")
