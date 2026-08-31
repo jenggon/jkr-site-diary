@@ -23,7 +23,7 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the mobile-first shell structure and DATUM identity without artificial phone frames', () => {
+  it('renders the mobile-first shell structure and NGAMSOI identity without artificial phone frames', () => {
     const html = renderToString(
       React.createElement(
         DailyEntryShell,
@@ -32,11 +32,16 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
       )
     );
 
-    // DATUM is the product identity; contractual JKR terminology remains downstream where required.
-    expect(html).toContain('DATUM');
-    expect(html).toContain('Digital Fieldbook · Project Ground Truth');
-    expect(html).toContain('datum-shell');
-    expect(html).toContain('datum-mark');
+    // NGAMSOI is the product identity; contractual JKR terminology remains downstream where required.
+    expect(html).toContain('NGAMSOI');
+    expect(html).toContain('Kena boh!');
+    expect(html).toContain('Ngamsoi.');
+    expect(html).toContain('ngamsoi-shell');
+    expect(html).toContain('ngamsoi-brand-lockup');
+    expect(html).toContain('ngamsoi-mark-svg');
+    expect(html).toContain('datum-shell'); // temporary visual-lineage compatibility class until N02-N08 propagation closes
+    expect(html).not.toContain('Digital Fieldbook · Project Ground Truth');
+    expect(html).not.toContain('>DATUM<');
     expect(html).not.toContain('Sistem Pengurusan Tapak Digital');
 
     // Verify mobile-responsive classes
@@ -52,6 +57,32 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
 
     // Verify child is rendered inside shell when programmeId is present
     expect(html).toContain('Child Component');
+  });
+
+  it('locks N01 mark geometry, graphite tokens, semantic accent and typography grammar as code', () => {
+    const brandSource = read('src/components/brand/NgamsoiBrand.tsx');
+    const identityCss = read('src/app/ngamsoi.css');
+    const layoutSource = read('src/app/layout.tsx');
+    const appIcon = read('public/ngamsoi-mark.svg');
+
+    expect(brandSource).toContain('viewBox="0 0 96 76"');
+    expect(brandSource).toContain('ngamsoi-mark-baseline');
+    expect(brandSource).toContain('NGAMSOI');
+    expect(brandSource).toContain('Kena boh!');
+
+    expect(identityCss).toContain('--ng-graphite-950');
+    expect(identityCss).toContain('--ng-current: #ff7a1a');
+    expect(identityCss).toContain('--ng-established: #55b879');
+    expect(identityCss).toContain('--ng-font-work');
+    expect(identityCss).toContain('--ng-font-reference');
+    expect(identityCss).toContain('--ng-font-brand');
+    expect(identityCss).toContain('.ng-work-voice');
+    expect(identityCss).toContain('.ng-reference-voice');
+
+    expect(layoutSource).toContain('NGAMSOI | JKR Site Diary');
+    expect(layoutSource).toContain('/ngamsoi-mark.svg');
+    expect(appIcon).toContain('#ff7a1a');
+    expect(appIcon).toContain('aria-label="NGAMSOI mark"');
   });
 
   it('preserves native DailyEntryForm through the bounded Site Diary workspace composition', () => {

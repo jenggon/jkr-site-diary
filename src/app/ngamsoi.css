@@ -1,0 +1,203 @@
+:root {
+  /* NGAMSOI N01 — canonical identity tokens */
+  --ng-graphite-1000: #050607;
+  --ng-graphite-950: #08090b;
+  --ng-graphite-925: #0b0d10;
+  --ng-graphite-900: #101216;
+  --ng-graphite-850: #15181d;
+  --ng-graphite-800: #1b1f25;
+  --ng-graphite-750: #22272e;
+  --ng-graphite-700: #2a3038;
+  --ng-graphite-650: #373e47;
+
+  --ng-ivory-100: #f3f0e8;
+  --ng-grey-200: #d4d4cf;
+  --ng-grey-300: #b9bbc0;
+  --ng-grey-400: #969ca4;
+  --ng-grey-500: #747b84;
+  --ng-grey-600: #5b626c;
+
+  --ng-current: #ff7a1a;
+  --ng-established: #55b879;
+  --ng-warning: #d4a64f;
+  --ng-destructive: #e46d72;
+
+  --ng-font-work: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ng-font-reference: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ng-font-brand: Bahnschrift, "Arial Narrow", "Aptos Display", var(--font-geist-sans), sans-serif;
+
+  --ng-rule: var(--ng-graphite-700);
+  --ng-inset: var(--ng-graphite-925);
+  --ng-surface: var(--ng-graphite-900);
+
+  /* Temporary DATUM compatibility aliases. Remove only when N02-N08 propagation is complete. */
+  --datum-graphite-950: var(--ng-graphite-950);
+  --datum-graphite-925: var(--ng-graphite-925);
+  --datum-graphite-900: var(--ng-graphite-900);
+  --datum-graphite-850: var(--ng-graphite-850);
+  --datum-graphite-800: var(--ng-graphite-800);
+  --datum-graphite-750: var(--ng-graphite-750);
+  --datum-graphite-700: var(--ng-graphite-700);
+  --datum-graphite-650: var(--ng-graphite-650);
+  --datum-white: var(--ng-ivory-100);
+  --datum-grey-200: var(--ng-grey-200);
+  --datum-grey-300: var(--ng-grey-300);
+  --datum-grey-400: var(--ng-grey-400);
+  --datum-grey-500: var(--ng-grey-500);
+  --datum-grey-600: var(--ng-grey-600);
+  --datum-active: var(--ng-current);
+  --datum-valid: var(--ng-established);
+  --datum-warning: var(--ng-warning);
+  --datum-destructive: var(--ng-destructive);
+}
+
+html,
+body {
+  background: var(--ng-graphite-950);
+}
+
+body {
+  font-family: var(--ng-font-work);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--ng-current) 32%, transparent);
+  color: var(--ng-ivory-100);
+}
+
+.ngamsoi-shell {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.018), transparent 18%),
+    var(--ng-graphite-950);
+}
+
+.ngamsoi-brand-lockup {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--ng-ivory-100);
+}
+
+.ngamsoi-mark-housing {
+  display: inline-flex;
+  width: 2.45rem;
+  height: 2.45rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: var(--ng-ivory-100);
+}
+
+.ngamsoi-mark-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ngamsoi-mark-baseline {
+  color: var(--ng-current);
+  stroke: currentColor;
+}
+
+.ngamsoi-brand-copy {
+  display: inline-flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1;
+}
+
+.ngamsoi-wordmark {
+  display: block;
+  color: var(--ng-ivory-100);
+  font-family: var(--ng-font-brand);
+  font-size: 0.94rem;
+  font-weight: 620;
+  font-stretch: condensed;
+  letter-spacing: 0.17em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ngamsoi-tagline {
+  display: block;
+  margin-top: 0.32rem;
+  color: var(--ng-grey-300);
+  font-size: 0.65rem;
+  font-weight: 520;
+  letter-spacing: 0.015em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ngamsoi-tagline-trigger {
+  color: var(--ng-current);
+  font-weight: 680;
+}
+
+.ngamsoi-brand-lockup--compact {
+  gap: 0.58rem;
+}
+
+.ngamsoi-brand-lockup--compact .ngamsoi-mark-housing {
+  width: 2.15rem;
+  height: 2.15rem;
+}
+
+.ngamsoi-brand-lockup--compact .ngamsoi-wordmark {
+  font-size: 0.82rem;
+  letter-spacing: 0.15em;
+}
+
+.ngamsoi-brand-lockup--compact .ngamsoi-tagline {
+  margin-top: 0.27rem;
+  font-size: 0.59rem;
+}
+
+/* Typography grammar: work voice for human field content, reference voice for authority/metadata. */
+.ng-work-voice {
+  font-family: var(--ng-font-work);
+  font-weight: 460;
+  letter-spacing: -0.006em;
+}
+
+.ng-reference-voice {
+  font-family: var(--ng-font-reference);
+  font-size: 0.92em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.045em;
+}
+
+.ng-brand-voice {
+  font-family: var(--ng-font-brand);
+  font-weight: 620;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* N01 top-chrome identity only. Layout and navigation redesign remain later passes. */
+.ngamsoi-app-header {
+  border-color: var(--ng-rule) !important;
+  background: rgb(8 9 11 / 0.985) !important;
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.025) !important;
+}
+
+@media (max-width: 767px) {
+  .ngamsoi-app-header > div {
+    padding-top: 0.62rem;
+    padding-bottom: 0.62rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ngamsoi-brand-lockup *,
+  .ngamsoi-brand-lockup *::before,
+  .ngamsoi-brand-lockup *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

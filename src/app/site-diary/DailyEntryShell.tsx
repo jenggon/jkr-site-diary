@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import NgamsoiBrand from '@/components/brand/NgamsoiBrand';
 import { useAuth } from '@/context/AuthContext';
 
 export interface ProgrammeOption {
@@ -248,31 +249,19 @@ export default function DailyEntryShell({
         refreshContext: loadProgrammes,
       }}
     >
-      <div className="datum-shell h-[100dvh] w-full bg-surface-canvas text-tactical-text-primary flex flex-col overflow-hidden">
+      <div className="ngamsoi-shell datum-shell h-[100dvh] w-full bg-surface-canvas text-tactical-text-primary flex flex-col overflow-hidden">
         {/* Sticky top navigation bar */}
-        <header className="datum-app-header shrink-0 z-40 w-full bg-surface-primary border-b border-surface-border shadow-sm">
+        <header className="ngamsoi-app-header datum-app-header shrink-0 z-40 w-full bg-surface-primary border-b border-surface-border shadow-sm">
           <div className="mx-auto w-full px-4 py-3 flex items-center justify-between gap-3">
-            {/* DATUM product identity */}
-            <div className="flex items-center gap-3">
-              <div className="datum-mark w-9 h-9 rounded-lg bg-accent-operational flex items-center justify-center font-bold text-white shadow-inner text-sm tracking-wider" aria-hidden="true">
-                D
-              </div>
-              <div>
-                <h1 className="datum-brand-title text-sm sm:text-base font-bold text-tactical-text-primary tracking-tight leading-tight">
-                  DATUM
-                </h1>
-                <p className="datum-brand-subtitle text-[11px] text-tactical-text-secondary font-medium leading-none">
-                  Digital Fieldbook · Project Ground Truth
-                </p>
-              </div>
-            </div>
+            {/* NGAMSOI product identity */}
+            <NgamsoiBrand compact />
 
             {/* User logout */}
             <div className="flex items-center gap-2">
               {user && (
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-8 h-8 rounded-full bg-surface-raised border border-surface-border text-tactical-text-secondary flex items-center justify-center text-xs font-bold"
+                    className="ng-reference-voice w-8 h-8 rounded-full bg-surface-raised border border-surface-border text-tactical-text-secondary flex items-center justify-center text-xs font-bold"
                     title={user.email ?? ''}
                   >
                     {userInitials}
@@ -296,10 +285,10 @@ export default function DailyEntryShell({
             <div className="mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
               {/* Left: code + name on one tight row */}
               <div className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-                <span className="datum-project-code text-xs font-bold uppercase tracking-wider text-tactical-state-pending bg-surface-raised border border-surface-border px-2 py-0.5 rounded leading-tight shrink-0">
+                <span className="ng-reference-voice datum-project-code text-xs font-bold uppercase tracking-wider text-tactical-state-pending bg-surface-raised border border-surface-border px-2 py-0.5 rounded leading-tight shrink-0">
                   {programmeCode || 'Program Aktif'}
                 </span>
-                <h2 className="text-sm font-semibold text-tactical-text-primary truncate leading-tight" title={programmeName || ''}>
+                <h2 className="ng-work-voice text-sm font-semibold text-tactical-text-primary truncate leading-tight" title={programmeName || ''}>
                   {programmeName || 'Nama Program'}
                 </h2>
                 {availableProgrammes.length > 1 && (
@@ -322,7 +311,7 @@ export default function DailyEntryShell({
               {/* Right: revision authority — always visible */}
               <div className="shrink-0 flex items-center gap-1.5">
                 {revisionState === 'RESOLVED' && revisionId && (
-                  <span className="datum-revision-stamp text-xs font-bold text-tactical-state-valid flex items-center gap-1">
+                  <span className="ng-reference-voice datum-revision-stamp text-xs font-bold text-tactical-state-valid flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-tactical-state-valid shrink-0"></span>
                     <span className="uppercase tracking-wide">Semakan Sah</span>
                     <span aria-hidden="true" className="text-tactical-text-muted font-normal">·</span>
@@ -330,22 +319,22 @@ export default function DailyEntryShell({
                   </span>
                 )}
                 {revisionState === 'RESOLVING' && (
-                  <span className="text-xs font-bold text-tactical-text-secondary flex items-center gap-1">
+                  <span className="ng-reference-voice text-xs font-bold text-tactical-text-secondary flex items-center gap-1">
                     <span className="uppercase tracking-wide">Memuatkan Semakan</span>
                   </span>
                 )}
                 {revisionState === 'UNAVAILABLE' && (
-                  <span className="text-xs font-bold text-tactical-text-muted flex items-center gap-1">
+                  <span className="ng-reference-voice text-xs font-bold text-tactical-text-muted flex items-center gap-1">
                     <span className="uppercase tracking-wide">Tiada Semakan</span>
                   </span>
                 )}
                 {revisionState === 'ERROR' && (
-                  <span className="text-xs font-bold text-tactical-state-destructive flex items-center gap-1">
+                  <span className="ng-reference-voice text-xs font-bold text-tactical-state-destructive flex items-center gap-1">
                     <span className="uppercase tracking-wide">Ralat Semakan</span>
                   </span>
                 )}
                 {revisionState === 'IDLE' && (
-                  <span className="text-xs font-mono text-tactical-text-muted">—</span>
+                  <span className="ng-reference-voice text-xs font-mono text-tactical-text-muted">—</span>
                 )}
               </div>
             </div>
@@ -425,14 +414,14 @@ export default function DailyEntryShell({
                     className="w-full text-left p-3.5 rounded-xl border border-zinc-800 bg-zinc-950/80 hover:bg-zinc-800/80 hover:border-blue-600/50 transition-all group flex flex-col gap-1"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-blue-400 tracking-wider">
+                      <span className="ng-reference-voice text-xs font-bold text-blue-400 tracking-wider">
                         {prog.code}
                       </span>
                       <span className="text-[11px] text-zinc-500 group-hover:text-blue-400 transition-colors font-medium">
                         Pilih &rarr;
                       </span>
                     </div>
-                    <div className="text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors">
+                    <div className="ng-work-voice text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors">
                       {prog.name}
                     </div>
                     {prog.contractorName && (
