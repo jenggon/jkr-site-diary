@@ -167,7 +167,7 @@ async function main(): Promise<void> {
     await expect(signature).not.toContainText('Simpanan Berjaya');
     await expect(signature).not.toContainText('Buku Harian Tapak berjaya disimpan.');
 
-    await ritual.scrollIntoViewIfNeeded();
+    await ritual.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
     await page.waitForTimeout(850);
 
     const metrics = await page.evaluate(() => {
@@ -183,6 +183,12 @@ async function main(): Promise<void> {
         .filter(Boolean);
       const baselineAfter = getComputedStyle(baseline, '::after');
 
+      const establishedProbe = document.createElement('span');
+      establishedProbe.style.color = getComputedStyle(root).getPropertyValue('--ng-established').trim();
+      document.body.appendChild(establishedProbe);
+      const establishedColor = getComputedStyle(establishedProbe).color;
+      establishedProbe.remove();
+
       return {
         viewportWidth: root.clientWidth,
         scrollWidth: root.scrollWidth,
@@ -190,6 +196,7 @@ async function main(): Promise<void> {
         baselineBackground: baselineAfter.backgroundColor,
         baselineTransform: baselineAfter.transform,
         markBaselineColor: getComputedStyle(markBaseline).color,
+        establishedColor,
         checkOpacity: parseFloat(getComputedStyle(check).opacity),
         signatureOpacity: parseFloat(getComputedStyle(signature).opacity),
         visibleActionLabels,
@@ -200,6 +207,8 @@ async function main(): Promise<void> {
     expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
     expect(metrics.ritualBorderRadius).toBe('0px');
     expect(metrics.baselineTransform).toBe('matrix(1, 0, 0, 1, 0, 0)');
+    expect(metrics.baselineBackground).toBe(metrics.establishedColor);
+    expect(metrics.markBaselineColor).toBe(metrics.establishedColor);
     expect(metrics.checkOpacity).toBe(1);
     expect(metrics.signatureOpacity).toBe(1);
     expect(metrics.particleCount).toBe(6);
