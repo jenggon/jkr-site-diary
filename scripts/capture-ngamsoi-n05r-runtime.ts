@@ -237,6 +237,7 @@ async function main(): Promise<void> {
 
     await figure.click();
     await expect(figure).toHaveAttribute('aria-pressed', 'true');
+    await expect(workforce).toHaveAttribute('data-workforce-editing', 'true');
     await expect(controller).toBeVisible();
     await page.waitForTimeout(140);
 
@@ -287,11 +288,14 @@ async function main(): Promise<void> {
       fullPage: false,
     });
 
-    /* Close the same active figure, leave the section, and prove visible recompile. */
+    /* Close the same active figure. State flips immediately; colour then settles through
+       the intentional 150–170ms compile transition before visual comparison. */
     await figure.click();
     await expect(figure).toHaveAttribute('aria-pressed', 'false');
+    await expect(workforce).toHaveAttribute('data-workforce-editing', 'false');
     expect(await controller.count()).toBe(0);
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.waitForTimeout(220);
 
     const workforceCompiled = await workforce.evaluate((element) => {
       const node = getComputedStyle(element, '::before');
