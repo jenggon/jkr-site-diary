@@ -62,6 +62,8 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
   it('locks N01 mark geometry, graphite tokens, semantic accent and typography grammar as code', () => {
     const brandSource = read('src/components/brand/NgamsoiBrand.tsx');
     const identityCss = read('src/app/ngamsoi.css');
+    const layoutSource = read('src/app/layout.tsx');
+    const appIcon = read('public/ngamsoi-mark.svg');
 
     expect(brandSource).toContain('viewBox="0 0 96 76"');
     expect(brandSource).toContain('ngamsoi-mark-baseline');
@@ -76,6 +78,11 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(identityCss).toContain('--ng-font-brand');
     expect(identityCss).toContain('.ng-work-voice');
     expect(identityCss).toContain('.ng-reference-voice');
+
+    expect(layoutSource).toContain('NGAMSOI | JKR Site Diary');
+    expect(layoutSource).toContain('/ngamsoi-mark.svg');
+    expect(appIcon).toContain('#ff7a1a');
+    expect(appIcon).toContain('aria-label="NGAMSOI mark"');
   });
 
   it('preserves native DailyEntryForm through the bounded Site Diary workspace composition', () => {
