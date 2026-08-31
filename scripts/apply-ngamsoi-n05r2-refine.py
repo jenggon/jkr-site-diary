@@ -62,6 +62,12 @@ replace(
     "await expect(page.getByText('Pilih Sumber Aktiviti Harian')).toBeVisible();",
     "await expect(page.getByRole('heading', { name: 'Sumber' })).toBeVisible();",
 )
+# The concise BM source badge is intentionally narrower than the retired English phrase.
+replace(
+    "scripts/capture-ngamsoi-n05r-runtime.ts",
+    "expect(topMetrics.sourcePrimitive.labelWidth).toBeGreaterThan(60);",
+    "expect(topMetrics.sourcePrimitive.labelWidth).toBeGreaterThan(40);",
+)
 
 # Remaining presentation assertions from the contract migration.
 for path, pairs in {
