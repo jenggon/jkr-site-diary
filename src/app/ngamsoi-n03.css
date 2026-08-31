@@ -1,0 +1,206 @@
+/* NGAMSOI N03 — Field/Input Language
+ * Scope: Mobile New Entry form controls only. Behaviour and domain semantics remain frozen.
+ */
+
+/* Form rhythm: sections read as ruled fieldbook bands, not floating SaaS cards. */
+form[aria-label="Borang Buku Harian Tapak"] > section {
+  border-color: var(--ng-rule) !important;
+  border-radius: 0 !important;
+  background: var(--ng-graphite-900) !important;
+  box-shadow: none !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section > h3 {
+  margin-bottom: 0.9rem !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-brand) !important;
+  font-size: 0.76rem !important;
+  font-weight: 620 !important;
+  letter-spacing: 0.08em !important;
+  line-height: 1.2 !important;
+  text-transform: uppercase;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section > h3 > span:first-child {
+  width: 1.1rem !important;
+  height: 2px !important;
+  border-radius: 0 !important;
+  background: var(--ng-current) !important;
+}
+
+/* Labels are reference voice: compact, factual, quiet. */
+form[aria-label="Borang Buku Harian Tapak"] label {
+  margin-bottom: 0.38rem !important;
+  color: var(--ng-grey-500) !important;
+  font-family: var(--ng-font-reference) !important;
+  font-size: 0.58rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.075em !important;
+  line-height: 1.25 !important;
+  text-transform: uppercase;
+}
+
+/* Human-entered values use work voice and sit inside depressed ruled channels. */
+form[aria-label="Borang Buku Harian Tapak"] input[type="date"],
+form[aria-label="Borang Buku Harian Tapak"] input[type="time"],
+form[aria-label="Borang Buku Harian Tapak"] input[type="text"],
+form[aria-label="Borang Buku Harian Tapak"] select,
+form[aria-label="Borang Buku Harian Tapak"] textarea {
+  min-height: 44px;
+  border: 1px solid var(--ng-graphite-650) !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 0.16), transparent 44%),
+    var(--ng-inset) !important;
+  color: var(--ng-grey-200) !important;
+  font-family: var(--ng-font-work) !important;
+  font-weight: 470 !important;
+  letter-spacing: -0.004em;
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.34),
+    inset 3px 0 0 transparent !important;
+  transition:
+    border-color 110ms ease,
+    box-shadow 110ms ease,
+    background-color 110ms ease;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] input[type="date"],
+form[aria-label="Borang Buku Harian Tapak"] input[type="time"],
+form[aria-label="Borang Buku Harian Tapak"] input[type="text"],
+form[aria-label="Borang Buku Harian Tapak"] select {
+  padding: 0.66rem 0.72rem !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] textarea {
+  min-height: 7rem;
+  padding: 0.78rem 0.82rem !important;
+  line-height: 1.48 !important;
+  resize: vertical;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] input::placeholder,
+form[aria-label="Borang Buku Harian Tapak"] textarea::placeholder {
+  color: var(--ng-grey-600) !important;
+  opacity: 1;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] input[type="date"]:focus,
+form[aria-label="Borang Buku Harian Tapak"] input[type="time"]:focus,
+form[aria-label="Borang Buku Harian Tapak"] input[type="text"]:focus,
+form[aria-label="Borang Buku Harian Tapak"] select:focus,
+form[aria-label="Borang Buku Harian Tapak"] textarea:focus {
+  border-color: var(--ng-grey-500) !important;
+  outline: none !important;
+  background: var(--ng-graphite-925) !important;
+  box-shadow:
+    inset 3px 0 0 var(--ng-current),
+    inset 0 1px 2px rgb(0 0 0 / 0.38) !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] input:disabled,
+form[aria-label="Borang Buku Harian Tapak"] select:disabled,
+form[aria-label="Borang Buku Harian Tapak"] textarea:disabled {
+  cursor: not-allowed;
+  color: var(--ng-grey-500) !important;
+  opacity: 0.62;
+}
+
+/* Keep browser-native date/time affordances, but mute them into the reference layer. */
+form[aria-label="Borang Buku Harian Tapak"] input[type="date"]::-webkit-calendar-picker-indicator,
+form[aria-label="Borang Buku Harian Tapak"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(74%) sepia(7%) saturate(279%) hue-rotate(177deg) brightness(84%);
+  opacity: 0.72;
+}
+
+/* Horizontal rules separate observational groups rather than nested containers. */
+form[aria-label="Borang Buku Harian Tapak"] section .border-t {
+  border-color: var(--ng-rule) !important;
+}
+
+/* Top mode selector uses the same set/engage grammar as source selection. */
+form[aria-label="Borang Buku Harian Tapak"] ~ * {
+  --ng-n03-unused: 0;
+}
+
+nav[aria-label="Navigasi Mod Laporan"] [role="tablist"] {
+  gap: 0 !important;
+  border-color: var(--ng-rule) !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: var(--ng-graphite-925) !important;
+  box-shadow: none !important;
+}
+
+nav[aria-label="Navigasi Mod Laporan"] [role="tab"] {
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ng-grey-400) !important;
+  box-shadow: none !important;
+  font-family: var(--ng-font-work);
+  font-weight: 560 !important;
+}
+
+nav[aria-label="Navigasi Mod Laporan"] [role="tab"] + [role="tab"] {
+  border-left: 1px solid var(--ng-rule);
+}
+
+nav[aria-label="Navigasi Mod Laporan"] [role="tab"][aria-selected="true"] {
+  color: var(--ng-ivory-100) !important;
+  box-shadow: inset 0 -2px 0 var(--ng-current) !important;
+}
+
+/* Submit is an action key: flat silhouette, inset pressure, orange current edge. N06 owns the ritual later. */
+form[aria-label="Borang Buku Harian Tapak"] > div:last-child > button[type="submit"] {
+  min-height: 48px;
+  border: 1px solid var(--ng-graphite-650) !important;
+  border-radius: 0 !important;
+  background: var(--ng-graphite-850) !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-brand) !important;
+  font-size: 0.76rem !important;
+  font-weight: 620 !important;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 3px 0 0 var(--ng-current),
+    inset 0 1px 0 rgb(255 255 255 / 0.035),
+    inset 0 -2px 3px rgb(0 0 0 / 0.28) !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > div:last-child > button[type="submit"]:hover:not(:disabled) {
+  border-color: var(--ng-grey-500) !important;
+  background: var(--ng-graphite-800) !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > div:last-child > button[type="submit"]:active:not(:disabled) {
+  transform: translateY(1px);
+  background: var(--ng-graphite-925) !important;
+  box-shadow:
+    inset 4px 0 0 var(--ng-current),
+    inset 0 2px 4px rgb(0 0 0 / 0.42) !important;
+}
+
+/* Mobile density: reduce container padding while preserving 44px touch targets. */
+@media (max-width: 767px) {
+  form[aria-label="Borang Buku Harian Tapak"] > section {
+    padding: 0.9rem 0.85rem !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section > h3 {
+    margin-bottom: 0.72rem !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] .grid {
+    row-gap: 0.68rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  form[aria-label="Borang Buku Harian Tapak"] input,
+  form[aria-label="Borang Buku Harian Tapak"] select,
+  form[aria-label="Borang Buku Harian Tapak"] textarea,
+  form[aria-label="Borang Buku Harian Tapak"] button {
+    transition-duration: 0.01ms !important;
+  }
+}
