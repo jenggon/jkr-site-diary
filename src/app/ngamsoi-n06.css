@@ -18,6 +18,13 @@
     inset 0 -1px 0 rgb(0 0 0 / 0.34);
 }
 
+/* Once persistence succeeds the form is closed. The original submit action
+ * must not remain as a second competing call-to-action. Resetting to Baharu
+ * removes the completion surface and naturally restores the submit control. */
+form[aria-label="Borang Buku Harian Tapak"]:has(.ng-completion) > div:last-child {
+  display: none !important;
+}
+
 .ng-completion__instrument {
   position: relative;
   width: min(15.5rem, 78%);
