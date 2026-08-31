@@ -11,6 +11,10 @@ const PROGRAMME_ID = '11111111-1111-4111-8111-111111111111';
 const REVISION_ID = '22222222-2222-4222-8222-222222222222';
 const TASK_ID = '33333333-3333-4333-8333-333333333333';
 
+function cleanPseudoContent(value: string): string {
+  return value.replaceAll('"', '').replace(/^none$/, '');
+}
+
 async function main(): Promise<void> {
   await mkdir(EVIDENCE_DIR, { recursive: true });
 
@@ -19,7 +23,6 @@ async function main(): Promise<void> {
   const page = await context.newPage();
 
   try {
-    // Default empty API response keeps unrelated startup reads deterministic.
     await page.route('**/api/**', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
     });
@@ -126,19 +129,25 @@ async function main(): Promise<void> {
       const root = document.documentElement;
       const form = document.querySelector<HTMLElement>('form[aria-label="Borang Buku Harian Tapak"]')!;
       const selected = document.querySelector<HTMLElement>('.mobile-entry-selected-source')!;
+      const sourceSection = selected.closest<HTMLElement>('section')!;
+      const locationInput = document.querySelector<HTMLInputElement>('input[placeholder="cth: Aras 2, Blok Pentadbiran, Grid 4-8"]')!;
+      const locationSection = locationInput.closest<HTMLElement>('section')!;
       const sourceBefore = getComputedStyle(selected, '::before');
       const sourceAfter = getComputedStyle(selected, '::after');
-      const firstSection = form.querySelector<HTMLElement>(':scope > section')!;
-      const firstMarker = getComputedStyle(firstSection, '::before');
-      const firstTick = getComputedStyle(firstSection, '::after');
-      const currentSection = document.activeElement?.closest('section') as HTMLElement | null;
-      const currentMarker = currentSection ? getComputedStyle(currentSection, '::before') : null;
-      const currentTick = currentSection ? getComputedStyle(currentSection, '::after') : null;
+      const sourceNode = getComputedStyle(sourceSection, '::before');
+      const sourceSegment = getComputedStyle(sourceSection, '::after');
+      const locationNode = getComputedStyle(locationSection, '::before');
+      const locationSegment = getComputedStyle(locationSection, '::after');
       const rail = getComputedStyle(form, '::before');
+      const formRect = form.getBoundingClientRect();
+      const sourceRect = sourceSection.getBoundingClientRect();
+      const sourceNodeCenter = sourceRect.left + parseFloat(sourceNode.left) + parseFloat(sourceNode.width) / 2;
+      const railCenter = formRect.left + parseFloat(rail.left) + parseFloat(rail.width) / 2;
+
       return {
         viewportWidth: root.clientWidth,
         scrollWidth: root.scrollWidth,
-        source: {
+        sourcePrimitive: {
           label: sourceBefore.content.replaceAll('"', ''),
           labelWidth: parseFloat(sourceBefore.width),
           labelHeight: parseFloat(sourceBefore.height),
@@ -147,38 +156,39 @@ async function main(): Promise<void> {
           notchRight: sourceAfter.right,
           notchWidth: parseFloat(sourceAfter.width),
         },
-        ledger: {
-          borderRadius: getComputedStyle(firstSection).borderRadius,
-          borderLeftWidth: getComputedStyle(firstSection).borderLeftWidth,
-          borderBottomWidth: getComputedStyle(firstSection).borderBottomWidth,
-          markerClip: firstMarker.clipPath,
-          tickHeight: firstTick.height,
-          railWidth: rail.width,
-        },
-        current: {
-          markerBackground: currentMarker?.backgroundColor ?? '',
-          tickBackground: currentTick?.backgroundColor ?? '',
-          markerClip: currentMarker?.clipPath ?? '',
+        spine: {
+          railWidth: parseFloat(rail.width),
+          alignmentDelta: Math.abs(sourceNodeCenter - railCenter),
+          sourceNodeContent: sourceNode.content.replaceAll('"', '').replace(/^none$/, ''),
+          sourceNodeClip: sourceNode.clipPath,
+          sourceNodeBorder: sourceNode.borderColor,
+          sourceSegmentBackground: sourceSegment.backgroundImage || sourceSegment.backgroundColor,
+          locationNodeContent: locationNode.content.replaceAll('"', '').replace(/^none$/, ''),
+          locationNodeBorder: locationNode.borderColor,
+          locationSegmentBackground: locationSegment.backgroundImage || locationSegment.backgroundColor,
         },
       };
     });
 
     expect(topMetrics.scrollWidth).toBeLessThanOrEqual(topMetrics.viewportWidth);
-    expect(topMetrics.source.label).toBe('RECORD LOADED');
-    expect(topMetrics.source.labelWidth).toBeGreaterThan(60);
-    expect(topMetrics.source.labelHeight).toBeLessThan(20);
-    expect(topMetrics.source.labelBackground).toBe('rgba(0, 0, 0, 0)');
-    expect(topMetrics.source.labelWhiteSpace).toBe('nowrap');
-    expect(topMetrics.source.notchRight).toBe('0px');
-    expect(topMetrics.source.notchWidth).toBeGreaterThan(20);
-    expect(topMetrics.ledger.borderRadius).toBe('0px');
-    expect(topMetrics.ledger.borderLeftWidth).toBe('0px');
-    expect(parseFloat(topMetrics.ledger.borderBottomWidth)).toBeGreaterThanOrEqual(1);
-    expect(topMetrics.ledger.markerClip).toContain('polygon');
-    expect(parseFloat(topMetrics.ledger.tickHeight)).toBeGreaterThanOrEqual(2);
-    expect(parseFloat(topMetrics.ledger.railWidth)).toBeGreaterThanOrEqual(2);
-    expect(topMetrics.current.markerClip).toContain('polygon');
-    expect(topMetrics.current.markerBackground).toBe(topMetrics.current.tickBackground);
+    expect(topMetrics.sourcePrimitive.label).toBe('RECORD LOADED');
+    expect(topMetrics.sourcePrimitive.labelWidth).toBeGreaterThan(60);
+    expect(topMetrics.sourcePrimitive.labelHeight).toBeLessThan(20);
+    expect(topMetrics.sourcePrimitive.labelBackground).toBe('rgba(0, 0, 0, 0)');
+    expect(topMetrics.sourcePrimitive.labelWhiteSpace).toBe('nowrap');
+    expect(topMetrics.sourcePrimitive.notchRight).toBe('0px');
+    expect(topMetrics.sourcePrimitive.notchWidth).toBeGreaterThan(20);
+
+    // Compile-flow contract: node is aligned to the actual rail, old triangle is gone,
+    // completed source is checked green, and the field currently being revised is unticked orange.
+    expect(topMetrics.spine.railWidth).toBeGreaterThanOrEqual(2);
+    expect(topMetrics.spine.alignmentDelta).toBeLessThanOrEqual(1.5);
+    expect(topMetrics.spine.sourceNodeClip).toBe('none');
+    expect(topMetrics.spine.sourceNodeContent).toBe('✓');
+    expect(topMetrics.spine.sourceNodeBorder).toBe('rgb(85, 184, 121)');
+    expect(topMetrics.spine.locationNodeContent).toBe('');
+    expect(topMetrics.spine.locationNodeBorder).toBe('rgb(255, 122, 26)');
+    expect(topMetrics.spine.locationSegmentBackground).toContain('linear-gradient');
 
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-top-390x844.png'),
@@ -190,20 +200,45 @@ async function main(): Promise<void> {
     await firstAddButton.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
     await page.waitForTimeout(80);
 
-    // Use real pointer clicks: this catches actual mobile control overlap/interception rather than
-    // bypassing it with DOM-dispatched or force clicks.
     await firstAddButton.click();
     await firstAddButton.click();
     await firstAddButton.click();
     await expect(workforce.getByTestId('overall-workforce-total')).toHaveText('3');
 
+    const workforceEditing = await workforce.evaluate((element) => {
+      const node = getComputedStyle(element, '::before');
+      return {
+        content: node.content.replaceAll('"', '').replace(/^none$/, ''),
+        borderColor: node.borderColor,
+      };
+    });
+    expect(workforceEditing.content).toBe('');
+    expect(workforceEditing.borderColor).toBe('rgb(255, 122, 26)');
+
     await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-workforce-390x844.png'),
+      path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-workforce-editing-390x844.png'),
+      fullPage: false,
+    });
+
+    // Blur models leaving a valid revised section: it recompiles to the green check.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    const workforceCompiled = await workforce.evaluate((element) => {
+      const node = getComputedStyle(element, '::before');
+      return {
+        content: node.content.replaceAll('"', '').replace(/^none$/, ''),
+        borderColor: node.borderColor,
+      };
+    });
+    expect(workforceCompiled.content).toBe('✓');
+    expect(workforceCompiled.borderColor).toBe('rgb(85, 184, 121)');
+
+    await page.screenshot({
+      path: path.join(EVIDENCE_DIR, 'n05r-live-new-entry-workforce-compiled-390x844.png'),
       fullPage: false,
     });
 
     console.log(
-      `N05R live runtime gate captured ${MOBILE.width}x${MOBILE.height}: actual /site-diary route, selected-source pseudo reset, coherent CURRENT NGAM datum, workforce pointer controls`,
+      `N05R compile-flow gate captured ${MOBILE.width}x${MOBILE.height}: aligned datum, compiled check, revise untick, downstream recompile`,
     );
   } finally {
     await context.close();
