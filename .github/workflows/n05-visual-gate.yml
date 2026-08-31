@@ -1,0 +1,45 @@
+name: N05 NGAMSOI Spine State Gate
+
+on:
+  push:
+    branches:
+      - feature/N05-ngamsoi-spine-state-grammar
+
+jobs:
+  n05-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout N05 branch
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run repository verification contract
+        run: pnpm run verify
+
+      - name: Install Chromium for N05 visual gate
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Capture deterministic N05 spine state gate
+        run: pnpm exec tsx scripts/capture-ngamsoi-n05.ts
+
+      - name: Upload N05 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: n05-ngamsoi-spine-state-gate
+          path: docs/evidence/n05-ngamsoi/n05-spine-states-375x812.png
+          if-no-files-found: error
+          retention-days: 14
