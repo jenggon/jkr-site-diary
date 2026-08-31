@@ -21,10 +21,12 @@ jobs:
       - name: Apply typography and copy pass
         run: |
           python3 scripts/apply-ngamsoi-n05r2.py
+          python3 scripts/apply-ngamsoi-n05r2-refine.py
           sed -i 's/[[:space:]]*$//' \
             src/app/layout.tsx \
             src/app/site-diary/DailyEntryForm.tsx \
             src/app/site-diary/OperationalSourceSelector.tsx \
+            src/app/site-diary/OpenActivitiesList.tsx \
             src/app/site-diary/WorkforceEntry.tsx \
             src/app/site-diary/SiteDiaryWorkspace.tsx \
             scripts/capture-ngamsoi-n05r-runtime.ts \
@@ -94,6 +96,7 @@ jobs:
             src/app/layout.tsx \
             src/app/site-diary/DailyEntryForm.tsx \
             src/app/site-diary/OperationalSourceSelector.tsx \
+            src/app/site-diary/OpenActivitiesList.tsx \
             src/app/site-diary/WorkforceEntry.tsx \
             src/app/site-diary/SiteDiaryWorkspace.tsx \
             scripts/capture-ngamsoi-n05r-runtime.ts \
