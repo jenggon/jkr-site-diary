@@ -5,38 +5,58 @@
 
 form[aria-label="Borang Buku Harian Tapak"] {
   --ng-spine-gutter: 1.05rem;
+  --ng-spine-rail: color-mix(in srgb, var(--ng-grey-500) 72%, var(--ng-graphite-950));
   position: relative;
+  isolation: isolate;
+}
+
+/* The datum is a real continuous rail, not a collection of unrelated section borders. */
+form[aria-label="Borang Buku Harian Tapak"]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 1.14rem;
+  bottom: 1.14rem;
+  left: 0;
+  width: 1px;
+  background: var(--ng-spine-rail);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ng-spine-rail) 18%, transparent);
+  pointer-events: none;
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])) {
   --ng-step-color: var(--ng-grey-600);
   --ng-step-glow: transparent;
   position: relative;
+  z-index: 1;
   margin-left: var(--ng-spine-gutter);
-  border-left-color: color-mix(in srgb, var(--ng-step-color) 48%, var(--ng-rule)) !important;
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ng-step-color) 38%, transparent) !important;
+  border-left-color: color-mix(in srgb, var(--ng-step-color) 58%, var(--ng-rule)) !important;
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--ng-step-color) 48%, transparent) !important;
 }
 
-/* Continuous ruled spine running through all record sections. */
+/* State node anchored directly on the continuous datum rail. */
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"]))::before {
   content: "";
   position: absolute;
   z-index: 3;
-  top: 0.92rem;
-  left: calc(-1 * var(--ng-spine-gutter) - 0.255rem);
-  width: 0.52rem;
-  height: 0.52rem;
+  top: 0.86rem;
+  left: calc(-1 * var(--ng-spine-gutter) - 0.285rem);
+  width: 0.58rem;
+  height: 0.58rem;
   border: 1px solid var(--ng-step-color);
   border-radius: 50%;
   background: var(--ng-graphite-950);
-  box-shadow: 0 0 0 3px var(--ng-graphite-950), 0 0 0 4px color-mix(in srgb, var(--ng-step-color) 28%, transparent), 0 0 0.72rem var(--ng-step-glow);
+  box-shadow:
+    0 0 0 3px var(--ng-graphite-950),
+    0 0 0 4px color-mix(in srgb, var(--ng-step-color) 38%, transparent),
+    0 0 0.76rem var(--ng-step-glow);
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"]))::after {
   content: "NEXT";
   position: absolute;
   z-index: 2;
-  top: 1.82rem;
+  top: 1.88rem;
   left: calc(-1 * var(--ng-spine-gutter) - 0.44rem);
   width: 0.9rem;
   color: var(--ng-grey-600);
@@ -49,7 +69,6 @@ form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="bu
   writing-mode: vertical-rl;
 }
 
-/* Rail segment between record sections. */
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])) + section:not(:has(> button[type="button"])) {
   margin-top: 1rem;
 }
@@ -68,6 +87,18 @@ form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not
   --ng-step-color: var(--ng-established) !important;
 }
 
+form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source)::before,
+form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]::before,
+form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"])::before,
+form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown))::before,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__stepper > button:first-child:not(:disabled))::before,
+form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown))::before {
+  background: var(--ng-established);
+  box-shadow:
+    0 0 0 3px var(--ng-graphite-950),
+    0 0 0 4px color-mix(in srgb, var(--ng-established) 46%, transparent);
+}
+
 form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source)::after,
 form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]::after,
 form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"])::after,
@@ -81,14 +112,17 @@ form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not
 /* CURRENT — focus is the user's present working position and overrides established/next. */
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):focus-within {
   --ng-step-color: var(--ng-current) !important;
-  --ng-step-glow: color-mix(in srgb, var(--ng-current) 34%, transparent) !important;
+  --ng-step-glow: color-mix(in srgb, var(--ng-current) 40%, transparent) !important;
   border-left-color: var(--ng-current) !important;
-  background-image: linear-gradient(90deg, color-mix(in srgb, var(--ng-current) 4%, transparent), transparent 32%);
+  background-image: linear-gradient(90deg, color-mix(in srgb, var(--ng-current) 5%, transparent), transparent 34%);
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):focus-within::before {
   background: var(--ng-current);
-  box-shadow: 0 0 0 3px var(--ng-graphite-950), 0 0 0 4px color-mix(in srgb, var(--ng-current) 50%, transparent), 0 0 0.8rem var(--ng-step-glow);
+  box-shadow:
+    0 0 0 3px var(--ng-graphite-950),
+    0 0 0 4px color-mix(in srgb, var(--ng-current) 62%, transparent),
+    0 0 0.9rem var(--ng-step-glow);
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):focus-within::after {
@@ -100,8 +134,17 @@ form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="bu
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):has([role="alert"]),
 form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert) {
   --ng-step-color: var(--ng-destructive) !important;
-  --ng-step-glow: color-mix(in srgb, var(--ng-destructive) 26%, transparent) !important;
+  --ng-step-glow: color-mix(in srgb, var(--ng-destructive) 30%, transparent) !important;
   border-left-color: var(--ng-destructive) !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):has([role="alert"])::before,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce:has(.ng-workforce__alert)::before {
+  background: var(--ng-destructive);
+  box-shadow:
+    0 0 0 3px var(--ng-graphite-950),
+    0 0 0 4px color-mix(in srgb, var(--ng-destructive) 54%, transparent),
+    0 0 0.82rem var(--ng-step-glow);
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])):has([role="alert"])::after,
@@ -115,7 +158,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-
   border-color: var(--ng-rule) !important;
   border-radius: 0 !important;
   background: var(--ng-graphite-925) !important;
-  box-shadow: inset 2px 0 0 var(--ng-established) !important;
+  box-shadow: inset 1px 0 0 var(--ng-established) !important;
 }
 
 form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"] span[class*="rounded-full"] {
@@ -135,7 +178,8 @@ form[aria-label="Borang Buku Harian Tapak"] > .ng-workforce:focus-within .ng-wor
 
 @media (max-width: 767px) {
   form[aria-label="Borang Buku Harian Tapak"] {
-    --ng-spine-gutter: 0.82rem;
+    --ng-spine-gutter: 0.92rem;
+    --ng-spine-rail: color-mix(in srgb, var(--ng-grey-500) 86%, var(--ng-graphite-950));
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"])) {
@@ -143,9 +187,10 @@ form[aria-label="Borang Buku Harian Tapak"] > .ng-workforce:focus-within .ng-wor
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"]))::before {
-    left: calc(-1 * var(--ng-spine-gutter) - 0.255rem);
+    left: calc(-1 * var(--ng-spine-gutter) - 0.285rem);
   }
 
+  /* State is communicated by rail + filled node on mobile; tiny vertical words stay out of the field width. */
   form[aria-label="Borang Buku Harian Tapak"] > section:not(:has(> button[type="button"]))::after {
     display: none;
   }
