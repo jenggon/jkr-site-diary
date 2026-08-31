@@ -142,7 +142,7 @@ async function main(): Promise<void> {
           labelBackground: sourceBefore.backgroundColor,
           labelWhiteSpace: sourceBefore.whiteSpace,
           notchRight: sourceAfter.right,
-          notchLeft: sourceAfter.left,
+          notchWidth: parseFloat(sourceAfter.width),
         },
         ledger: {
           borderRadius: getComputedStyle(firstSection).borderRadius,
@@ -162,7 +162,7 @@ async function main(): Promise<void> {
     expect(topMetrics.source.labelBackground).toBe('rgba(0, 0, 0, 0)');
     expect(topMetrics.source.labelWhiteSpace).toBe('nowrap');
     expect(topMetrics.source.notchRight).toBe('0px');
-    expect(topMetrics.source.notchLeft).toBe('auto');
+    expect(topMetrics.source.notchWidth).toBeGreaterThan(20);
     expect(topMetrics.ledger.borderRadius).toBe('0px');
     expect(topMetrics.ledger.borderLeftWidth).toBe('0px');
     expect(parseFloat(topMetrics.ledger.borderBottomWidth)).toBeGreaterThanOrEqual(1);
