@@ -158,11 +158,14 @@ async function main(): Promise<void> {
     await saveButton.click();
 
     const ritual = page.getByTestId('ngamsoi-completion');
+    const signature = ritual.locator('.ng-completion__signature');
     await expect(ritual).toBeVisible();
-    await expect(page.locator('.ng-completion__signature')).toContainText('Kena boh!');
-    await expect(page.locator('.ng-completion__signature')).toContainText('Ngamsoi.');
-    await expect(page.getByText('Simpanan Berjaya')).toBeHidden();
-    await expect(page.getByText('Buku Harian Tapak berjaya disimpan.')).toBeHidden();
+    await expect(signature).toContainText('Kena boh!');
+    await expect(signature).toContainText('Ngamsoi.');
+    await expect(ritual.locator('.sr-only').filter({ hasText: 'Simpanan Berjaya' })).toHaveCount(1);
+    await expect(ritual.locator('.sr-only').filter({ hasText: 'Buku Harian Tapak berjaya disimpan.' })).toHaveCount(1);
+    await expect(signature).not.toContainText('Simpanan Berjaya');
+    await expect(signature).not.toContainText('Buku Harian Tapak berjaya disimpan.');
 
     await ritual.scrollIntoViewIfNeeded();
     await page.waitForTimeout(850);
