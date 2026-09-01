@@ -37,6 +37,7 @@ describe('ProgrammeService', () => {
     programmeId: 'p1',
     programmeCode: 'JKR/PLS/2026/001',
     programmeName: 'Projek Lebuhraya',
+    programmeShortName: 'PLS 001',
     status: 'Active',
     isLocked: false,
     createdAt: '2026-08-07T12:00:00.000Z',
@@ -97,12 +98,14 @@ describe('ProgrammeService', () => {
     const result = await service.createProgramme({
       programmeCode: 'JKR/PLS/2026/002',
       programmeName: 'Projek Baru',
+      programmeShortName: 'PLS 002',
       createdBy: 'u1',
     });
 
     expect(isSuccess(result)).toBe(true);
     if (isSuccess(result)) {
       expect(result.value.programmeCode).toBe('JKR/PLS/2026/002');
+      expect(result.value.programmeShortName).toBe('PLS 002');
     }
   });
 
@@ -114,12 +117,28 @@ describe('ProgrammeService', () => {
     const result = await service.createProgramme({
       programmeCode: 'JKR/PLS/2026/001',
       programmeName: 'Projek Wujud',
+      programmeShortName: 'PLS 001',
       createdBy: 'u1',
     });
 
     expect(isFailure(result)).toBe(true);
     if (isFailure(result)) {
       expect(result.error.errorCode).toBe('PROGRAMME_ALREADY_EXISTS');
+    }
+  });
+
+  it('should reject an invalid short name before persistence', async () => {
+    const service = createService();
+    const result = await service.createProgramme({
+      programmeCode: 'JKR/PLS/2026/003',
+      programmeName: 'Projek Baru',
+      programmeShortName: 'TOO__NOISY',
+      createdBy: 'u1',
+    });
+
+    expect(isFailure(result)).toBe(true);
+    if (isFailure(result)) {
+      expect(result.error.errorCode).toBe('PROGRAMME_VALIDATION_FAILED');
     }
   });
 
