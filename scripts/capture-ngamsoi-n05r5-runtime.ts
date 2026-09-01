@@ -156,7 +156,7 @@ async function assertProjectPulse(page: Page) {
   await expect(pulse.getByText('MASA', { exact: true })).toBeVisible();
 }
 
-async function chooseTaskAndAssertActionFamily(page: Page) {
+async function chooseTaskAndAssertActionFamily(page: Page, expectedLineClamp: '2' | 'none') {
   await page.getByRole('tab', { name: 'Baharu' }).click();
   const taskButton = page.getByRole('button', { name: new RegExp('Kerja konkrit rasuk aras bawah') }).first();
   await expect(taskButton).toBeVisible();
@@ -185,10 +185,15 @@ async function chooseTaskAndAssertActionFamily(page: Page) {
       lineClamp: style.getPropertyValue('-webkit-line-clamp'),
       clientWidth: node.clientWidth,
       scrollWidth: node.scrollWidth,
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
     };
   });
-  expect(titleMetrics.lineClamp).toBe('2');
+  expect(titleMetrics.lineClamp).toBe(expectedLineClamp);
   expect(titleMetrics.scrollWidth).toBeLessThanOrEqual(titleMetrics.clientWidth + 1);
+  if (expectedLineClamp === 'none') {
+    expect(titleMetrics.scrollHeight).toBeLessThanOrEqual(titleMetrics.clientHeight + 1);
+  }
 }
 
 async function exerciseDirectWorkforceEntry(page: Page, field: 'bumi_count' | 'foreign_count', value: string) {
@@ -254,7 +259,7 @@ async function mobileGate(browser: import('playwright').Browser) {
     await page.goto(`${BASE_URL}/site-diary`, { waitUntil: 'domcontentloaded' });
     await assertCanonicalMark(page);
     await assertProjectPulse(page);
-    await chooseTaskAndAssertActionFamily(page);
+    await chooseTaskAndAssertActionFamily(page, '2');
     await exerciseDirectWorkforceEntry(page, 'foreign_count', '50');
     await assertUniformMobileSections(page);
 
@@ -280,7 +285,7 @@ async function desktopGate(browser: import('playwright').Browser) {
     const sidebar = page.getByRole('navigation', { name: 'Navigasi Buku Harian Tapak' });
     expect((await sidebar.boundingBox())?.width ?? 0).toBeLessThanOrEqual(60);
 
-    await chooseTaskAndAssertActionFamily(page);
+    await chooseTaskAndAssertActionFamily(page, 'none');
     await exerciseDirectWorkforceEntry(page, 'bumi_count', '347');
 
     const sections = page.locator('form[aria-label="Borang Buku Harian Tapak"] > section');
