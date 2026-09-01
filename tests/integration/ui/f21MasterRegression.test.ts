@@ -169,7 +169,10 @@ describe('F2.1-G Mandatory 26-Point Master Regression Suite', () => {
       })
     );
     expect(workforceHtml).toContain('Tukang Cat');
-    expect(workforceHtml).toContain('6 Orang');
+    expect(workforceHtml).toContain('aria-label="6 pekerja"');
+    expect(workforceHtml).toContain('ng-workforce__overall-icon');
+    expect(workforceHtml).not.toContain('>ORANG<');
+    expect(workforceHtml).not.toContain('👷');
 
     // 16–20: Feedback, Print handoff, and 401 Session Handling
     const feedbackHtml = renderToString(
