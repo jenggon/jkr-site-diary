@@ -216,8 +216,8 @@ async function exerciseDirectWorkforceEntry(page: Page, field: 'bumi_count' | 'f
 
 async function assertUniformMobileSections(page: Page) {
   const actualHeadings = [
-    page.getByRole('heading', { name: 'Harian' }),
-    page.getByRole('heading', { name: 'Tapak' }),
+    page.getByRole('heading', { name: 'Harian', exact: true }),
+    page.getByRole('heading', { name: 'Tapak', exact: true }),
     page.locator('.ng-workforce__title'),
     page.getByRole('heading', { name: /Catatan/i }),
   ];
