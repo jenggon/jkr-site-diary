@@ -11,6 +11,7 @@ import "./ngamsoi-n05r-spine.css";
 import "./ngamsoi-n04r.css";
 import "./ngamsoi-n05r2-type.css";
 import "./ngamsoi-n06.css";
+import "./ngamsoi-n05r2-header.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
