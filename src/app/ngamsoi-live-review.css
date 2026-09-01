@@ -268,21 +268,21 @@
 
 @media (max-width: 767px) {
   .datum-project-strip {
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.5rem;
   }
 
   .ng-workforce__matrix-head {
-    grid-template-columns: minmax(0, 1fr) repeat(3, 2.5rem) 2.85rem !important;
+    grid-template-columns: minmax(0, 1fr) repeat(3, 2.5rem) 3rem !important;
     padding: 0.38rem 0.34rem 0.38rem 0.42rem !important;
   }
 
   .ng-workforce__matrix-head > span:last-child {
-    font-size: 0.34rem;
-    letter-spacing: 0.035em;
+    font-size: 0.42rem;
+    letter-spacing: 0.02em;
   }
 
   .ng-workforce__row {
-    grid-template-columns: minmax(0, 1fr) 7.5rem 2.85rem !important;
+    grid-template-columns: minmax(0, 1fr) 7.5rem 3rem !important;
   }
 
   .ng-workforce__row-total {
