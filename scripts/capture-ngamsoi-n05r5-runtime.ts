@@ -207,7 +207,7 @@ async function exerciseDirectWorkforceEntry(page: Page, field: 'bumi_count' | 'f
   if (field === 'foreign_count') await expect(workforce.locator('[data-testid="workforce-a-total"]')).toHaveText(value);
   await expect(workforce.locator('[data-testid="workforce-classified-total"]')).toHaveText(value);
   await expect(workforce.locator('[data-testid="overall-workforce-total"]')).toHaveText(value);
-  await expect(workforce.locator('[data-testid="trade-total-0"]')).toHaveText(value);
+  await expect(workforce.locator('[data-testid="trade-total-0"] strong')).toHaveText(value);
 
   const totalHeader = workforce.locator('.ng-workforce__matrix-metric--total');
   const bHeader = workforce.locator('.ng-workforce__matrix-metric').first();
