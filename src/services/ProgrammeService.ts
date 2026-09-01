@@ -14,7 +14,12 @@ import {
 } from '@/errors/programmeErrors';
 import { validateProgrammeStateTransition } from '@/statemachines/programmeStateMachine';
 import { validateProgrammeRevisionTransition } from '@/statemachines/programmeRevisionStateMachine';
-import { validateProgrammeCode, validateProgrammeName, validateDateHierarchy } from '@/validation/programmeValidation';
+import {
+  validateProgrammeCode,
+  validateProgrammeName,
+  validateProgrammeShortName,
+  validateDateHierarchy,
+} from '@/validation/programmeValidation';
 import { IProgrammeRepository } from '@/repositories/IProgrammeRepository';
 import { IProgrammeRevisionRepository } from '@/repositories/IProgrammeRevisionRepository';
 import { ITransactionManager } from '@/transactions/ITransactionManager';
@@ -69,6 +74,7 @@ export class ProgrammeService implements IProgrammeService {
     try {
       validateProgrammeCode(cmd.programmeCode);
       validateProgrammeName(cmd.programmeName);
+      validateProgrammeShortName(cmd.programmeShortName);
       validateDateHierarchy(cmd.contractStartDate, cmd.contractCompletionDate, cmd.defectLiabilityEnd);
     } catch (err: unknown) {
       if (err instanceof BaseAppError) return Failure(err);
@@ -90,6 +96,7 @@ export class ProgrammeService implements IProgrammeService {
         programmeId,
         programmeCode: cmd.programmeCode,
         programmeName: cmd.programmeName,
+        programmeShortName: cmd.programmeShortName,
         employerName: cmd.employerName,
         contractorName: cmd.contractorName,
         supervisingOfficer: cmd.supervisingOfficer,
@@ -118,6 +125,7 @@ export class ProgrammeService implements IProgrammeService {
         const created = await this.atomicRepo.createProgramme({
           programme_code: cmd.programmeCode,
           programme_name: cmd.programmeName,
+          programme_short_name: cmd.programmeShortName,
           employer_name: cmd.employerName ?? null,
           contractor_name: cmd.contractorName ?? null,
           supervising_officer: cmd.supervisingOfficer ?? null,
@@ -150,6 +158,8 @@ export class ProgrammeService implements IProgrammeService {
 
   public async updateProgramme(cmd: UpdateProgrammeCommand): Promise<Result<Programme, BaseAppError>> {
     try {
+      if (cmd.programmeName !== undefined) validateProgrammeName(cmd.programmeName);
+      if (cmd.programmeShortName !== undefined) validateProgrammeShortName(cmd.programmeShortName);
       validateDateHierarchy(cmd.contractStartDate, cmd.contractCompletionDate, cmd.defectLiabilityEnd);
     } catch (err: unknown) {
       if (err instanceof BaseAppError) return Failure(err);
@@ -166,6 +176,7 @@ export class ProgrammeService implements IProgrammeService {
       const updatedProgramme: Programme = {
         ...existingRes.value,
         programmeName: cmd.programmeName ?? existingRes.value.programmeName,
+        programmeShortName: cmd.programmeShortName ?? existingRes.value.programmeShortName,
         employerName: cmd.employerName ?? existingRes.value.employerName,
         contractorName: cmd.contractorName ?? existingRes.value.contractorName,
         supervisingOfficer: cmd.supervisingOfficer ?? existingRes.value.supervisingOfficer,
@@ -179,6 +190,7 @@ export class ProgrammeService implements IProgrammeService {
       if (this.atomicRepo) {
         const payload: Record<string, unknown> = {};
         if (cmd.programmeName !== undefined) payload.programme_name = cmd.programmeName;
+        if (cmd.programmeShortName !== undefined) payload.programme_short_name = cmd.programmeShortName;
         if (cmd.employerName !== undefined) payload.employer_name = cmd.employerName;
         if (cmd.contractorName !== undefined) payload.contractor_name = cmd.contractorName;
         if (cmd.supervisingOfficer !== undefined) payload.supervising_officer = cmd.supervisingOfficer;
@@ -342,5 +354,3 @@ export class ProgrammeService implements IProgrammeService {
     return this.programmeRepo.findAll(params);
   }
 }
-
-
