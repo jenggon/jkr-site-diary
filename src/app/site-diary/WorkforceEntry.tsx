@@ -43,10 +43,10 @@ type ActiveCountCell = {
   field: CountField;
 } | null;
 
-const CLASSIFICATIONS: Array<{ field: CountField; short: string; label: string }> = [
-  { field: 'bumi_count', short: 'BUMI', label: 'Bumiputera' },
-  { field: 'non_bumi_count', short: 'BUKAN', label: 'Bukan Bumiputera' },
-  { field: 'foreign_count', short: 'ASING', label: 'Bukan Warganegara' },
+const CLASSIFICATIONS: Array<{ field: CountField; short: string; label: string; ariaLabel: string }> = [
+  { field: 'bumi_count', short: 'B', label: 'Bumiputera', ariaLabel: 'Bumiputera' },
+  { field: 'non_bumi_count', short: 'BB', label: 'Bukan Bumiputera', ariaLabel: 'Bukan Bumiputera' },
+  { field: 'foreign_count', short: 'A', label: 'Asing', ariaLabel: 'Bukan Warganegara / Asing' },
 ];
 
 function rosterTradeLabel(tradeName: string): string {
@@ -152,7 +152,7 @@ export default function WorkforceEntry({
           <p className="ng-workforce__hint">Tap angka</p>
         </div>
         <div className="ng-workforce__overall" aria-label={`${overallTotal} Orang`}>
-          <span>JUMLAH</span>
+          <span className="ng-workforce__overall-icon" aria-hidden="true">👷</span>
           <strong data-testid="overall-workforce-total">{overallTotal}</strong>
           <small>ORANG</small>
         </div>
@@ -164,10 +164,10 @@ export default function WorkforceEntry({
 
       <div className="ng-workforce__matrix-head" aria-hidden="true">
         <span>TRED</span>
-        <span>BUMI</span>
-        <span>BUKAN</span>
-        <span>ASING</span>
-        <span>Σ</span>
+        <span title="Bumiputera">B</span>
+        <span title="Bukan Bumiputera">BB</span>
+        <span title="Asing">A</span>
+        <span>JUMLAH</span>
       </div>
 
       <div className="ng-workforce__rows">
@@ -202,7 +202,7 @@ export default function WorkforceEntry({
                   </div>
 
                   <div className="ng-workforce__counts">
-                    {CLASSIFICATIONS.map(({ field, short, label }) => {
+                    {CLASSIFICATIONS.map(({ field, short, ariaLabel }) => {
                       const isActive = activeCell?.rowIndex === idx && activeCell.field === field;
                       const value = Math.max(0, row[field] || 0);
 
@@ -215,7 +215,7 @@ export default function WorkforceEntry({
                             readOnly
                             tabIndex={-1}
                             aria-hidden="true"
-                            aria-label={`Bilangan ${label} untuk ${row.trade_name}`}
+                            aria-label={`Bilangan ${ariaLabel} untuk ${row.trade_name}`}
                           />
                           <button
                             type="button"
@@ -230,8 +230,8 @@ export default function WorkforceEntry({
                             }}
                             disabled={disabled}
                             aria-pressed={isActive}
-                            aria-label={`${label}, ${row.trade_name}: ${value} orang. Tekan untuk laras.`}
-                            title={`${label}: ${value}`}
+                            aria-label={`${ariaLabel}, ${row.trade_name}: ${value} orang. Tekan untuk laras.`}
+                            title={`${ariaLabel}: ${value}`}
                             data-testid={`workforce-cell-${idx}-${field}`}
                           >
                             {value}
@@ -243,7 +243,7 @@ export default function WorkforceEntry({
                   </div>
 
                   <div className="ng-workforce__row-total" data-testid={`trade-total-${idx}`}>
-                    <span>Σ</span>
+                    <span className="sr-only">Jumlah</span>
                     <strong>{rowTotal}</strong>
                   </div>
                 </div>
@@ -252,10 +252,10 @@ export default function WorkforceEntry({
                   <div
                     className="ng-workforce__controller is-active"
                     data-testid="workforce-active-controller"
-                    aria-label={`Laras ${activeClassification.label} untuk ${row.trade_name}`}
+                    aria-label={`Laras ${activeClassification.ariaLabel} untuk ${row.trade_name}`}
                   >
                     <div className="ng-workforce__controller-meta">
-                      <span>{activeClassification.short}</span>
+                      <span>{activeClassification.label}</span>
                       <strong>{compactTradeName}</strong>
                     </div>
                     <div className="ng-workforce__controller-stepper">
@@ -263,7 +263,7 @@ export default function WorkforceEntry({
                         type="button"
                         onClick={() => handleActiveStep(-1)}
                         disabled={disabled || (activeValue ?? 0) <= 0}
-                        aria-label={`Tolak 1 ${activeClassification.label}`}
+                        aria-label={`Tolak 1 ${activeClassification.ariaLabel}`}
                       >
                         −
                       </button>
@@ -274,7 +274,7 @@ export default function WorkforceEntry({
                         type="button"
                         onClick={() => handleActiveStep(1)}
                         disabled={disabled}
-                        aria-label={`Tambah 1 ${activeClassification.label}`}
+                        aria-label={`Tambah 1 ${activeClassification.ariaLabel}`}
                       >
                         +
                       </button>
