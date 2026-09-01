@@ -63,6 +63,20 @@
   content: none !important;
 }
 
+/* Selected source follows the same orange-datum + one-word section heading grammar. */
+.mobile-entry-selected-source::before {
+  content: "SUMBER" !important;
+  width: auto !important;
+  padding-left: 1.67rem;
+  color: var(--ng-ivory-100) !important;
+  background: linear-gradient(var(--ng-current), var(--ng-current)) left center / 1.05rem 2px no-repeat !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.68rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+}
+
 /* Workforce authority header uses the exact same final-column proportion as the matrix. */
 .ng-workforce__header {
   grid-template-columns: 88% 12% !important;
@@ -75,6 +89,16 @@
   min-width: 0 !important;
   justify-content: center !important;
   padding: 0 !important;
+}
+
+.ng-workforce__overall-icon {
+  width: 1.7rem !important;
+  height: 1.7rem !important;
+}
+
+.ng-workforce__matrix-head > span:last-child {
+  font-size: 0.45rem !important;
+  letter-spacing: 0.015em !important;
 }
 
 @media (max-width: 767px) {
@@ -118,5 +142,10 @@
 
   .ng-workforce__header {
     grid-template-columns: 80% 20% !important;
+  }
+
+  .ng-workforce__overall-icon {
+    width: 1.65rem !important;
+    height: 1.65rem !important;
   }
 }
