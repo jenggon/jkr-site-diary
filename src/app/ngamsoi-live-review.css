@@ -3,8 +3,7 @@
  * Loaded last so accepted interaction/domain behaviour remains untouched.
  */
 
-/* Canonical mark is now exact icon geometry. Keep housing optical size modest so the
- * interior triangle stays visibly open instead of collapsing into a white wedge. */
+/* Keep the compact identity crisp at header scale. */
 .ngamsoi-app-header .ngamsoi-mark-housing {
   padding: 0.08rem;
 }
@@ -61,29 +60,44 @@
   font-size: 0.6rem !important;
 }
 
+/* Source replacement is a real field action, not micro-copy. */
 .mobile-entry-selected-source > div:last-child {
-  gap: 0.35rem !important;
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: minmax(0, 1fr) 46px !important;
+  gap: 0 !important;
 }
 
 .mobile-entry-selected-source > div:last-child button:first-child {
-  min-width: 5rem !important;
-  min-height: 40px !important;
-  border: 1px solid color-mix(in srgb, var(--ng-current) 62%, var(--ng-graphite-650)) !important;
-  background: color-mix(in srgb, var(--ng-current) 5%, #090b0e) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 46px !important;
+  border: 1px solid color-mix(in srgb, var(--ng-current) 78%, var(--ng-graphite-650)) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--ng-current) 10%, #0a0c0f), #090b0e) !important;
   color: var(--ng-current) !important;
-  font-family: var(--ng-font-reference) !important;
-  font-size: 0.58rem !important;
-  font-weight: 780 !important;
-  letter-spacing: 0.075em !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.72rem !important;
+  font-weight: 760 !important;
+  letter-spacing: 0.045em !important;
   text-transform: uppercase;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-current) 72%, transparent) !important;
+}
+
+.mobile-entry-selected-source > div:last-child button:first-child:active {
+  translate: 0 1px;
+  background: color-mix(in srgb, var(--ng-current) 14%, #090b0e) !important;
 }
 
 .mobile-entry-selected-source > div:last-child button:last-child {
-  width: 2.5rem !important;
-  min-width: 2.5rem !important;
-  min-height: 40px !important;
+  width: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  border: 1px solid var(--ng-graphite-650) !important;
   border-left: 0 !important;
-  color: var(--ng-grey-600) !important;
+  background: #090b0e !important;
+  color: var(--ng-grey-500) !important;
+  font-size: 1rem !important;
 }
 
 /* VO is exceptional catalogue registration. Treat it as a secondary sheet, never as
@@ -230,30 +244,30 @@
 
 /* Workforce: TRED | B | BB | A | JUMLAH. Dense but legible. */
 .ng-workforce__overall {
-  min-width: 4.45rem !important;
-  grid-template-columns: auto auto auto !important;
+  min-width: 3.2rem !important;
+  display: inline-grid !important;
+  grid-template-columns: 1.1rem auto !important;
   align-items: center !important;
   justify-content: end;
-  column-gap: 0.28rem !important;
+  column-gap: 0.36rem !important;
 }
 
 .ng-workforce__overall-icon {
-  grid-column: auto !important;
-  color: initial !important;
-  font-family: initial !important;
-  font-size: 0.98rem !important;
-  font-weight: 400 !important;
-  letter-spacing: 0 !important;
-  line-height: 1 !important;
-  text-transform: none !important;
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  overflow: visible;
+  stroke: var(--ng-current);
+  stroke-width: 1.65;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
 }
 
 .ng-workforce__overall > strong {
-  font-size: 1.12rem !important;
-}
-
-.ng-workforce__overall > small {
-  padding-bottom: 0 !important;
+  color: var(--ng-ivory-100) !important;
+  font-size: 1.16rem !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1 !important;
 }
 
 .ng-workforce__controller-meta > span {
@@ -299,7 +313,6 @@
     grid-template-columns: minmax(0, 1fr) 7.5rem !important;
   }
 
-  /* Selected bottom-tab datum gets its own reserved lane instead of sharing label space. */
   .mobile-entry-nav-item {
     position: relative;
     padding-top: 0.3rem !important;
