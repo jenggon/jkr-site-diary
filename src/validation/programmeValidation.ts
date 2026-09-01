@@ -25,11 +25,11 @@ export const programmeShortNameSchema = z
   .string()
   .min(3, 'programmeShortName must be at least 3 characters')
   .max(20, 'programmeShortName must not exceed 20 characters')
-  .refine((val) => val === val.trim(), 'programmeShortName must not contain leading or trailing whitespace')
   .regex(
     /^[A-Za-z0-9]+(?:[ -][A-Za-z0-9]+)*$/,
     'programmeShortName may contain only letters, numbers, single spaces, or hyphens',
   )
+  .refine((val) => val === val.trim(), 'programmeShortName must not contain leading or trailing whitespace')
   .refine(
     (val) => !RESERVED_SHORT_NAMES.has(val.toUpperCase()),
     'programmeShortName contains a reserved keyword',
