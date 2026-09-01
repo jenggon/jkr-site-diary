@@ -54,17 +54,17 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).toContain('Child Component');
   });
 
-  it('locks the attached NGAMSOI master as one closed marker geometry everywhere', () => {
+  it('locks the attached NGAMSOI master to the exact accepted app-icon geometry everywhere', () => {
     const brandSource = read('src/components/brand/NgamsoiBrand.tsx');
     const identityCss = read('src/app/ngamsoi.css');
     const headerCss = read('src/app/ngamsoi-n05r2-header.css');
     const layoutSource = read('src/app/layout.tsx');
     const appIcon = read('public/ngamsoi-mark.svg');
 
-    expect(brandSource).toContain('viewBox="0 0 128 92"');
-    expect(brandSource).toContain('M32 14H96L64 52Z');
-    expect(brandSource).toContain('M64 52V87');
-    expect(brandSource).toContain('M10 72H118');
+    expect(brandSource).toContain('viewBox="0 0 64 64"');
+    expect(brandSource).toContain('M21 13H43L32 28Z');
+    expect(brandSource).toContain('M32 28V51');
+    expect(brandSource).toContain('M11 43H53');
     expect(brandSource).toContain('ngamsoi-mark-stem');
     expect(brandSource).toContain('ngamsoi-mark-baseline');
     expect(brandSource).not.toContain('M32 14H96M32 14L59 49M96 14L69 49');
@@ -80,6 +80,7 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(layoutSource).toContain('NGAMSOI | JKR Site Diary');
     expect(layoutSource).toContain('/ngamsoi-mark.svg');
     expect(layoutSource).toContain('ngamsoi-n05r2-header.css');
+    expect(appIcon).toContain('viewBox="0 0 64 64"');
     expect(appIcon).toContain('M21 13H43L32 28Z');
     expect(appIcon).toContain('M32 28V51');
     expect(appIcon).toContain('M11 43H53');
