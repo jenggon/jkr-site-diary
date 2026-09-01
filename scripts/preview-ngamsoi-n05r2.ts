@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import { installN05R2PreviewRoutes } from './n05r2-preview-routes';
 
 const MOBILE = { width: 390, height: 844 };
 const BASE_URL = process.env.N05R2_BASE_URL ?? 'http://127.0.0.1:3000';
@@ -71,12 +72,14 @@ async function main(): Promise<void> {
 
   const page = await context.newPage();
 
+  // Safe default for unrelated endpoints. More specific interactive fixtures below win.
   await page.route('**/api/**', async (route) => {
     await json(route, { data: [] });
   });
 
-  await page.route('**/api/vo-items**', async (route) => {
-    await json(route, { data: [] });
+  await installN05R2PreviewRoutes(page, {
+    programmeId: PROGRAMME_ID,
+    revisionId: REVISION_ID,
   });
 
   await page.route(`**/api/task/revision/${REVISION_ID}`, async (route) => {
@@ -174,7 +177,8 @@ async function main(): Promise<void> {
   await page.bringToFront();
 
   console.log('NGAMSOI N05R.2 interactive preview is open at 390x844.');
-  console.log('Use the browser normally. Close the preview window when you are done.');
+  console.log('MSP, VO registration and the save/completion path are interactive preview fixtures.');
+  console.log('Close the preview window when you are done.');
 
   await new Promise<void>((resolve) => {
     browser.on('disconnected', () => resolve());
