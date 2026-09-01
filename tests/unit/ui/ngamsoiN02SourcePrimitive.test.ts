@@ -11,9 +11,9 @@ describe('NGAMSOI N02 mobile shell + selected source primitive', () => {
 
     expect(selector).toContain("export type OperationalSourceType = 'MSP' | 'VO'");
     expect(selector).toContain('currentSelection');
-    expect(selector).toContain('handleSelectMspTask');
-    expect(selector).toContain('handleSelectVoItem');
-    expect(selector).toContain('handleClearSelection');
+    expect(selector).toContain('selectedFromTask');
+    expect(selector).toContain('selectedFromVo');
+    expect(selector).toContain('commitSelection');
     expect(selector).toContain('mobile-entry-selected-source');
     expect(selector).toContain('mobile-entry-source-switcher');
   });
