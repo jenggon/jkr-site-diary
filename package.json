@@ -21,6 +21,7 @@
     "test:contract": "vitest run tests/contract",
     "test:e2e": "playwright test",
     "evidence:datum": "tsx scripts/capture-datum-mobile.ts",
+    "preview:n05r2": "tsx scripts/preview-ngamsoi-n05r2.ts",
     "prepare": "husky"
   },
   "dependencies": {
