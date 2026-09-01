@@ -36,6 +36,19 @@ form[aria-label="Borang Buku Harian Tapak"] > section > h3 {
   align-items: center !important;
 }
 
+/* Expanded source keeps its stored two-word DOM label inaccessible visually;
+ * the uniform one-word SUMBER presentation is supplied by the existing pseudo label. */
+.mobile-entry-spike-panel > div:first-child h3 {
+  font-size: 0 !important;
+}
+
+.mobile-entry-spike-panel > div:first-child h3::after {
+  content: "SUMBER" !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+}
+
 /* Selected source uses the exact same orange dash + white one-word title. */
 .mobile-entry-selected-source {
   grid-template-columns: 1fr !important;
@@ -265,17 +278,26 @@ form[aria-label="Borang Buku Harian Tapak"] > section > h3 {
   }
 
   form[aria-label="Borang Buku Harian Tapak"] > section > h3,
-  .ng-workforce__title,
-  .mobile-entry-spike-panel > div:first-child h3 {
+  .ng-workforce__title {
     min-height: 1.35rem !important;
     margin-bottom: 0.72rem !important;
     font-size: 0.78rem !important;
     line-height: 1.1 !important;
   }
 
-  .mobile-entry-spike-panel > div:first-child {
+  .mobile-entry-spike-panel > div:first-child,
+  .mobile-entry-spike-panel > div:first-child h3 {
     min-height: 1.35rem !important;
     margin-bottom: 0.72rem !important;
+  }
+
+  .mobile-entry-spike-panel > div:first-child h3 {
+    font-size: 0 !important;
+  }
+
+  .mobile-entry-spike-panel > div:first-child h3::after {
+    font-size: 0.78rem !important;
+    line-height: 1.1 !important;
   }
 
   .mobile-entry-selected-source {
