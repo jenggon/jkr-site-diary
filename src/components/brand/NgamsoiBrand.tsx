@@ -6,7 +6,9 @@ interface NgamsoiMarkProps {
 }
 
 export function NgamsoiMark({ className = '', accentedBaseline = true }: NgamsoiMarkProps) {
-  const datumClass = accentedBaseline ? 'ngamsoi-mark-datum' : undefined;
+  const datumClass = accentedBaseline
+    ? 'ngamsoi-mark-datum ngamsoi-mark-baseline'
+    : 'ngamsoi-mark-baseline';
 
   return (
     <svg
@@ -17,7 +19,8 @@ export function NgamsoiMark({ className = '', accentedBaseline = true }: Ngamsoi
       xmlns="http://www.w3.org/2000/svg"
       focusable="false"
     >
-      {/* Canonical NGAMSOI master: exact geometry shared with the accepted app icon. */}
+      {/* Canonical NGAMSOI mark: reference marker above a locked datum notch.
+          No vertical stroke crosses the datum, avoiding cross-like silhouettes at any scale. */}
       <path
         d="M21 13H43L32 28Z"
         stroke="currentColor"
@@ -27,19 +30,12 @@ export function NgamsoiMark({ className = '', accentedBaseline = true }: Ngamsoi
         vectorEffect="non-scaling-stroke"
       />
       <path
-        className={datumClass ? `${datumClass} ngamsoi-mark-stem` : 'ngamsoi-mark-stem'}
-        d="M32 28V51"
+        className={datumClass}
+        d="M11 43H27L32 38L37 43H53"
         stroke="currentColor"
         strokeWidth="3.5"
         strokeLinecap="butt"
-        vectorEffect="non-scaling-stroke"
-      />
-      <path
-        className={datumClass ? `${datumClass} ngamsoi-mark-baseline` : 'ngamsoi-mark-baseline'}
-        d="M11 43H53"
-        stroke="currentColor"
-        strokeWidth="3.5"
-        strokeLinecap="butt"
+        strokeLinejoin="miter"
         vectorEffect="non-scaling-stroke"
       />
     </svg>
