@@ -2,6 +2,7 @@ export interface ProgrammeRow {
   readonly programme_id: string;
   readonly programme_code: string;
   readonly programme_name: string;
+  readonly programme_short_name?: string | null | undefined;
   readonly employer_name: string | null;
   readonly contractor_name: string | null;
   readonly supervising_officer: string | null;
