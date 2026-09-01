@@ -63,6 +63,20 @@
   content: none !important;
 }
 
+/* Workforce authority header uses the exact same final-column proportion as the matrix. */
+.ng-workforce__header {
+  grid-template-columns: 88% 12% !important;
+  gap: 0 !important;
+  padding-right: 0 !important;
+}
+
+.ng-workforce__overall {
+  width: 100% !important;
+  min-width: 0 !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
 @media (max-width: 767px) {
   .ng-project-context {
     grid-template-columns: 1fr;
@@ -100,5 +114,9 @@
 
   .ng-project-pulse__item strong {
     font-size: 0.6rem;
+  }
+
+  .ng-workforce__header {
+    grid-template-columns: 80% 20% !important;
   }
 }
