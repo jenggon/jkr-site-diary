@@ -18,9 +18,6 @@
     inset 0 -1px 0 rgb(0 0 0 / 0.34);
 }
 
-/* Once persistence succeeds the form is closed. The original submit action
- * must not remain as a second competing call-to-action. Resetting to Baharu
- * removes the completion surface and naturally restores the submit control. */
 form[aria-label="Borang Buku Harian Tapak"]:has(.ng-completion) > div:last-child {
   display: none !important;
 }
@@ -57,23 +54,24 @@ form[aria-label="Borang Buku Harian Tapak"]:has(.ng-completion) > div:last-child
   animation: ng-n06-baseline-colour 520ms ease-out both;
 }
 
+/* Confirmation is an event, not part of the NGAMSOI identity.
+ * It flashes beside the mark, then disappears so the final state is the clean canonical mark. */
 .ng-completion__check {
   position: absolute;
-  left: 50%;
-  top: 1.28rem;
+  left: 76%;
+  top: 0.58rem;
   display: grid;
-  width: 1.34rem;
-  height: 1.34rem;
-  translate: -50% -50%;
+  width: 1.15rem;
+  height: 1.15rem;
   place-items: center;
   color: var(--ng-established);
   font-family: var(--ng-font-work);
-  font-size: 0.88rem;
-  font-weight: 760;
+  font-size: 0.78rem;
+  font-weight: 800;
   line-height: 1;
   opacity: 0;
-  transform: scale(0.72);
-  animation: ng-n06-check-lock 280ms 250ms cubic-bezier(0.18, 0.86, 0.28, 1.24) forwards;
+  transform: translateY(0.18rem) scale(0.72);
+  animation: ng-n06-check-flash 680ms 220ms cubic-bezier(0.18, 0.86, 0.28, 1.18) both;
 }
 
 .ng-completion__baseline {
@@ -250,9 +248,11 @@ form[aria-label="Borang Buku Harian Tapak"]:has(.ng-completion) > div:last-child
   100% { background: var(--ng-established); transform: scaleX(1); }
 }
 
-@keyframes ng-n06-check-lock {
-  0% { opacity: 0; transform: scale(0.72); }
-  100% { opacity: 1; transform: scale(1); }
+@keyframes ng-n06-check-flash {
+  0% { opacity: 0; transform: translateY(0.18rem) scale(0.72); }
+  24% { opacity: 1; transform: translateY(0) scale(1.06); }
+  62% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-0.2rem) scale(0.94); }
 }
 
 @keyframes ng-n06-copy-settle {
@@ -269,7 +269,6 @@ form[aria-label="Borang Buku Harian Tapak"]:has(.ng-completion) > div:last-child
 @media (prefers-reduced-motion: reduce) {
   .ng-completion__mark-shell,
   .ng-completion__mark .ngamsoi-mark-baseline,
-  .ng-completion__check,
   .ng-completion__baseline::after,
   .ng-completion__signature,
   .ng-completion__id {
@@ -280,7 +279,10 @@ form[aria-label="Borang Buku Harian Tapak"]:has(.ng-completion) > div:last-child
     color: var(--ng-established);
   }
 
-  .ng-completion__check,
+  .ng-completion__check {
+    display: none !important;
+  }
+
   .ng-completion__signature,
   .ng-completion__id {
     opacity: 1;
