@@ -8,7 +8,6 @@ import OperationalSourceSelector from '@/app/site-diary/OperationalSourceSelecto
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
-// Mock DailyEntryContext
 vi.mock('@/app/site-diary/DailyEntryShell', () => ({
   useDailyEntryContext: () => ({
     programmeId: 'test-programme-uuid-1',
@@ -35,12 +34,9 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
       })
     );
 
-    // Verify Bahasa Malaysia labels
     expect(html).toContain('MSP');
     expect(html).toContain('VO');
     expect(html).toContain('Sumber');
-
-    // Verify technical identifiers are NOT the primary user-facing terminology
     expect(html).not.toContain('MSP_TASK');
     expect(html).not.toContain('VO_ITEM');
     expect(html).not.toContain('vo_item_id');
@@ -86,33 +82,27 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
     expect(html).toContain('Tukar');
   });
 
-  it('enforces strict XOR behavior in selection handlers (MSP selection clears VO, VO clears MSP)', () => {
+  it('enforces strict XOR behavior through one source-state commit path', () => {
     const source = read('src/app/site-diary/OperationalSourceSelector.tsx');
 
-    // Handle MSP Selection: sets sourceType to MSP and rawTask
     expect(source).toContain("sourceType: 'MSP'");
-    expect(source).toContain('handleSelectMspTask');
-
-    // Handle VO Selection: sets sourceType to VO and rawVoItem
+    expect(source).toContain('selectedFromTask');
+    expect(source).toContain('rawTask: task');
     expect(source).toContain("sourceType: 'VO'");
-    expect(source).toContain('handleSelectVoItem');
+    expect(source).toContain('selectedFromVo');
+    expect(source).toContain('rawVoItem: vo');
 
-    // XOR Mutual Exclusion: verify single source state container
+    expect(source).toContain('commitSelection');
     expect(source).toContain('setInternalSource(source)');
-    expect(source).toContain('onSelectSource(source)');
+    expect(source).toContain('onSelectSource?.(source)');
   });
 
   it('uses canonical authenticated endpoints for MSP tasks and VO items tied to Programme/Revision context', () => {
     const source = read('src/app/site-diary/OperationalSourceSelector.tsx');
 
-    // Canonical MSP Task route
     expect(source).toContain('/api/task/revision/');
-
-    // Canonical VO Item route
     expect(source).toContain('/api/vo-items?programmeId=');
     expect(source).toContain('revisionId=');
-
-    // Canonical VO Registration route
     expect(source).toContain("method: 'POST'");
     expect(source).toContain('/api/vo-items');
   });
@@ -128,22 +118,15 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
   it('provides zero states, search filters, and error retry handlers for both MSP and VO lists', () => {
     const source = read('src/app/site-diary/OperationalSourceSelector.tsx');
 
-    // Zero states
     expect(source).toContain('Tiada');
-    expect(source).toContain('Tiada');
-
-    // Search filters
     expect(source).toContain('filteredMspTasks');
     expect(source).toContain('filteredVoItems');
-
-    // Retry handling
     expect(source).toContain('Ulang');
   });
 
   it('preserves integration inside DailyEntryForm without duplicate mutations', () => {
     const formSource = read('src/app/site-diary/DailyEntryForm.tsx');
 
-    // Verified embedded in DailyEntryForm
     expect(formSource).toContain('<OperationalSourceSelector');
     expect(formSource).toContain('onSelectSource={setSelectedSource}');
   });
