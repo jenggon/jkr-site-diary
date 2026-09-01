@@ -54,7 +54,7 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).toContain('Child Component');
   });
 
-  it('locks the attached NGAMSOI master to the exact accepted app-icon geometry everywhere', () => {
+  it('locks the NGAMSOI identity to one cross-free marker + locked-datum geometry everywhere', () => {
     const brandSource = read('src/components/brand/NgamsoiBrand.tsx');
     const identityCss = read('src/app/ngamsoi.css');
     const headerCss = read('src/app/ngamsoi-n05r2-header.css');
@@ -63,11 +63,10 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
 
     expect(brandSource).toContain('viewBox="0 0 64 64"');
     expect(brandSource).toContain('M21 13H43L32 28Z');
-    expect(brandSource).toContain('M32 28V51');
-    expect(brandSource).toContain('M11 43H53');
-    expect(brandSource).toContain('ngamsoi-mark-stem');
+    expect(brandSource).toContain('M11 43H27L32 38L37 43H53');
     expect(brandSource).toContain('ngamsoi-mark-baseline');
-    expect(brandSource).not.toContain('M32 14H96M32 14L59 49M96 14L69 49');
+    expect(brandSource).not.toContain('ngamsoi-mark-stem');
+    expect(brandSource).not.toContain('M32 28V51');
 
     expect(identityCss).toContain('--ng-graphite-950');
     expect(identityCss).toContain('--ng-current: #ff7a1a');
@@ -82,9 +81,9 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(layoutSource).toContain('ngamsoi-n05r2-header.css');
     expect(appIcon).toContain('viewBox="0 0 64 64"');
     expect(appIcon).toContain('M21 13H43L32 28Z');
-    expect(appIcon).toContain('M32 28V51');
-    expect(appIcon).toContain('M11 43H53');
-    expect(appIcon.match(/#ff7a1a/g)?.length).toBe(2);
+    expect(appIcon).toContain('M11 43H27L32 38L37 43H53');
+    expect(appIcon).not.toContain('M32 28V51');
+    expect(appIcon.match(/#ff7a1a/g)?.length).toBe(1);
     expect(appIcon).toContain('aria-label="NGAMSOI mark"');
   });
 
