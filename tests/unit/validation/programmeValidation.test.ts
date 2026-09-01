@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   validateProgrammeCode,
   validateProgrammeName,
+  validateProgrammeShortName,
   validateProgrammeUuid,
   validateDateHierarchy,
 } from '@/validation/programmeValidation';
@@ -33,6 +34,21 @@ describe('Programme Validation Schemas & Matrix', () => {
 
   it('should throw ProgrammeValidationError on short programmeName', () => {
     expect(() => validateProgrammeName('AB')).toThrow(ProgrammeValidationError);
+  });
+
+  it('locks project nickname to user-friendly 3-20 character identity', () => {
+    expect(validateProgrammeShortName('FPTV UPSI')).toBe('FPTV UPSI');
+    expect(validateProgrammeShortName('JALAN-B40')).toBe('JALAN-B40');
+    expect(validateProgrammeShortName('Hosp Tapah')).toBe('Hosp Tapah');
+  });
+
+  it('rejects invalid or reserved project nicknames', () => {
+    expect(() => validateProgrammeShortName('AB')).toThrow(ProgrammeValidationError);
+    expect(() => validateProgrammeShortName('THIS PROJECT NAME IS TOO LONG')).toThrow(ProgrammeValidationError);
+    expect(() => validateProgrammeShortName('FPTV_UPSI')).toThrow(ProgrammeValidationError);
+    expect(() => validateProgrammeShortName(' FPTV UPSI')).toThrow(ProgrammeValidationError);
+    expect(() => validateProgrammeShortName('FPTV  UPSI')).toThrow(ProgrammeValidationError);
+    expect(() => validateProgrammeShortName('NGAMSOI')).toThrow(ProgrammeValidationError);
   });
 
   it('should validate valid UUID string', () => {
