@@ -8,7 +8,6 @@ import DailyEntryShell from '@/app/site-diary/DailyEntryShell';
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
-// Mock Auth Context
 vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
     user: { email: 'supervisor@jkr.gov.my' },
@@ -32,46 +31,43 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
       )
     );
 
-    // NGAMSOI is the product identity; contractual JKR terminology remains downstream where required.
     expect(html).toContain('NGAMSOI');
     expect(html).toContain('Kena boh!');
     expect(html).toContain('Ngamsoi.');
     expect(html).toContain('ngamsoi-shell');
     expect(html).toContain('ngamsoi-brand-lockup');
     expect(html).toContain('ngamsoi-mark-svg');
-    expect(html).toContain('datum-shell'); // temporary visual-lineage compatibility class until N02-N08 propagation closes
+    expect(html).toContain('datum-shell');
     expect(html).not.toContain('Digital Fieldbook · Project Ground Truth');
     expect(html).not.toContain('>DATUM<');
     expect(html).not.toContain('Sistem Pengurusan Tapak Digital');
 
-    // Verify mobile-responsive classes
     expect(html).toContain('h-[100dvh]');
     expect(html).toContain('w-full');
 
-    // F2.6-B02: Print is exact-record contextual and cannot be a generic shell link.
     expect(html).not.toContain('href="/site-diary/print"');
     expect(html).not.toContain('Cetak / PDF');
 
-    // Verify user avatar / initials
     expect(html).toContain('SU');
-
-    // Verify child is rendered inside shell when programmeId is present
+    expect(html).toContain('ng-profile-trigger');
+    expect(html).toContain('ng-profile-panel');
     expect(html).toContain('Child Component');
   });
 
-  it('locks N01 mark geometry, graphite tokens, semantic accent and typography grammar as code', () => {
+  it('locks the attached NGAMSOI master as one closed marker geometry everywhere', () => {
     const brandSource = read('src/components/brand/NgamsoiBrand.tsx');
     const identityCss = read('src/app/ngamsoi.css');
+    const headerCss = read('src/app/ngamsoi-n05r2-header.css');
     const layoutSource = read('src/app/layout.tsx');
     const appIcon = read('public/ngamsoi-mark.svg');
 
-    // Master NGAMSOI identity: split reference-marker apex + wide established baseline.
     expect(brandSource).toContain('viewBox="0 0 128 92"');
-    expect(brandSource).toContain('M32 14H96M32 14L59 49M96 14L69 49');
+    expect(brandSource).toContain('M32 14H96L64 52Z');
+    expect(brandSource).toContain('M64 52V87');
     expect(brandSource).toContain('M10 72H118');
+    expect(brandSource).toContain('ngamsoi-mark-stem');
     expect(brandSource).toContain('ngamsoi-mark-baseline');
-    expect(brandSource).toContain('NGAMSOI');
-    expect(brandSource).toContain('Kena boh!');
+    expect(brandSource).not.toContain('M32 14H96M32 14L59 49M96 14L69 49');
 
     expect(identityCss).toContain('--ng-graphite-950');
     expect(identityCss).toContain('--ng-current: #ff7a1a');
@@ -79,15 +75,30 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(identityCss).toContain('--ng-font-work');
     expect(identityCss).toContain('--ng-font-reference');
     expect(identityCss).toContain('--ng-font-brand');
-    expect(identityCss).toContain('.ng-work-voice');
-    expect(identityCss).toContain('.ng-reference-voice');
+    expect(headerCss).toContain('.ngamsoi-brand-lockup .ngamsoi-mark-datum');
 
     expect(layoutSource).toContain('NGAMSOI | JKR Site Diary');
     expect(layoutSource).toContain('/ngamsoi-mark.svg');
-    expect(appIcon).toContain('M21 13H43M21 13L29.5 26M43 13L34.5 26');
+    expect(layoutSource).toContain('ngamsoi-n05r2-header.css');
+    expect(appIcon).toContain('M21 13H43L32 28Z');
+    expect(appIcon).toContain('M32 28V51');
     expect(appIcon).toContain('M11 43H53');
     expect(appIcon.match(/#ff7a1a/g)?.length).toBe(2);
     expect(appIcon).toContain('aria-label="NGAMSOI mark"');
+  });
+
+  it('locks header hierarchy to nickname, official project name, current revision, and avatar only', () => {
+    const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
+
+    expect(shellSource).toContain('programmeShortName');
+    expect(shellSource).toContain('ng-project-short-name');
+    expect(shellSource).toContain('ng-project-title');
+    expect(shellSource).toContain('ng-project-revision');
+    expect(shellSource).toContain('revisionNumber');
+    expect(shellSource).toContain('padStart(2,');
+    expect(shellSource).toContain('ng-profile-trigger');
+    expect(shellSource).not.toContain('Semakan Sah');
+    expect(shellSource).not.toContain('Semakan Semasa');
   });
 
   it('preserves native DailyEntryForm through the bounded Site Diary workspace composition', () => {
@@ -102,34 +113,26 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(workspaceContent).toContain('<DailyEntryForm');
   });
 
-  it('uses canonical GET /api/programme discovery and never calls project-summary without explicit programmeId', () => {
+  it('uses canonical programme and revision discovery without a default programme shortcut', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
 
-    // Verify canonical programme discovery
     expect(shellSource).toContain('/api/programme?status=Active');
-    
-    // Verify explicit parameterised project-summary call
     expect(shellSource).toContain('/api/project-summary?programmeId=');
+    expect(shellSource).toContain('/api/programme-revision?programmeId=');
     expect(shellSource).not.toMatch(/\/api\/project-summary['"`]\s*\)/);
 
-    // Verify revision and programme context state tracking
     expect(shellSource).toContain('revisionId');
+    expect(shellSource).toContain('revisionNumber');
     expect(shellSource).toContain('programmeName');
-    expect(shellSource).toContain('Semakan Sah');
     expect(shellSource).toContain('useDailyEntryContext');
   });
 
   it('handles 0, 1, and multiple active programme scenarios according to HQ authority', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
 
-    // Zero programme empty state
     expect(shellSource).toContain('Tiada Projek Aktif Ditemui');
     expect(shellSource).toContain('options.length === 0');
-
-    // Single programme auto-selection
     expect(shellSource).toContain('options.length === 1');
-
-    // Multiple programmes explicit selection (no arbitrary first auto-selection)
     expect(shellSource).toContain('Pilih Projek / Program Tapak');
     expect(shellSource).toContain('availableProgrammes.length > 1');
     expect(shellSource).toContain('handleSelectProgramme');
