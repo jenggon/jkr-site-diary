@@ -5,6 +5,7 @@ import { invariant } from '@/lib/invariant';
 import { ProgrammeValidationError } from '@/errors/programmeErrors';
 
 const RESERVED_CODES = new Set(['SYSTEM', 'ADMIN', 'NULL', 'TEMP']);
+const RESERVED_SHORT_NAMES = new Set(['SYSTEM', 'ADMIN', 'NULL', 'TEMP', 'NGAMSOI']);
 
 export const programmeCodeSchema = z
   .string()
@@ -19,6 +20,20 @@ export const programmeNameSchema = z
   .min(3, 'programmeName must be at least 3 characters')
   .max(100, 'programmeName must not exceed 100 characters')
   .refine((val) => val === val.trim(), 'programmeName must not contain leading or trailing whitespace');
+
+export const programmeShortNameSchema = z
+  .string()
+  .min(3, 'programmeShortName must be at least 3 characters')
+  .max(20, 'programmeShortName must not exceed 20 characters')
+  .refine((val) => val === val.trim(), 'programmeShortName must not contain leading or trailing whitespace')
+  .regex(
+    /^[A-Za-z0-9]+(?:[ -][A-Za-z0-9]+)*$/,
+    'programmeShortName may contain only letters, numbers, single spaces, or hyphens',
+  )
+  .refine(
+    (val) => !RESERVED_SHORT_NAMES.has(val.toUpperCase()),
+    'programmeShortName contains a reserved keyword',
+  );
 
 export function validateProgrammeCode(code: string): string {
   const parseResult = programmeCodeSchema.safeParse(code);
@@ -36,6 +51,16 @@ export function validateProgrammeName(name: string): string {
     parseResult.success,
     parseResult.success ? '' : parseResult.error.errors[0]?.message ?? 'Invalid programmeName',
     () => new ProgrammeValidationError(parseResult.success ? '' : parseResult.error.errors[0]?.message)
+  );
+  return parseResult.data;
+}
+
+export function validateProgrammeShortName(shortName: string): string {
+  const parseResult = programmeShortNameSchema.safeParse(shortName);
+  invariant(
+    parseResult.success,
+    parseResult.success ? '' : parseResult.error.errors[0]?.message ?? 'Invalid programmeShortName',
+    () => new ProgrammeValidationError(parseResult.success ? '' : parseResult.error.errors[0]?.message),
   );
   return parseResult.data;
 }
