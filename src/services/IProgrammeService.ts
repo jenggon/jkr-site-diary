@@ -6,6 +6,7 @@ import { ProgrammeRevision } from '@/types/programmeRevision';
 export interface CreateProgrammeCommand {
   readonly programmeCode: string;
   readonly programmeName: string;
+  readonly programmeShortName: string;
   readonly employerName?: string | undefined;
   readonly contractorName?: string | undefined;
   readonly supervisingOfficer?: string | undefined;
@@ -18,6 +19,7 @@ export interface CreateProgrammeCommand {
 export interface UpdateProgrammeCommand {
   readonly programmeId: string;
   readonly programmeName?: string | undefined;
+  readonly programmeShortName?: string | undefined;
   readonly employerName?: string | undefined;
   readonly contractorName?: string | undefined;
   readonly supervisingOfficer?: string | undefined;
