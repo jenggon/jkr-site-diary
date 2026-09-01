@@ -10,6 +10,41 @@ const BASE_URL = process.env.N05R2_BASE_URL ?? 'http://127.0.0.1:3000';
 const PROGRAMME_ID = '11111111-1111-4111-8111-111111111111';
 const REVISION_ID = '22222222-2222-4222-8222-222222222222';
 const TASK_ID = '33333333-3333-4333-8333-333333333333';
+const VISUAL_USER_ID = '77777777-7777-4777-8777-777777777777';
+const VISUAL_USER_EMAIL = 'pt.ngamsoi@jkr.gov.my';
+
+function supabaseAuthStorageKey(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder-project.supabase.co';
+  const projectRef = new URL(url).hostname.split('.')[0] || 'placeholder-project';
+  return `sb-${projectRef}-auth-token`;
+}
+
+function visualGateSession(): string {
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60;
+  return JSON.stringify({
+    access_token: 'n05r2-visual-gate-access-token',
+    refresh_token: 'n05r2-visual-gate-refresh-token',
+    expires_in: 3600,
+    expires_at: expiresAt,
+    token_type: 'bearer',
+    user: {
+      id: VISUAL_USER_ID,
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: VISUAL_USER_EMAIL,
+      email_confirmed_at: '2026-09-01T00:00:00.000Z',
+      phone: '',
+      confirmed_at: '2026-09-01T00:00:00.000Z',
+      last_sign_in_at: '2026-09-01T00:00:00.000Z',
+      app_metadata: { provider: 'email', providers: ['email'] },
+      user_metadata: { display_name: 'Pegawai Tapak' },
+      identities: [],
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-09-01T00:00:00.000Z',
+      is_anonymous: false,
+    },
+  });
+}
 
 async function main(): Promise<void> {
   await mkdir(EVIDENCE_DIR, { recursive: true });
@@ -22,6 +57,12 @@ async function main(): Promise<void> {
     isMobile: true,
     hasTouch: true,
   });
+  await context.addInitScript(
+    ({ storageKey, session }) => {
+      window.localStorage.setItem(storageKey, session);
+    },
+    { storageKey: supabaseAuthStorageKey(), session: visualGateSession() },
+  );
   const page = await context.newPage();
 
   try {
@@ -158,6 +199,7 @@ async function main(): Promise<void> {
     await expect(page.getByText('Semakan Sah', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Semakan Semasa', { exact: true })).toHaveCount(0);
     await expect(profileTrigger).toBeVisible();
+    await expect(profileTrigger).toHaveText('PT');
 
     const metrics = await page.evaluate(() => {
       const root = document.documentElement;
@@ -199,6 +241,7 @@ async function main(): Promise<void> {
     const profilePanel = page.locator('.ng-profile-panel');
     await expect(profilePanel).toBeVisible();
     await expect(profilePanel.getByText('Akaun', { exact: true })).toBeVisible();
+    await expect(profilePanel.getByText(VISUAL_USER_EMAIL, { exact: true })).toBeVisible();
     await expect(profilePanel.getByRole('button', { name: 'Keluar', exact: true })).toBeVisible();
 
     await page.screenshot({
@@ -221,7 +264,7 @@ async function main(): Promise<void> {
     });
 
     console.log(
-      `N05R.2 gate captured ${MOBILE.width}x${MOBILE.height}: closed master mark + FPTV UPSI nickname + R03 current-only + profile return`,
+      `N05R.2 gate captured ${MOBILE.width}x${MOBILE.height}: closed master mark + FPTV UPSI nickname + R03 current-only + authenticated profile return`,
     );
   } finally {
     await context.close();
