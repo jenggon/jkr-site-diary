@@ -13,6 +13,17 @@
   letter-spacing: 0.075em !important;
 }
 
+/* Spine state is communicated by circular node + rail colour only. Legacy words never return,
+ * including while a direct numeric workforce field still owns focus. */
+form[aria-label="Borang Buku Harian Tapak"] > section::after,
+form[aria-label="Borang Buku Harian Tapak"] > section:focus-within::after,
+form[aria-label="Borang Buku Harian Tapak"] > section:has([role="alert"])::after,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::after,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+  content: none !important;
+  display: none !important;
+}
+
 /* Desktop selected source: never sacrifice the task identity to the action rail. */
 @media (min-width: 768px) {
   .mobile-entry-selected-source h3 {
