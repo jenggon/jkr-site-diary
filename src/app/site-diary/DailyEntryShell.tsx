@@ -57,6 +57,21 @@ function formatRevision(number: number | null): string {
   return `R${Math.max(0, Math.trunc(number)).toString().padStart(2, '0')}`;
 }
 
+function formatClock(date: Date | null): string {
+  if (!date) return '--:--';
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function resolveDeadlinePulse(finishDate: string | null, now: Date | null): { label: string; value: string; title?: string } {
+  if (!finishDate || !now) return { label: 'BAKI', value: '—' };
+  const finish = new Date(`${finishDate}T23:59:59`);
+  if (Number.isNaN(finish.getTime())) return { label: 'BAKI', value: '—' };
+  const days = Math.ceil((finish.getTime() - now.getTime()) / 86_400_000);
+  const title = `Tarikh tamat projek: ${finishDate}`;
+  if (days < 0) return { label: 'LEWAT', value: `${Math.abs(days)} HARI`, title };
+  return { label: 'BAKI', value: `${days} HARI`, title };
+}
+
 export default function DailyEntryShell({
   children,
   initialProgrammeId,
@@ -74,6 +89,7 @@ export default function DailyEntryShell({
   const [finishDate, setFinishDate] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState<Date | null>(null);
   const programmeIdRef = useRef<string | null>(initialProgrammeId ?? null);
   const detailRequestRef = useRef<{ generation: number; programmeId: string; controller: AbortController } | null>(null);
   const detailGenerationRef = useRef(0);
@@ -273,6 +289,13 @@ export default function DailyEntryShell({
     };
   }, [programmeId, invalidateProgrammeDetails, loadProgrammeDetails]);
 
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const intervalId = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const handleSelectProgramme = (selectedId: string) => {
     const matched = availableProgrammes.find((p) => p.id === selectedId);
     if (matched) {
@@ -290,6 +313,8 @@ export default function DailyEntryShell({
     : revisionState === 'ERROR'
       ? 'R!'
       : 'R—';
+  const deadlinePulse = resolveDeadlinePulse(finishDate, now);
+  const clockLabel = formatClock(now);
 
   return (
     <DailyEntryContext.Provider
@@ -360,18 +385,30 @@ export default function DailyEntryShell({
                   </button>
                 )}
               </div>
-
-              <span
-                className={`ng-project-revision ${revisionState === 'RESOLVING' || revisionState === 'UNAVAILABLE' || revisionState === 'IDLE' ? 'ng-project-revision--pending' : ''} ${revisionState === 'ERROR' ? 'ng-project-revision--error' : ''}`.trim()}
-                title={revisionState === 'RESOLVED' ? `Semakan semasa ${revisionLabel}` : undefined}
-              >
-                {revisionLabel}
-              </span>
             </div>
 
             <h2 className="ng-project-title" title={programmeName || ''}>
               {programmeName || 'Nama Projek'}
             </h2>
+
+            <div className="ng-project-pulse" aria-label="Ringkasan projek semasa">
+              <span className="ng-project-pulse__item" title="Semakan program kerja semasa">
+                <small>SEMAKAN</small>
+                <strong
+                  className={`ng-project-revision ${revisionState === 'RESOLVING' || revisionState === 'UNAVAILABLE' || revisionState === 'IDLE' ? 'ng-project-revision--pending' : ''} ${revisionState === 'ERROR' ? 'ng-project-revision--error' : ''}`.trim()}
+                >
+                  {revisionLabel}
+                </strong>
+              </span>
+              <span className="ng-project-pulse__item" title={deadlinePulse.title}>
+                <small>{deadlinePulse.label}</small>
+                <strong>{deadlinePulse.value}</strong>
+              </span>
+              <span className="ng-project-pulse__item" title="Masa peranti semasa">
+                <small>MASA</small>
+                <strong>{clockLabel}</strong>
+              </span>
+            </div>
           </section>
         )}
 
@@ -387,7 +424,7 @@ export default function DailyEntryShell({
                 >
                   <path
                     fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1-2 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
                     clipRule="evenodd"
                   />
                 </svg>
