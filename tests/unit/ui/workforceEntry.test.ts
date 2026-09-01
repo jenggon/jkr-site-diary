@@ -21,7 +21,6 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     vi.restoreAllMocks();
   });
 
-  // 1. Render mobile-friendly Trade rows
   it('1. Renders mobile-friendly Trade rows with clear Bahasa Malaysia labels', () => {
     const html = renderToString(
       React.createElement(WorkforceEntry, {
@@ -38,8 +37,7 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     expect(html).toContain('Bukan Warganegara');
   });
 
-  // 2. Count calculations and derivation
-  it('2. Correctly derives per-Trade totals and overall total in rendered output', () => {
+  it('2. Correctly derives per-Trade totals and overall total with hardhat-only visible counter', () => {
     const html = renderToString(
       React.createElement(WorkforceEntry, {
         manpower: mockManpower,
@@ -47,15 +45,14 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
       })
     );
 
-    // Row 1 total = 3 + 1 + 4 = 8
     expect(html).toContain('8');
-    // Row 2 total = 2 + 0 + 0 = 2
     expect(html).toContain('2');
-    // Overall total = 8 + 2 = 10
-    expect(html).toContain('10 Orang');
+    expect(html).toContain('aria-label="10 pekerja"');
+    expect(html).toContain('ng-workforce__overall-icon');
+    expect(html).not.toContain('>ORANG<');
+    expect(html).not.toContain('👷');
   });
 
-  // 3. Negative count protection
   it('3. Negative counts are strictly coerced to 0 in derived totals', () => {
     const negativeManpower: ManpowerRow[] = [
       { trade_name: 'Pekerja Am', bumi_count: -5, non_bumi_count: -2, foreign_count: 3 },
@@ -68,11 +65,9 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
       })
     );
 
-    // Negative counts treated as 0, total = 3
-    expect(html).toContain('3 Orang');
+    expect(html).toContain('aria-label="3 pekerja"');
   });
 
-  // 4. Common trade catalog availability
   it('4. Provides standard Malaysian construction trades catalog for fast selection', () => {
     expect(COMMON_TRADES_CATALOG.length).toBeGreaterThan(10);
     expect(COMMON_TRADES_CATALOG).toContain('General Worker (Pekerja Am)');
@@ -81,7 +76,6 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     expect(COMMON_TRADES_CATALOG).toContain('Excavator Operator (Pemandu Jengkaut)');
   });
 
-  // 5. Empty state rendering
   it('5. Renders friendly empty state when no trade rows exist', () => {
     const html = renderToString(
       React.createElement(WorkforceEntry, {
@@ -91,10 +85,9 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     );
 
     expect(html).toContain('Tiada');
-    expect(html).toContain('0 Orang');
+    expect(html).toContain('aria-label="0 pekerja"');
   });
 
-  // 6. Integration: Submit populated workforce payload
   it('6. Workforce payload reaches Site Diary mutation atomically without duplicate API calls', async () => {
     const calls: Array<{ url: string; method: string; body: any }> = [];
     const mockFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -136,7 +129,7 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
       notes: 'Kerja pembinaan berjalan lancar.',
       manpower: [
         { trade_name: 'Pekerja Am', bumi_count: 5, non_bumi_count: 2, foreign_count: 10 },
-        { trade_name: 'Tukang Besi', bumi_count: 0, non_bumi_count: 0, foreign_count: 0 }, // zero row filtered
+        { trade_name: 'Tukang Besi', bumi_count: 0, non_bumi_count: 0, foreign_count: 0 },
       ],
       fetchFn: mockFetch,
     };
@@ -144,7 +137,6 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     const result = await submitDailyEntry(params);
     expect(result.siteDiaryId).toBe('sd-202');
 
-    // Verify Site Diary POST received exact manpower array
     const sdCall = calls.find((c) => c.url === '/api/site-diary' && c.method === 'POST');
     expect(sdCall).toBeDefined();
     expect(sdCall?.body.manpower).toEqual([
@@ -152,7 +144,6 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     ]);
   });
 
-  // 7. Integration: Edit mode preserves site_diary_id and updates workforce atomically via PATCH
   it('7. Edit mode preserves site_diary_id and updates workforce atomically via PATCH', async () => {
     const calls: Array<{ url: string; method: string; body: any }> = [];
     const mockFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -198,7 +189,6 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     const result = await submitDailyEntry(editParams);
     expect(result.siteDiaryId).toBe('sd-edit-303');
 
-    // Verify PATCH was called on exact ID with updated manpower
     expect(calls.length).toBe(1);
     expect(calls[0]?.url).toBe('/api/site-diary/sd-edit-303');
     expect(calls[0]?.method).toBe('PATCH');
@@ -208,9 +198,7 @@ describe('F2.1-D Mobile Workforce & Trade Entry Unit / Integration Suite', () =>
     expect(calls[0]?.body.print_context.contractor_scope).toBe('NSC');
   });
 
-  // 8. Direct database bypass check
   it('8. All workforce persistence occurs strictly via authenticated REST APIs without direct browser DB writes', () => {
-    // Assert no direct browser DB writes in WorkforceEntry
     expect(typeof WorkforceEntry).toBe('function');
   });
 });
