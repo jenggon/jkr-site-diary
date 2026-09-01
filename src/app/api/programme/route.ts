@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     }
 
     const { programme_code, programme_name } = body;
+    const programmeShortName = body.programme_short_name ?? body.programmeShortName;
 
     if (!programme_code || typeof programme_code !== 'string') {
       return NextResponse.json(
@@ -79,12 +80,18 @@ export async function POST(request: Request) {
       );
     }
 
-
+    if (!programmeShortName || typeof programmeShortName !== 'string') {
+      return NextResponse.json(
+        { error: 'Missing required field: programme_short_name' },
+        { status: 400 },
+      );
+    }
 
     const service = createProgrammeService({ accessToken: identity.accessToken });
     const result = await service.createProgramme({
       programmeCode: programme_code,
       programmeName: programme_name,
+      programmeShortName,
       employerName: body.employer_name,
       contractorName: body.contractor_name,
       supervisingOfficer: body.supervising_officer,
