@@ -1,0 +1,67 @@
+name: N05R4 NGAMSOI Harmony Runtime Gate
+
+on:
+  push:
+    branches:
+      - feature/N05R4-ngamsoi-harmony-pass
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  harmony-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: |
+          git diff --check
+          pnpm run verify
+
+      - name: Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start runtime
+        run: |
+          pnpm start > /tmp/n05r4-next.log 2>&1 &
+          echo $! > /tmp/n05r4-next.pid
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000/site-diary > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/n05r4-next.log
+          exit 1
+
+      - name: Capture
+        run: pnpm exec tsx scripts/capture-ngamsoi-n05r4-runtime.ts
+
+      - name: Evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: n05r4-harmony-production-runtime
+          path: docs/evidence/n05r4-harmony
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop runtime
+        if: always()
+        run: |
+          if [ -f /tmp/n05r4-next.pid ]; then kill "$(cat /tmp/n05r4-next.pid)" || true; fi
