@@ -3,6 +3,7 @@ import { ProgrammeStatus } from '@/types/programme';
 export interface CreateProgrammeDTO {
   readonly programmeCode: string;
   readonly programmeName: string;
+  readonly programmeShortName: string;
   readonly employerName?: string | undefined;
   readonly contractorName?: string | undefined;
   readonly supervisingOfficer?: string | undefined;
@@ -14,6 +15,7 @@ export interface CreateProgrammeDTO {
 export interface UpdateProgrammeDTO {
   readonly programmeId: string;
   readonly programmeName?: string | undefined;
+  readonly programmeShortName?: string | undefined;
   readonly employerName?: string | undefined;
   readonly contractorName?: string | undefined;
   readonly supervisingOfficer?: string | undefined;
@@ -30,6 +32,7 @@ export interface ProgrammeResponseDTO {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  readonly shortName?: string | undefined;
   readonly employerName?: string | undefined;
   readonly contractorName?: string | undefined;
   readonly supervisingOfficer?: string | undefined;
