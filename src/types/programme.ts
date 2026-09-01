@@ -10,6 +10,7 @@ export interface Programme {
   readonly programmeId: string;
   readonly programmeCode: string;
   readonly programmeName: string;
+  readonly programmeShortName?: string | undefined;
   readonly employerName?: string | undefined;
   readonly contractorName?: string | undefined;
   readonly supervisingOfficer?: string | undefined;
