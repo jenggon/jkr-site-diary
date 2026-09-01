@@ -10,31 +10,33 @@ export function NgamsoiMark({ className = '', accentedBaseline = true }: Ngamsoi
     <svg
       aria-hidden="true"
       className={className}
-      viewBox="0 0 96 76"
+      viewBox="0 0 128 92"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       focusable="false"
     >
+      {/* Canonical NGAMSOI reference marker: split apex, wide established baseline. */}
       <path
-        d="M18 10H78L48 45L18 10Z"
+        d="M32 14H96M32 14L59 49M96 14L69 49"
         stroke="currentColor"
         strokeWidth="7"
+        strokeLinecap="butt"
         strokeLinejoin="miter"
         vectorEffect="non-scaling-stroke"
       />
       <path
-        d="M48 50V71"
+        d="M64 58V87"
         stroke="currentColor"
         strokeWidth="6"
-        strokeLinecap="square"
+        strokeLinecap="butt"
         vectorEffect="non-scaling-stroke"
       />
       <path
         className={accentedBaseline ? 'ngamsoi-mark-baseline' : undefined}
-        d="M17 63H79"
+        d="M10 72H118"
         stroke="currentColor"
         strokeWidth="6"
-        strokeLinecap="square"
+        strokeLinecap="butt"
         vectorEffect="non-scaling-stroke"
       />
     </svg>
