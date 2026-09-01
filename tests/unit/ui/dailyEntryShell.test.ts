@@ -65,7 +65,10 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     const layoutSource = read('src/app/layout.tsx');
     const appIcon = read('public/ngamsoi-mark.svg');
 
-    expect(brandSource).toContain('viewBox="0 0 96 76"');
+    // Master NGAMSOI identity: split reference-marker apex + wide established baseline.
+    expect(brandSource).toContain('viewBox="0 0 128 92"');
+    expect(brandSource).toContain('M32 14H96M32 14L59 49M96 14L69 49');
+    expect(brandSource).toContain('M10 72H118');
     expect(brandSource).toContain('ngamsoi-mark-baseline');
     expect(brandSource).toContain('NGAMSOI');
     expect(brandSource).toContain('Kena boh!');
@@ -81,7 +84,9 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
 
     expect(layoutSource).toContain('NGAMSOI | JKR Site Diary');
     expect(layoutSource).toContain('/ngamsoi-mark.svg');
-    expect(appIcon).toContain('#ff7a1a');
+    expect(appIcon).toContain('M21 13H43M21 13L29.5 26M43 13L34.5 26');
+    expect(appIcon).toContain('M11 43H53');
+    expect(appIcon.match(/#ff7a1a/g)?.length).toBe(2);
     expect(appIcon).toContain('aria-label="NGAMSOI mark"');
   });
 
