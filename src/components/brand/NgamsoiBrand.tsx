@@ -12,33 +12,33 @@ export function NgamsoiMark({ className = '', accentedBaseline = true }: Ngamsoi
     <svg
       aria-hidden="true"
       className={className}
-      viewBox="0 0 128 92"
+      viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       focusable="false"
     >
-      {/* Canonical NGAMSOI master: one closed inverted marker, one centred stem, one datum. */}
+      {/* Canonical NGAMSOI master: exact geometry shared with the accepted app icon. */}
       <path
-        d="M32 14H96L64 52Z"
+        d="M21 13H43L32 28Z"
         stroke="currentColor"
-        strokeWidth="7"
+        strokeWidth="4"
         strokeLinecap="butt"
         strokeLinejoin="miter"
         vectorEffect="non-scaling-stroke"
       />
       <path
         className={datumClass ? `${datumClass} ngamsoi-mark-stem` : 'ngamsoi-mark-stem'}
-        d="M64 52V87"
+        d="M32 28V51"
         stroke="currentColor"
-        strokeWidth="6"
+        strokeWidth="3.5"
         strokeLinecap="butt"
         vectorEffect="non-scaling-stroke"
       />
       <path
         className={datumClass ? `${datumClass} ngamsoi-mark-baseline` : 'ngamsoi-mark-baseline'}
-        d="M10 72H118"
+        d="M11 43H53"
         stroke="currentColor"
-        strokeWidth="6"
+        strokeWidth="3.5"
         strokeLinecap="butt"
         vectorEffect="non-scaling-stroke"
       />
