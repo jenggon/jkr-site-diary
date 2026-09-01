@@ -12,6 +12,7 @@ export function mapProgrammeToResponseDTO(programme: Programme): ProgrammeRespon
     id: programme.programmeId,
     code: programme.programmeCode,
     name: programme.programmeName,
+    shortName: programme.programmeShortName,
     employerName: programme.employerName,
     contractorName: programme.contractorName,
     supervisingOfficer: programme.supervisingOfficer,
