@@ -55,6 +55,23 @@ function rosterTradeLabel(tradeName: string): string {
   return localLabel || trimmed;
 }
 
+function WorkforceHardhatIcon() {
+  return (
+    <svg
+      className="ng-workforce__overall-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5 13v-1a7 7 0 0 1 14 0v1" />
+      <path d="M8.2 12V8.7M15.8 12V8.7" />
+      <path d="M3.5 13h17" />
+      <path d="M6.5 16h11" />
+    </svg>
+  );
+}
+
 export default function WorkforceEntry({
   manpower,
   onChange,
@@ -151,10 +168,9 @@ export default function WorkforceEntry({
           </h3>
           <p className="ng-workforce__hint">Tap angka</p>
         </div>
-        <div className="ng-workforce__overall" aria-label={`${overallTotal} Orang`}>
-          <span className="ng-workforce__overall-icon" aria-hidden="true">👷</span>
+        <div className="ng-workforce__overall" aria-label={`${overallTotal} pekerja`}>
+          <WorkforceHardhatIcon />
           <strong data-testid="overall-workforce-total">{overallTotal}</strong>
-          <small>ORANG</small>
         </div>
       </header>
 
