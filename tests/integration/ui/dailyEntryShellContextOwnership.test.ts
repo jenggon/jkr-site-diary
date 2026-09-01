@@ -72,6 +72,22 @@ describe('F2.6-B03 DailyEntryShell Programme and Revision ownership', () => {
       }
       if (url.includes('/api/project-summary?programmeId=programme-A')) return summaryA.promise;
       if (url.includes('/api/project-summary?programmeId=programme-B')) return summaryB.promise;
+      if (url === '/api/programme-revision?programmeId=programme-A') {
+        return Promise.resolve(json({ data: [{
+          revisionId: 'revision-A',
+          revisionNumber: 1,
+          revisionStatus: 'Approved',
+          isCurrentRevision: true,
+        }] }));
+      }
+      if (url === '/api/programme-revision?programmeId=programme-B') {
+        return Promise.resolve(json({ data: [{
+          revisionId: 'revision-B',
+          revisionNumber: 2,
+          revisionStatus: 'Approved',
+          isCurrentRevision: true,
+        }] }));
+      }
       if (url.includes('/api/programme/programme-')) {
         const id = url.endsWith('programme-B') ? 'B' : 'A';
         return Promise.resolve(json({ data: { programmeCode: id, programmeName: `Programme ${id}` } }));
