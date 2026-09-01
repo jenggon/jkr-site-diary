@@ -1,0 +1,424 @@
+/* N05R.4 — Harmony pass.
+ * One visual grammar across desktop and mobile: section heading, circular datum node,
+ * workforce matrix, selected source action and compact navigation.
+ * Canonical NGAMSOI mark geometry is intentionally untouched here.
+ */
+
+/* ---------- Field section heading grammar ---------- */
+form[aria-label="Borang Buku Harian Tapak"] > section > h3,
+.ng-workforce__title,
+.mobile-entry-spike-panel > div:first-child h3 {
+  position: relative;
+  display: flex !important;
+  align-items: center;
+  gap: 0.62rem;
+  margin: 0 !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+  text-transform: uppercase !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section > h3::before,
+.ng-workforce__title::before,
+.mobile-entry-spike-panel > div:first-child h3::before {
+  content: "";
+  width: 1.05rem;
+  height: 2px;
+  flex: 0 0 1.05rem;
+  background: var(--ng-current);
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section > h3 > span[class*="rounded-full"] {
+  display: none !important;
+}
+
+/* Expanded source owns the same one-word heading. */
+.mobile-entry-spike-panel > div:first-child > div > p {
+  display: none !important;
+}
+
+.mobile-entry-spike-panel > div:first-child h3 {
+  font-size: 0 !important;
+}
+
+.mobile-entry-spike-panel > div:first-child h3::after {
+  content: "SUMBER";
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+/* Selected source: heading stays a section heading, not a second status badge. */
+.mobile-entry-selected-source::before {
+  content: "—  SUMBER" !important;
+  top: 0.55rem !important;
+  left: 0.82rem !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.68rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  text-transform: uppercase;
+}
+
+/* Workforce has one heading only. */
+.ng-workforce__kicker,
+.ng-workforce__hint {
+  display: none !important;
+}
+
+.ng-workforce__header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  min-height: 3.5rem;
+  padding: 0.62rem 0.72rem !important;
+  border-bottom: 1px solid var(--ng-rule);
+}
+
+.ng-workforce__title {
+  white-space: nowrap;
+}
+
+/* ---------- Datum / spine: shape + colour explain state; text labels do not ---------- */
+form[aria-label="Borang Buku Harian Tapak"] > section::before {
+  border-radius: 50% !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::before,
+form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::before,
+form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::before,
+form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::before,
+form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::before,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::before {
+  content: "" !important;
+  border-radius: 50% !important;
+  background: var(--ng-established) !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section:focus-within::before,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::before {
+  content: "" !important;
+  border-radius: 50% !important;
+  background: var(--ng-graphite-950) !important;
+}
+
+@media (min-width: 768px) {
+  /* N05 legacy NEXT / EST / CURRENT / CHECK words are retired. */
+  form[aria-label="Borang Buku Harian Tapak"] > section::after {
+    content: none !important;
+    display: none !important;
+  }
+}
+
+/* ---------- Workforce matrix: total is a first-class column ---------- */
+.ng-workforce__overall {
+  display: inline-grid !important;
+  grid-template-columns: 1.45rem auto !important;
+  align-items: center !important;
+  justify-content: end;
+  gap: 0.36rem !important;
+  min-width: 4.1rem !important;
+  min-height: 2.35rem;
+  padding: 0 0.35rem 0 0.55rem !important;
+  border-left: 2px solid var(--ng-current) !important;
+}
+
+.ng-workforce__overall-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  color: var(--ng-current) !important;
+}
+
+.ng-workforce__overall-icon path {
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+}
+
+.ng-workforce__overall > strong {
+  color: var(--ng-ivory-100) !important;
+  font-size: 1.18rem !important;
+  font-weight: 760 !important;
+  line-height: 1 !important;
+}
+
+.ng-workforce__matrix-head {
+  grid-template-columns: 46% 14% 14% 14% 12% !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  min-height: 2rem;
+}
+
+.ng-workforce__matrix-head > span {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  border-right: 1px solid var(--ng-rule);
+  padding: 0 0.25rem;
+}
+
+.ng-workforce__matrix-head > span:first-child {
+  justify-items: start;
+  padding-left: 0.7rem;
+}
+
+.ng-workforce__matrix-head > span:last-child {
+  border-right: 0;
+  color: var(--ng-current);
+}
+
+.ng-workforce__row {
+  grid-template-columns: 46% 42% 12% !important;
+  gap: 0 !important;
+  min-height: 3.35rem !important;
+}
+
+.ng-workforce__trade {
+  padding-left: 0.7rem !important;
+  border-right: 1px solid var(--ng-rule);
+}
+
+.ng-workforce__counts {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  border-left: 0 !important;
+}
+
+.ng-workforce__count-cell,
+.ng-workforce__figure,
+.ng-workforce__row-total {
+  min-height: 3.35rem !important;
+}
+
+.ng-workforce__row-total {
+  border-left: 1px solid var(--ng-rule);
+  background: color-mix(in srgb, var(--ng-current) 2.5%, var(--ng-graphite-900)) !important;
+}
+
+.ng-workforce__row-total > strong {
+  margin: 0 !important;
+  color: var(--ng-current) !important;
+  font-size: 0.86rem !important;
+}
+
+/* Active row controller: classification never breaks away from its trade. */
+.ng-workforce__controller {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(9.25rem, 12rem) !important;
+  align-items: stretch !important;
+  min-height: 3rem !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--ng-current) 36%, var(--ng-rule)) !important;
+  background: color-mix(in srgb, var(--ng-current) 3%, var(--ng-graphite-925)) !important;
+  box-shadow: inset 2px 0 0 var(--ng-current) !important;
+}
+
+.ng-workforce__controller-meta {
+  display: flex !important;
+  min-width: 0;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  padding: 0 0.7rem !important;
+  overflow: hidden;
+}
+
+.ng-workforce__controller-meta > span,
+.ng-workforce__controller-meta > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+}
+
+.ng-workforce__controller-meta > span {
+  flex: 0 0 auto;
+  color: var(--ng-current) !important;
+  font-size: 0.54rem !important;
+  font-weight: 760 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase;
+}
+
+.ng-workforce__controller-meta > strong {
+  color: var(--ng-grey-200) !important;
+  font-size: 0.66rem !important;
+  font-weight: 590 !important;
+}
+
+.ng-workforce__controller-meta > strong::before {
+  content: "·";
+  margin-right: 0.45rem;
+  color: var(--ng-grey-600);
+}
+
+.ng-workforce__controller-stepper {
+  display: grid !important;
+  grid-template-columns: 2.75rem minmax(2.75rem, 1fr) 2.75rem !important;
+  border-left: 1px solid var(--ng-rule) !important;
+  background: var(--ng-graphite-950) !important;
+}
+
+.ng-workforce__controller-stepper > button,
+.ng-workforce__controller-stepper > output {
+  display: grid;
+  min-height: 3rem !important;
+  place-items: center;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.ng-workforce__controller-stepper > button {
+  background: var(--ng-graphite-900) !important;
+  color: var(--ng-current) !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+}
+
+.ng-workforce__controller-stepper > button:first-child {
+  border-right: 1px solid var(--ng-rule) !important;
+}
+
+.ng-workforce__controller-stepper > button:last-child {
+  border-left: 1px solid var(--ng-rule) !important;
+}
+
+.ng-workforce__controller-stepper > button:disabled {
+  color: var(--ng-grey-700) !important;
+  background: var(--ng-graphite-950) !important;
+}
+
+.ng-workforce__controller-stepper > output {
+  background: #080a0d !important;
+  color: var(--ng-ivory-100) !important;
+  font-size: 1rem !important;
+  font-weight: 780 !important;
+}
+
+.ng-workforce__controller-stepper > button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--ng-current) 12%, var(--ng-graphite-900)) !important;
+  transform: translateY(1px);
+}
+
+/* ---------- Selected source: content first, action docked predictably ---------- */
+.mobile-entry-selected-source {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: stretch !important;
+  gap: 0.72rem !important;
+  padding: 1.75rem 0.72rem 0.72rem 0.82rem !important;
+}
+
+.mobile-entry-selected-source > div:first-child {
+  min-width: 0;
+}
+
+.mobile-entry-selected-source > div:last-child {
+  display: grid !important;
+  grid-template-columns: 6.5rem 2.75rem !important;
+  align-self: end;
+  justify-self: end;
+  gap: 0 !important;
+}
+
+.mobile-entry-selected-source > div:last-child button:first-child {
+  width: 6.5rem !important;
+  min-width: 6.5rem !important;
+  min-height: 44px !important;
+}
+
+.mobile-entry-selected-source > div:last-child button:last-child {
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  min-height: 44px !important;
+  border: 1px solid var(--ng-graphite-650) !important;
+  border-left: 0 !important;
+}
+
+/* ---------- Desktop nav: collapsed rail hugs the icon ---------- */
+@media (min-width: 768px) and (max-width: 1023px) {
+  nav[aria-label="Navigasi Buku Harian Tapak"] {
+    width: 3.5rem !important;
+  }
+
+  nav[aria-label="Navigasi Buku Harian Tapak"] > div {
+    padding-right: 0.375rem !important;
+    padding-left: 0.375rem !important;
+  }
+
+  nav[aria-label="Navigasi Buku Harian Tapak"] button[role="tab"] {
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    min-height: 2.75rem !important;
+    justify-content: center !important;
+    margin-right: auto;
+    margin-left: auto;
+    padding: 0 !important;
+    border-left-width: 2px !important;
+    border-radius: 0.55rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  nav[aria-label="Navigasi Buku Harian Tapak"] {
+    width: 13rem !important;
+  }
+}
+
+/* R03 is not a mystery token. It is the current work-schedule revision. */
+.ng-project-revision::before {
+  content: "SEMAKAN ";
+  color: var(--ng-grey-500);
+  font-size: 0.48rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 767px) {
+  .ng-workforce__matrix-head {
+    grid-template-columns: 44% 12% 12% 12% 20% !important;
+  }
+
+  .ng-workforce__row {
+    grid-template-columns: 44% 36% 20% !important;
+  }
+
+  .ng-workforce__overall {
+    min-width: 3.85rem !important;
+  }
+
+  .ng-workforce__overall-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .ng-workforce__controller {
+    grid-template-columns: minmax(0, 1fr) 9.25rem !important;
+  }
+
+  .mobile-entry-selected-source {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mobile-entry-selected-source > div:last-child {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) 2.75rem !important;
+    justify-self: stretch;
+  }
+
+  .mobile-entry-selected-source > div:last-child button:first-child {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ng-workforce__controller-stepper > button:active:not(:disabled) {
+    transform: none;
+  }
+}
