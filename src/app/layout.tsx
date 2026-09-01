@@ -13,6 +13,7 @@ import "./ngamsoi-n05r2-type.css";
 import "./ngamsoi-n06.css";
 import "./ngamsoi-n05r2-header.css";
 import "./ngamsoi-live-review.css";
+import "./ngamsoi-harmony.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
