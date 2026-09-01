@@ -46,7 +46,7 @@ type ActiveCountCell = {
 const CLASSIFICATIONS: Array<{ field: CountField; short: string; label: string; ariaLabel: string }> = [
   { field: 'bumi_count', short: 'B', label: 'Bumiputera', ariaLabel: 'Bumiputera' },
   { field: 'non_bumi_count', short: 'BB', label: 'Bukan Bumiputera', ariaLabel: 'Bukan Bumiputera' },
-  { field: 'foreign_count', short: 'A', label: 'Asing', ariaLabel: 'Bukan Warganegara / Asing' },
+  { field: 'foreign_count', short: 'A', label: 'Asing', ariaLabel: 'Bukan Warganegara' },
 ];
 
 function rosterTradeLabel(tradeName: string): string {
