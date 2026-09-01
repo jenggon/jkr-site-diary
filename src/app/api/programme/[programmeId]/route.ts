@@ -80,6 +80,7 @@ export async function PATCH(request: Request, context: RouteParams) {
     const result = await service.updateProgramme({
       programmeId,
       programmeName: body.programme_name ?? body.programmeName,
+      programmeShortName: body.programme_short_name ?? body.programmeShortName,
       employerName: body.employer_name ?? body.employerName,
       contractorName: body.contractor_name ?? body.contractorName,
       supervisingOfficer: body.supervising_officer ?? body.supervisingOfficer,
@@ -93,7 +94,6 @@ export async function PATCH(request: Request, context: RouteParams) {
       return NextResponse.json({ data: result.value }, { status: 200 });
     }
 
-    // Explicit safe HTTP/domain mapping for errors, never expose arbitrary message
     if (result.error.errorCode === 'PROGRAMME_NOT_FOUND') {
       return NextResponse.json({ error: 'Programme not found' }, { status: 404 });
     }
@@ -103,12 +103,9 @@ export async function PATCH(request: Request, context: RouteParams) {
     if (result.error.errorCode === 'PROGRAMME_VALIDATION_FAILED') {
       return NextResponse.json({ error: 'Validation failed' }, { status: 400 });
     }
-    
-    // Everything else is a generic 500
-    return NextResponse.json({ error: 'Failed to update programme' }, { status: 500 });
 
-  } catch (error: unknown) {
-    // Unexpected error: HTTP 500 { error: 'Failed to update programme' }
+    return NextResponse.json({ error: 'Failed to update programme' }, { status: 500 });
+  } catch {
     return NextResponse.json({ error: 'Failed to update programme' }, { status: 500 });
   }
 }
