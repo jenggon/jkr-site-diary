@@ -86,12 +86,14 @@ describe('ProgrammeService Integration Scenarios', () => {
     const result = await service.createProgramme({
       programmeCode: 'JKR/PLS/2026/999',
       programmeName: 'Projek Integrasi',
+      programmeShortName: 'PLS 999',
       createdBy: 'user-admin',
     });
 
     expect(isSuccess(result)).toBe(true);
     if (isSuccess(result)) {
       expect(result.value.programmeCode).toBe('JKR/PLS/2026/999');
+      expect(result.value.programmeShortName).toBe('PLS 999');
       expect(result.value.status).toBe('Active');
     }
   });
