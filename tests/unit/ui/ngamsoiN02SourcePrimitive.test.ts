@@ -30,18 +30,25 @@ describe('NGAMSOI N02 mobile shell + selected source primitive', () => {
     expect(css).toContain('inset 0 -2px 0 var(--ng-current)');
   });
 
-  it('makes the project/revision shell authority ruled and established-state explicit', () => {
-    const css = read('src/app/ngamsoi.css');
+  it('keeps project authority current-first and historical revision chrome quiet', () => {
+    const baseCss = read('src/app/ngamsoi.css');
+    const headerCss = read('src/app/ngamsoi-n05r2-header.css');
     const shell = read('src/app/site-diary/DailyEntryShell.tsx');
 
     expect(shell).toContain('datum-project-strip');
-    expect(shell).toContain('datum-project-code');
-    expect(shell).toContain('datum-revision-stamp');
-    expect(shell).toContain('Semakan Sah');
-    expect(shell).toContain('Semakan Semasa');
-    expect(css).toContain('.datum-project-strip');
-    expect(css).toContain('.datum-project-code');
-    expect(css).toContain('.datum-revision-stamp > span:first-child');
-    expect(css).toContain('background: var(--ng-established) !important');
+    expect(shell).toContain('ng-project-short-name');
+    expect(shell).toContain('ng-project-revision');
+    expect(shell).toContain('programmeShortName');
+    expect(shell).toContain('revisionNumber');
+    expect(shell).not.toContain('datum-project-code');
+    expect(shell).not.toContain('datum-revision-stamp');
+    expect(shell).not.toContain('Semakan Sah');
+    expect(shell).not.toContain('Semakan Semasa');
+
+    expect(baseCss).toContain('.datum-project-strip');
+    expect(headerCss).toContain('.ng-project-context');
+    expect(headerCss).toContain('.ng-project-short-name');
+    expect(headerCss).toContain('.ng-project-revision');
+    expect(headerCss).toContain('color: var(--ng-established)');
   });
 });
