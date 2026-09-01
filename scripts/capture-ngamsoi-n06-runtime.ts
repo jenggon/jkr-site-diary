@@ -17,7 +17,13 @@ async function main(): Promise<void> {
   await mkdir(EVIDENCE_DIR, { recursive: true });
 
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: MOBILE, deviceScaleFactor: 1 });
+  const context = await browser.newContext({
+    viewport: MOBILE,
+    screen: MOBILE,
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
+  });
   const page = await context.newPage();
 
   try {
@@ -155,6 +161,12 @@ async function main(): Promise<void> {
 
     const saveButton = page.getByRole('button', { name: 'Simpan', exact: true });
     await saveButton.scrollIntoViewIfNeeded();
+    await expect(saveButton).toBeVisible();
+    await page.screenshot({
+      path: path.join(EVIDENCE_DIR, 'n06-01-before-save-390x844.png'),
+      fullPage: false,
+    });
+
     await saveButton.click();
 
     const ritual = page.getByTestId('ngamsoi-completion');
@@ -169,7 +181,13 @@ async function main(): Promise<void> {
     await expect(signature).not.toContainText('Buku Harian Tapak berjaya disimpan.');
 
     await ritual.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
-    await page.waitForTimeout(850);
+    await page.waitForTimeout(280);
+    await page.screenshot({
+      path: path.join(EVIDENCE_DIR, 'n06-02-engage-390x844.png'),
+      fullPage: false,
+    });
+
+    await page.waitForTimeout(650);
 
     const metrics = await page.evaluate(() => {
       const root = document.documentElement;
@@ -216,7 +234,7 @@ async function main(): Promise<void> {
     expect(metrics.visibleActionLabels).toEqual(['Mohon', 'Cetak', 'Aktiviti', 'Baharu']);
 
     await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n06-completion-ritual-390x844.png'),
+      path: path.join(EVIDENCE_DIR, 'n06-03-established-390x844.png'),
       fullPage: false,
     });
 
@@ -237,7 +255,7 @@ async function main(): Promise<void> {
     expect(reducedMotion.particleDisplay).toBe('none');
 
     console.log(
-      `N06 live gate captured ${MOBILE.width}x${MOBILE.height}: actual save -> established baseline -> NGAMSOI closure, concise BM actions, reduced-motion safe`,
+      `N06 live gate captured ${MOBILE.width}x${MOBILE.height}: three-frame touch-mobile decision pack + actual save -> established baseline -> NGAMSOI closure`,
     );
   } finally {
     await context.close();
