@@ -155,6 +155,13 @@ form[aria-label="Borang Buku Harian Tapak"] > section[aria-label="Pemilih Sumber
 /* Completed mobile sections softly establish the rail downward. The neutral form rail stays
  * underneath, so the effect reads as progress rather than a second decorative spine. */
 @media (max-width: 767px) {
+  /* Keep the fieldbook datum fixed when a long chooser collapses into a short loaded source.
+   * Classic-scrollbar browsers otherwise recenter the whole mobile canvas by half a gutter;
+   * overlay-scrollbar phones are unaffected. */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
