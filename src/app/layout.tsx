@@ -18,6 +18,7 @@ import "./ngamsoi-harmony-header.css";
 import "./ngamsoi-n05r5.css";
 import "./ngamsoi-n05r5-final.css";
 import "./ngamsoi-n05r5-acceptance.css";
+import "./ngamsoi-n05r5-desktop-acceptance.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
