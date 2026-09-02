@@ -3,6 +3,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import {
+  createNgamsoiPreviewSession,
+  isNgamsoiPreviewMode,
+  ngamsoiPreviewFetch,
+} from '@/lib/ngamsoiPreview';
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +24,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Development-only physical-device preview. This bypass exists solely for
+    // NGAMSOI UI acceptance on LAN and is hard-disabled in production.
+    if (isNgamsoiPreviewMode()) {
+      const previewSession = createNgamsoiPreviewSession();
+      setSession(previewSession);
+      setUser(previewSession.user);
+      setLoading(false);
+      return;
+    }
+
     // Dapatkan sesi semasa secara tak senkronus
     async function getSession() {
       try {
@@ -60,6 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const originalFetch = window.fetch.bind(window);
 
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const previewResponse = await ngamsoiPreviewFetch(input, init);
+      if (previewResponse) return previewResponse;
+
       const requestUrl =
         typeof input === 'string'
           ? input
@@ -95,6 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session?.access_token]);
 
   const signOut = async () => {
+    if (isNgamsoiPreviewMode()) return;
+
     try {
       await supabase.auth.signOut();
     } catch (error) {
@@ -116,4 +136,3 @@ export function useAuth() {
   }
   return context;
 }
-
