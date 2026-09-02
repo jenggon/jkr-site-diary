@@ -50,14 +50,17 @@ jobs:
           cat /tmp/n05r4-next.log
           exit 1
 
+      # N05R.5 is now sealed into this parent branch. Reuse the stronger current
+      # runtime acceptance harness instead of asserting superseded N05R.4 labels
+      # such as SEMAKAN/BAKI.
       - name: Capture
-        run: pnpm exec tsx scripts/capture-ngamsoi-n05r4-runtime.ts
+        run: pnpm exec tsx scripts/capture-ngamsoi-n05r5-runtime.ts
 
       - name: Evidence
         uses: actions/upload-artifact@v4
         with:
-          name: n05r4-harmony-production-runtime
-          path: docs/evidence/n05r4-harmony
+          name: n05r4-parent-n05r5-production-runtime
+          path: docs/evidence/n05r5-uniformity
           if-no-files-found: error
           retention-days: 14
 
