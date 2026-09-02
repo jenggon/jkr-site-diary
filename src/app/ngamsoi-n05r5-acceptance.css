@@ -160,7 +160,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section[aria-label="Pemilih Sumber
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after,
-  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:has(.ng-workforce__alert))::after {
     content: "" !important;
     display: block !important;
     position: absolute !important;
