@@ -1,0 +1,234 @@
+/* N07 — NGAMSOI homecoming / navigation.
+ * Navigation only. N05R.5 fieldbook, domain, print and persistence semantics stay frozen.
+ */
+
+.ng-workspace-nav {
+  font-family: var(--ng-font-reference);
+  background: var(--ng-graphite-950) !important;
+  border-color: var(--ng-rule) !important;
+  box-shadow: none !important;
+}
+
+.ng-workspace-nav__list {
+  gap: 0 !important;
+}
+
+.ng-workspace-nav__item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ng-grey-500) !important;
+}
+
+.ng-workspace-nav__item:hover {
+  background: color-mix(in srgb, var(--ng-ivory-100) 2.5%, transparent) !important;
+  color: var(--ng-grey-200) !important;
+}
+
+.ng-workspace-nav__item[data-selected="true"] {
+  background: color-mix(in srgb, var(--ng-current) 4%, transparent) !important;
+  color: var(--ng-ivory-100) !important;
+}
+
+.ng-workspace-nav__item:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--ng-current) 72%, transparent) !important;
+  outline-offset: -1px;
+  box-shadow: none !important;
+}
+
+.ng-workspace-nav__icon {
+  color: currentColor !important;
+}
+
+.ng-workspace-nav__icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  stroke-width: 1.7;
+}
+
+.ng-workspace-nav__label {
+  margin: 0 !important;
+  color: currentColor !important;
+  font-family: var(--ng-font-reference) !important;
+  font-weight: 680 !important;
+  letter-spacing: 0.015em !important;
+}
+
+.ng-workspace-content {
+  animation: ng-n07-homecoming 170ms cubic-bezier(0.2, 0.82, 0.22, 1) both;
+}
+
+@keyframes ng-n07-homecoming {
+  from {
+    opacity: 0.78;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Desktop: one ruled navigation instrument. The current workspace is painted on the same edge. */
+@media (min-width: 768px) {
+  .ng-workspace-nav--desktop {
+    border-right: 1px solid var(--ng-rule) !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__list {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__item {
+    min-height: 3.15rem !important;
+    border-left: 0 !important;
+    border-bottom: 1px solid var(--ng-rule) !important;
+    justify-content: flex-start !important;
+    padding: 0.72rem 0.6rem !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__item:first-child {
+    border-top: 1px solid var(--ng-rule) !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: transparent;
+    transition: background-color 150ms ease;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__item[data-selected="true"]::before {
+    background: var(--ng-current);
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__item[data-selected="true"] .ng-workspace-nav__icon {
+    color: var(--ng-current) !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__label {
+    font-size: 0.7rem !important;
+    text-transform: uppercase;
+  }
+
+  .ng-workspace-review {
+    min-height: 100%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ng-workspace-nav--desktop {
+    width: 3.5rem !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__list {
+    padding-right: 0.375rem !important;
+    padding-left: 0.375rem !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__item {
+    width: 2.75rem !important;
+    height: 3rem !important;
+    min-height: 3rem !important;
+    margin-right: auto;
+    margin-left: auto;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ng-workspace-nav--desktop {
+    width: 12.5rem !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__item {
+    display: grid !important;
+    grid-template-columns: 1.35rem minmax(0, 1fr);
+    gap: 0.72rem;
+    align-items: center;
+  }
+}
+
+/* Mobile: bottom navigation is the home rail, not four floating cards. */
+@media (max-width: 767px) {
+  .ng-workspace-nav--mobile {
+    border-top: 1px solid var(--ng-rule) !important;
+    background: color-mix(in srgb, var(--ng-graphite-950) 96%, transparent) !important;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.22) !important;
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__list {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 0 !important;
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__item {
+    display: grid !important;
+    min-height: 3.75rem !important;
+    place-items: center;
+    gap: 0.18rem;
+    padding: 0.42rem 0.18rem max(0.42rem, env(safe-area-inset-bottom)) !important;
+    border-top: 0 !important;
+    border-right: 1px solid var(--ng-rule) !important;
+    transform: none !important;
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__item:last-child {
+    border-right: 0 !important;
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 2px;
+    background: transparent;
+    transform: scaleX(0.28);
+    transform-origin: center;
+    transition: background-color 150ms ease, transform 170ms cubic-bezier(0.2, 0.82, 0.22, 1);
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__item[data-selected="true"]::before {
+    background: var(--ng-current);
+    transform: scaleX(1);
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__item[data-selected="true"] .ng-workspace-nav__icon {
+    color: var(--ng-current) !important;
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__icon {
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__label {
+    font-size: 0.58rem !important;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ng-workspace-content {
+    animation: none;
+  }
+
+  .ng-workspace-nav__item,
+  .ng-workspace-nav__item::before {
+    transition: none !important;
+  }
+}
