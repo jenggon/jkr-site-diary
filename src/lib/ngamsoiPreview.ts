@@ -8,7 +8,18 @@ const SITE_DIARY_ID = '55555555-5555-4555-8555-555555555555';
 const VISUAL_USER_ID = '77777777-7777-4777-8777-777777777777';
 const PREVIEW_VO_ID = '88888888-8888-4888-8888-888888888888';
 
-let voItems = [
+type PreviewVoItem = {
+  vo_item_id: string;
+  programme_id: string;
+  revision_id: string;
+  vo_reference: string;
+  line_item: string;
+  description: string | null;
+  is_omission: boolean;
+  created_at: string;
+};
+
+let voItems: PreviewVoItem[] = [
   {
     vo_item_id: PREVIEW_VO_ID,
     programme_id: PROGRAMME_ID,
@@ -187,7 +198,7 @@ export async function ngamsoiPreviewFetch(
   if (path === '/api/vo-items') {
     if (method === 'POST') {
       const payload = await requestJson(input, init);
-      const created = {
+      const created: PreviewVoItem = {
         vo_item_id: `preview-vo-${voItems.length + 1}`,
         programme_id: String(payload.programmeId ?? PROGRAMME_ID),
         revision_id: String(payload.revisionId ?? REVISION_ID),
