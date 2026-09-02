@@ -144,16 +144,14 @@ async function assertCanonicalMark(page: Page) {
 async function assertProjectPulse(page: Page) {
   const pulse = page.locator('.ng-project-pulse');
   await expect(pulse).toBeVisible();
-  const firstLabel = pulse.locator('.ng-project-pulse__item').first().locator('small');
-  const labelStyle = await firstLabel.evaluate((node) => ({
-    fontSize: getComputedStyle(node).fontSize,
-    after: getComputedStyle(node, '::after').content,
-  }));
-  expect(labelStyle.fontSize).toBe('0px');
-  expect(labelStyle.after).toBe('"PROGRAM KERJA"');
+  await expect(pulse.getByText('PROGRAM KERJA', { exact: true })).toBeVisible();
   await expect(page.locator('.ng-project-revision')).toHaveText('R03');
-  await expect(pulse.getByText('BAKI', { exact: true })).toBeVisible();
+  await expect(pulse.getByText('TINGGAL', { exact: true })).toBeVisible();
+  await expect(pulse.getByText('HARI KE', { exact: true })).toBeVisible();
+  await expect(pulse.getByText(/^(AHAD|ISNIN|SELASA|RABU|KHAMIS|JUMAAT|SABTU)$/)).toBeVisible();
+  await expect(pulse.getByText(/^\d{2}\/\d{2}\/\d{2}$/)).toBeVisible();
   await expect(pulse.getByText('MASA', { exact: true })).toBeVisible();
+  await expect(pulse.getByText(/^\d{2}:\d{2}$/)).toBeVisible();
 }
 
 async function chooseTaskAndAssertActionFamily(page: Page, expectedLineClamp: '2' | 'none') {
@@ -315,7 +313,7 @@ async function main(): Promise<void> {
   try {
     await mobileGate(browser);
     await desktopGate(browser);
-    console.log('N05R.5 gate: locked mark, PROGRAM KERJA pulse, uniform source grammar, action family, class totals and direct numeric workforce entry verified.');
+    console.log('N05R.5 gate: locked mark, PROGRAM KERJA pulse, TINGGAL/HARI KE + day/date/time instrumentation, uniform source grammar, action family, class totals and direct numeric workforce entry verified.');
   } finally {
     await browser.close();
   }
