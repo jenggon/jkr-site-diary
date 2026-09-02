@@ -91,16 +91,48 @@
     padding-left: 0.58rem !important;
   }
 
+  /* ---------- Single-rail authority ----------
+   * Desktop previously exposed two parallel state carriers: the real form datum and
+   * a legacy green section edge. State now lives on ONE physical rail only. */
+  form[aria-label="Borang Buku Harian Tapak"] > section {
+    border-left-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:focus-within,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source),
+  form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"],
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]),
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)),
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)),
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce {
+    border-left-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* A workforce section with any recorded headcount is established even while one
+   * cell is open for fine adjustment. The orange controller itself still communicates
+   * edit focus, so the section datum does not need to revert to neutral. */
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:has(.ng-workforce__alert))::before {
+    content: "" !important;
+    --ng-step-color: var(--ng-established) !important;
+    border-color: var(--ng-established) !important;
+    background: color-mix(in srgb, var(--ng-established) 8%, var(--ng-graphite-950)) !important;
+    color: var(--ng-established) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-established) 20%, transparent) !important;
+  }
+
   /* ---------- Desktop established-flow spine ----------
-   * Base rail is still neutral. A materially completed section paints one short,
-   * animated green-to-neutral segment from its node toward the next section.
-   * This mirrors the accepted mobile semantics without adding checks or labels. */
+   * The green state paints directly ON TOP OF the existing 1px neutral datum.
+   * No second rail, no extra thickness, no glow. */
   form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after,
-  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:has(.ng-workforce__alert))::after {
     content: "" !important;
     display: block !important;
     position: absolute !important;
@@ -108,7 +140,7 @@
     top: 1.44rem !important;
     bottom: -1.05rem !important;
     left: calc(-1 * var(--ng-spine-gutter)) !important;
-    width: 2px !important;
+    width: 1px !important;
     height: auto !important;
     border: 0 !important;
     border-radius: 0 !important;
@@ -119,7 +151,7 @@
       color-mix(in srgb, var(--ng-established) 38%, var(--ng-spine-rail)) 86%,
       var(--ng-spine-rail) 100%
     ) !important;
-    box-shadow: 0 0 0.28rem color-mix(in srgb, var(--ng-established) 10%, transparent) !important;
+    box-shadow: none !important;
     pointer-events: none !important;
     transform-origin: top center;
     animation: ng-n05r5-desktop-established-flow 360ms cubic-bezier(0.22, 0.72, 0.24, 1) both !important;
