@@ -108,16 +108,23 @@ form[aria-label="Borang Buku Harian Tapak"] > section[aria-label="Pemilih Sumber
 
 /* Loaded source: same exact dash origin, dash width, gap and type as every real section
  * heading. Content beneath it keeps the accepted loaded-source layout. */
-.mobile-entry-selected-source::before {
+form[aria-label="Borang Buku Harian Tapak"] > section[aria-label="Pemilih Sumber Operasi"] .mobile-entry-selected-source::before {
   content: "" !important;
   position: absolute !important;
   top: 0.92rem !important;
   left: 0 !important;
+  box-sizing: border-box !important;
   width: 1.05rem !important;
+  min-width: 0 !important;
+  max-width: 1.05rem !important;
   height: 2px !important;
+  min-height: 2px !important;
+  max-height: 2px !important;
+  padding: 0 !important;
   border: 0 !important;
   background: var(--ng-current) !important;
   box-shadow: none !important;
+  flex: none !important;
 }
 
 .mobile-entry-selected-source::after {
@@ -153,7 +160,7 @@ form[aria-label="Borang Buku Harian Tapak"] > section[aria-label="Pemilih Sumber
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
   form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after,
-  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:has(.ng-workforce__alert))::after {
     content: "" !important;
     display: block !important;
     position: absolute !important;
