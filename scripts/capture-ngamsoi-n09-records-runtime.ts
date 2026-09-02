@@ -290,7 +290,9 @@ async function assertDetailLedger(page: Page) {
   const headingDash = await sectionHeading.evaluate((node) => getComputedStyle(node, '::before').width);
   expect(Number.parseFloat(headingDash)).toBeGreaterThan(15);
 
-  const workforceRow = detail.locator('section').filter({ has: detail.getByRole('heading', { name: 'Tenaga Kerja' }) }).locator('div.space-y-2 > div').first();
+  const workforceSection = detail.getByRole('heading', { name: 'Tenaga Kerja' }).locator('..');
+  const workforceRow = workforceSection.locator('div.space-y-2 > div').first();
+  await expect(workforceRow).toBeVisible();
   expect(await workforceRow.evaluate((node) => getComputedStyle(node).borderRadius)).toBe('0px');
 
   const historyEvent = detail.locator('[aria-labelledby="site-diary-history-heading"] ol > li').first();
