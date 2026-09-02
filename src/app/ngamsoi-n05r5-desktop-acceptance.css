@@ -1,0 +1,154 @@
+/* N05R.5 desktop physical-acceptance parity.
+ * Loaded last. Scope is presentation only: the desktop fieldbook must use the same
+ * source/header/spine grammar already accepted on physical mobile.
+ * Canonical NGAMSOI mark geometry and domain behaviour remain untouched.
+ */
+
+/* A source state change should feel like one instrument changing state, not two
+ * unrelated cards replacing one another. */
+.mobile-entry-spike-panel,
+.mobile-entry-selected-source {
+  transform-origin: top left;
+  animation: ng-n05r5-source-state 170ms cubic-bezier(0.22, 0.72, 0.24, 1) both;
+}
+
+@keyframes ng-n05r5-source-state {
+  from {
+    opacity: 0.74;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 768px) {
+  /* ---------- One desktop heading origin ----------
+   * Normal field sections already own ~1.3rem content inset. Source and Workforce
+   * had their own internal structures, so explicitly align their dash/title origin
+   * to HARIAN / TAPAK / CATATAN instead of letting each component invent an inset. */
+  .mobile-entry-spike-panel > div:first-child {
+    padding-left: 1.3rem !important;
+  }
+
+  .mobile-entry-selected-source {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    column-gap: 1rem !important;
+    row-gap: 0 !important;
+    min-height: 7rem !important;
+    padding: 2.25rem 0.8rem 0.8rem 1.3rem !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-entry-selected-source::before {
+    top: 0.92rem !important;
+    left: 1.3rem !important;
+    width: 1.05rem !important;
+    height: 2px !important;
+  }
+
+  .mobile-entry-selected-source::after {
+    top: 0.62rem !important;
+    left: 2.97rem !important;
+  }
+
+  .mobile-entry-selected-source > div:first-child {
+    min-width: 0 !important;
+    align-self: center !important;
+  }
+
+  .mobile-entry-selected-source > div:last-child {
+    display: grid !important;
+    width: auto !important;
+    grid-template-columns: 6.5rem 2.75rem !important;
+    align-self: center !important;
+    justify-self: end !important;
+    gap: 0 !important;
+  }
+
+  .mobile-entry-selected-source > div:last-child button:first-child {
+    width: 6.5rem !important;
+    min-width: 6.5rem !important;
+    min-height: 44px !important;
+  }
+
+  .mobile-entry-selected-source > div:last-child button:last-child {
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    min-height: 44px !important;
+  }
+
+  /* Workforce header has its own grid container. Move only its title origin; the
+   * aggregate helmet/total remains right-aligned and untouched. */
+  .ng-workforce__title {
+    padding-left: 0.58rem !important;
+  }
+
+  /* ---------- Desktop established-flow spine ----------
+   * Base rail is still neutral. A materially completed section paints one short,
+   * animated green-to-neutral segment from its node toward the next section.
+   * This mirrors the accepted mobile semantics without adding checks or labels. */
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    z-index: 2 !important;
+    top: 1.44rem !important;
+    bottom: -1.05rem !important;
+    left: calc(-1 * var(--ng-spine-gutter)) !important;
+    width: 2px !important;
+    height: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ng-established) 92%, var(--ng-grey-600)) 0%,
+      color-mix(in srgb, var(--ng-established) 76%, var(--ng-grey-600)) 52%,
+      color-mix(in srgb, var(--ng-established) 38%, var(--ng-spine-rail)) 86%,
+      var(--ng-spine-rail) 100%
+    ) !important;
+    box-shadow: 0 0 0.28rem color-mix(in srgb, var(--ng-established) 10%, transparent) !important;
+    pointer-events: none !important;
+    transform-origin: top center;
+    animation: ng-n05r5-desktop-established-flow 360ms cubic-bezier(0.22, 0.72, 0.24, 1) both !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:last-of-type:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after {
+    bottom: 0.72rem !important;
+  }
+}
+
+@keyframes ng-n05r5-desktop-established-flow {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  55% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-entry-spike-panel,
+  .mobile-entry-selected-source,
+  form[aria-label="Borang Buku Harian Tapak"] > section::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
