@@ -57,6 +57,9 @@
   letter-spacing: 0.015em !important;
 }
 
+/* Homecoming is deliberately opacity-only. A transformed workspace becomes a containing
+ * block for position: fixed descendants, which would trap the VO/APK sheet inside the
+ * scrolled fieldbook instead of the device viewport. */
 .ng-workspace-content {
   animation: ng-n07-homecoming 170ms cubic-bezier(0.2, 0.82, 0.22, 1) both;
 }
@@ -64,11 +67,9 @@
 @keyframes ng-n07-homecoming {
   from {
     opacity: 0.78;
-    transform: translateY(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
