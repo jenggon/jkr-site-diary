@@ -1,0 +1,361 @@
+/* N05R.5 — Source + workforce uniformity.
+ * User-facing correction pass: one section grammar, source actions from one family,
+ * direct numeric workforce entry, readable classification totals and stronger final total.
+ * Canonical NGAMSOI geometry is intentionally out of scope and MUST NOT change here.
+ */
+
+/* ---------- Header pulse: say what R03 actually is ---------- */
+.ng-project-pulse__item:first-child > small {
+  font-size: 0 !important;
+}
+
+.ng-project-pulse__item:first-child > small::after {
+  content: "PROGRAM KERJA";
+  font-size: 0.42rem;
+  font-weight: 680;
+  letter-spacing: 0.075em;
+}
+
+/* ---------- Source: outer form section owns the hierarchy ---------- */
+.mobile-entry-spike-panel {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-spike-panel > div:first-child {
+  min-height: 2rem;
+  margin-bottom: 0.72rem !important;
+}
+
+.mobile-entry-spike-panel > div:first-child h3,
+.ng-workforce__title,
+form[aria-label="Borang Buku Harian Tapak"] > section > h3 {
+  min-height: 1.35rem;
+  align-items: center !important;
+}
+
+/* Expanded source keeps its stored two-word DOM label inaccessible visually;
+ * the uniform one-word SUMBER presentation is supplied by the existing pseudo label. */
+.mobile-entry-spike-panel > div:first-child h3 {
+  font-size: 0 !important;
+}
+
+.mobile-entry-spike-panel > div:first-child h3::after {
+  content: "SUMBER" !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Selected source uses the exact same orange dash + white one-word title. */
+.mobile-entry-selected-source {
+  grid-template-columns: 1fr !important;
+  gap: 0.72rem !important;
+  padding: 2.2rem 0.72rem 0.72rem !important;
+  overflow: visible !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.mobile-entry-selected-source::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0.92rem !important;
+  left: 0.72rem !important;
+  width: 1.05rem !important;
+  height: 2px !important;
+  background: var(--ng-current) !important;
+}
+
+.mobile-entry-selected-source::after {
+  content: "SUMBER" !important;
+  display: block !important;
+  position: absolute !important;
+  top: 0.62rem !important;
+  left: 2.38rem !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+}
+
+.mobile-entry-selected-source > div:first-child {
+  display: grid !important;
+  grid-template-columns: 2rem minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 0.72rem !important;
+  min-width: 0 !important;
+}
+
+.mobile-entry-selected-source > div:first-child > div:nth-child(2) {
+  min-width: 0 !important;
+}
+
+.mobile-entry-selected-source h3 {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.mobile-entry-selected-source p,
+.mobile-entry-selected-source span[class*="font-mono"] {
+  overflow-wrap: anywhere;
+}
+
+.mobile-entry-selected-source > div:last-child {
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: minmax(0, 1fr) 46px !important;
+  justify-self: stretch !important;
+  gap: 0 !important;
+}
+
+/* One action family: list PICK and loaded-source CHANGE share tactile treatment. */
+.mobile-entry-row-action,
+.mobile-entry-selected-source > div:last-child button:first-child {
+  min-height: 42px !important;
+  border: 1px solid color-mix(in srgb, var(--ng-current) 78%, var(--ng-graphite-650)) !important;
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ng-current) 9%, #0a0c0f), #090b0e) !important;
+  color: var(--ng-current) !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.68rem !important;
+  font-weight: 760 !important;
+  letter-spacing: 0.035em !important;
+  text-transform: uppercase;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-current) 70%, transparent) !important;
+}
+
+.mobile-entry-row-action {
+  display: inline-grid !important;
+  min-width: 5.35rem;
+  place-items: center;
+  padding: 0 0.72rem;
+  flex: 0 0 auto;
+}
+
+.mobile-entry-task-row > div:first-child {
+  align-items: stretch !important;
+}
+
+.mobile-entry-task-row > div:first-child > div:first-child {
+  min-width: 0;
+  align-self: center;
+}
+
+.mobile-entry-task-row > div:nth-child(2) {
+  padding-right: 0.15rem;
+}
+
+/* ---------- Workforce header / aggregate matrix ---------- */
+.ng-workforce__matrix-head {
+  grid-template-columns: 42% 13% 13% 13% 19% !important;
+  min-height: 3.1rem !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  font-size: inherit !important;
+}
+
+.ng-workforce__matrix-head > span {
+  min-width: 0;
+  padding: 0.35rem 0.2rem !important;
+}
+
+.ng-workforce__matrix-trade {
+  display: flex !important;
+  align-items: center;
+  padding-left: 0.72rem !important;
+  color: var(--ng-grey-500);
+  font-family: var(--ng-font-reference);
+  font-size: 0.54rem;
+  font-weight: 730;
+  letter-spacing: 0.09em;
+}
+
+.ng-workforce__matrix-metric {
+  display: grid !important;
+  align-content: center;
+  justify-items: center;
+  gap: 0.25rem;
+}
+
+.ng-workforce__matrix-metric small {
+  color: var(--ng-grey-400);
+  font-family: var(--ng-font-reference);
+  font-size: 0.53rem;
+  font-weight: 760;
+  letter-spacing: 0.055em;
+  line-height: 1;
+}
+
+.ng-workforce__matrix-metric strong {
+  color: var(--ng-grey-200);
+  font-family: var(--ng-font-reference);
+  font-size: 0.78rem;
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ng-workforce__matrix-metric--total {
+  background: color-mix(in srgb, var(--ng-current) 3.5%, var(--ng-graphite-900));
+}
+
+.ng-workforce__matrix-metric--total small,
+.ng-workforce__matrix-metric--total strong {
+  color: var(--ng-current);
+}
+
+.ng-workforce__row {
+  grid-template-columns: 42% 39% 19% !important;
+}
+
+.ng-workforce__row-total {
+  background: color-mix(in srgb, var(--ng-current) 3.5%, var(--ng-graphite-900)) !important;
+}
+
+.ng-workforce__row-total > strong {
+  color: var(--ng-current) !important;
+  font-size: 0.9rem !important;
+}
+
+/* Direct entry is first-class. +/- are fine-adjust keys, not the only way to count. */
+.ng-workforce__controller-stepper {
+  grid-template-columns: 2.75rem minmax(4.25rem, 1fr) 2.75rem !important;
+}
+
+.ng-workforce__controller-stepper > input[type="number"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 3rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: #080a0d !important;
+  color: var(--ng-ivory-100) !important;
+  padding: 0 0.25rem !important;
+  font-family: var(--ng-font-reference) !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  appearance: textfield;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-current) 44%, transparent) !important;
+}
+
+.ng-workforce__controller-stepper > input[type="number"]::-webkit-inner-spin-button,
+.ng-workforce__controller-stepper > input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.ng-workforce__controller-stepper > input[type="number"]:focus {
+  background: color-mix(in srgb, var(--ng-current) 5%, #080a0d) !important;
+  box-shadow: inset 0 -2px 0 var(--ng-current) !important;
+}
+
+/* ---------- Mobile: one subheader rhythm from SUMBER through CATATAN ---------- */
+@media (max-width: 767px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  .ng-project-pulse__item:first-child > small::after {
+    font-size: 0.39rem;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section,
+  form[aria-label="Borang Buku Harian Tapak"] > .ng-workforce {
+    padding-top: 0.9rem !important;
+  }
+
+  /* Absolute mobile rhythm prevents Chromium text autosizing from creating
+     different visual headings across otherwise identical field sections. */
+  form[aria-label="Borang Buku Harian Tapak"] > section > h3,
+  .ng-workforce__title {
+    min-height: 1.35rem !important;
+    margin-bottom: 0.72rem !important;
+    font-size: 12px !important;
+    line-height: 13.2px !important;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  .mobile-entry-spike-panel > div:first-child,
+  .mobile-entry-spike-panel > div:first-child h3 {
+    min-height: 1.35rem !important;
+    margin-bottom: 0.72rem !important;
+  }
+
+  .mobile-entry-spike-panel > div:first-child h3 {
+    font-size: 0 !important;
+  }
+
+  .mobile-entry-spike-panel > div:first-child h3::after,
+  .mobile-entry-selected-source::after {
+    font-size: 12px !important;
+    line-height: 13.2px !important;
+  }
+
+  .mobile-entry-selected-source {
+    padding-top: 2.15rem !important;
+  }
+
+  .ng-workforce__matrix-head {
+    grid-template-columns: 42% 12% 12% 12% 22% !important;
+    min-height: 3rem !important;
+  }
+
+  .ng-workforce__row {
+    grid-template-columns: 42% 36% 22% !important;
+  }
+
+  .ng-workforce__matrix-trade {
+    padding-left: 0.55rem !important;
+    font-size: 0.49rem;
+  }
+
+  .ng-workforce__matrix-metric small {
+    font-size: 0.48rem;
+  }
+
+  .ng-workforce__matrix-metric--total small {
+    font-size: 0.43rem;
+    letter-spacing: 0.015em;
+  }
+
+  .ng-workforce__matrix-metric strong {
+    font-size: 0.72rem;
+  }
+
+  .ng-workforce__controller {
+    grid-template-columns: minmax(0, 1fr) minmax(10.5rem, 46%) !important;
+  }
+
+  .ng-workforce__controller-meta {
+    padding: 0 0.6rem !important;
+  }
+
+  .ng-workforce__controller-stepper {
+    grid-template-columns: 2.7rem minmax(4.2rem, 1fr) 2.7rem !important;
+  }
+
+  .mobile-entry-row-action {
+    min-width: 4.65rem;
+    min-height: 40px !important;
+    padding: 0 0.5rem;
+  }
+}

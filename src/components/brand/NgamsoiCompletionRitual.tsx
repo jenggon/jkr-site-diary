@@ -56,7 +56,6 @@ export default function NgamsoiCompletionRitual({
 
         <span className="ng-completion__mark-shell">
           <NgamsoiMark className="ng-completion__mark" />
-          <span className="ng-completion__check">✓</span>
         </span>
 
         <span className="ng-completion__baseline" />

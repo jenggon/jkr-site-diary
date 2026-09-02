@@ -1,0 +1,380 @@
+/* N05R.5 final authority overrides.
+ * Loaded last. These rules resolve legacy selector specificity without touching the locked mark.
+ */
+
+/* Spine state is communicated by circular node + rail colour only. Legacy words never return,
+ * including while a direct numeric workforce field still owns focus. */
+form[aria-label="Borang Buku Harian Tapak"] > section::after,
+form[aria-label="Borang Buku Harian Tapak"] > section:focus-within::after,
+form[aria-label="Borang Buku Harian Tapak"] > section:has([role="alert"])::after,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="true"]::after,
+form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Desktop selected source: never sacrifice the task identity to the action rail. */
+@media (min-width: 768px) {
+  .mobile-entry-selected-source h3 {
+    display: block !important;
+    overflow: visible !important;
+    max-width: none !important;
+    -webkit-line-clamp: unset !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+}
+
+/* Workforce matrix authority: B/BB/A remain readable; JUMLAH owns the strongest final column. */
+.ng-workforce .ng-workforce__matrix-head {
+  grid-template-columns: 42% 13% 13% 13% 19% !important;
+  min-height: 3.1rem !important;
+  padding: 0 !important;
+}
+.ng-workforce .ng-workforce__matrix-head > span {
+  min-width: 0 !important;
+  padding: 0.35rem 0.2rem !important;
+}
+.ng-workforce .ng-workforce__matrix-metric small {
+  font-size: 0.53rem !important;
+}
+.ng-workforce .ng-workforce__matrix-metric strong {
+  font-size: 0.78rem !important;
+}
+.ng-workforce .ng-workforce__row {
+  grid-template-columns: 42% 39% 19% !important;
+}
+.ng-workforce .ng-workforce__row-total {
+  background: color-mix(in srgb, var(--ng-current) 3.5%, var(--ng-graphite-900)) !important;
+}
+.ng-workforce .ng-workforce__row-total > strong {
+  color: var(--ng-current) !important;
+}
+
+/* Direct numeric entry is the primary bulk-entry surface. */
+.ng-workforce .ng-workforce__controller-stepper {
+  grid-template-columns: 2.75rem minmax(4.25rem, 1fr) 2.75rem !important;
+}
+.ng-workforce .ng-workforce__controller-stepper > input[type="number"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 3rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: #080a0d !important;
+  color: var(--ng-ivory-100) !important;
+  padding: 0 0.25rem !important;
+  font-family: var(--ng-font-reference) !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums;
+  text-align: center !important;
+  appearance: textfield;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-current) 44%, transparent) !important;
+}
+.ng-workforce .ng-workforce__controller-stepper > input[type="number"]:focus {
+  background: color-mix(in srgb, var(--ng-current) 5%, #080a0d) !important;
+  box-shadow: inset 0 -2px 0 var(--ng-current) !important;
+}
+
+/* N05R.5 acceptance correction: the source is one fieldbook section, not a card inside a card. */
+.mobile-entry-spike-panel {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-source-switcher {
+  gap: 0 !important;
+  margin-bottom: 0.72rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ng-rule) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-source-control {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-source-control + .mobile-entry-source-control {
+  border-left: 0 !important;
+}
+
+.mobile-entry-source-control[data-active="true"] {
+  border: 0 !important;
+  background: color-mix(in srgb, var(--ng-current) 3.5%, transparent) !important;
+  box-shadow: inset 0 -2px 0 var(--ng-current) !important;
+}
+
+.mobile-entry-source-control[data-active="true"]::before,
+.mobile-entry-source-control[data-active="true"]::after {
+  display: none !important;
+  content: none !important;
+}
+
+.mobile-entry-task-list {
+  overflow: hidden;
+  border: 0 !important;
+  border-top: 1px solid var(--ng-rule) !important;
+  border-bottom: 1px solid var(--ng-rule) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Let the task identity own the mobile row. PILIH is a compact dock at the right. */
+.mobile-entry-task-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 4.35rem !important;
+  grid-template-rows: auto auto auto;
+  column-gap: 0.65rem !important;
+  row-gap: 0.2rem !important;
+  min-height: 0 !important;
+  padding: 0.78rem 0.62rem 0.78rem 0.72rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ng-rule) !important;
+  background: transparent !important;
+}
+
+.mobile-entry-task-row:last-child {
+  border-bottom: 0 !important;
+}
+
+.mobile-entry-task-row > div:first-child {
+  display: contents !important;
+}
+
+.mobile-entry-task-row > div:first-child > div:first-child {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.mobile-entry-task-row .mobile-entry-row-action {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  padding: 0 0.35rem !important;
+}
+
+.mobile-entry-task-row > div:nth-child(2) {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  padding-right: 0 !important;
+}
+
+.mobile-entry-task-row > div:nth-child(3),
+.mobile-entry-task-row > p:nth-child(3) {
+  grid-column: 1;
+  grid-row: 3;
+  min-width: 0;
+}
+
+/* VO sheet must sit above the fieldbook stack and bottom navigation on a physical phone. */
+form[aria-label="Borang Buku Harian Tapak"] > section:has(.ng-vo-dialog-backdrop) {
+  z-index: 140 !important;
+}
+
+.ng-vo-dialog-backdrop {
+  z-index: 220 !important;
+  align-items: center !important;
+  padding:
+    max(0.55rem, env(safe-area-inset-top))
+    0.5rem
+    max(0.55rem, env(safe-area-inset-bottom)) !important;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.ng-vo-dialog {
+  width: min(30rem, calc(100vw - 1rem)) !important;
+  max-height: calc(100dvh - 1.1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  border: 1px solid var(--ng-graphite-650) !important;
+  padding: 0.9rem 0.9rem max(0.9rem, env(safe-area-inset-bottom)) !important;
+  scrollbar-gutter: stable;
+}
+
+body:has(.ng-vo-dialog-backdrop) {
+  overflow: hidden;
+}
+
+body:has(.ng-vo-dialog-backdrop) .mobile-entry-bottom-nav {
+  z-index: 20 !important;
+}
+
+/* Completion truth = NGAMSOI itself establishes green. No extra tick glyph. */
+.ng-completion__mark-shell {
+  animation: ng-n05r5-mark-establish 620ms cubic-bezier(0.2, 0.82, 0.22, 1) both !important;
+}
+
+@keyframes ng-n05r5-mark-establish {
+  0% {
+    color: var(--ng-ivory-100);
+    opacity: 0.72;
+    transform: translateY(-0.2rem) scale(0.96);
+  }
+  48% {
+    color: var(--ng-current);
+    opacity: 1;
+    transform: translateY(0.03rem) scale(1.01);
+  }
+  100% {
+    color: var(--ng-established);
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Enriched project pulse keeps the same 3-cell authority strip while each dense cell
+ * can carry two compact measurements. */
+.ng-project-pulse__item--split {
+  padding: 0 !important;
+}
+
+.ng-project-pulse__pair {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ng-project-pulse__metric {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  justify-items: center;
+  gap: 0.18rem;
+  padding: 0.28rem 0.22rem;
+  text-align: center;
+}
+
+.ng-project-pulse__metric + .ng-project-pulse__metric {
+  border-left: 1px solid var(--ng-rule);
+}
+
+.ng-project-pulse__metric small {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--ng-grey-500);
+  font-family: var(--ng-font-reference);
+  font-size: 0.39rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ng-project-pulse__metric strong {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--ng-grey-200);
+  font-family: var(--ng-font-reference);
+  font-size: 0.62rem;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  /* ONE tutorial-friendly section grammar: SUMBER / HARIAN / TAPAK / PEKERJA / CATATAN. */
+  form[aria-label="Borang Buku Harian Tapak"] > section > h3,
+  form[aria-label="Borang Buku Harian Tapak"] > .ng-workforce .ng-workforce__title {
+    min-height: 1.35rem !important;
+    margin-bottom: 0.72rem !important;
+    font-family: var(--ng-font-work) !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    letter-spacing: 0 !important;
+    line-height: 13.2px !important;
+    text-transform: uppercase !important;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  .mobile-entry-spike-panel > div:first-child h3::after,
+  .mobile-entry-selected-source::after {
+    font-family: var(--ng-font-work) !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    letter-spacing: 0 !important;
+    line-height: 13.2px !important;
+    text-transform: uppercase !important;
+  }
+
+  .ng-workforce .ng-workforce__matrix-head {
+    grid-template-columns: 42% 12% 12% 12% 22% !important;
+    min-height: 3rem !important;
+  }
+  .ng-workforce .ng-workforce__row {
+    grid-template-columns: 42% 36% 22% !important;
+  }
+  .ng-workforce .ng-workforce__matrix-metric small {
+    font-size: 0.48rem !important;
+  }
+  .ng-workforce .ng-workforce__matrix-metric--total small {
+    font-size: 0.43rem !important;
+    letter-spacing: 0.015em !important;
+  }
+  .ng-workforce .ng-workforce__matrix-metric strong {
+    font-size: 0.72rem !important;
+  }
+  .ng-workforce .ng-workforce__controller {
+    grid-template-columns: minmax(0, 1fr) minmax(10.5rem, 46%) !important;
+  }
+  .ng-workforce .ng-workforce__controller-stepper {
+    grid-template-columns: 2.7rem minmax(4.2rem, 1fr) 2.7rem !important;
+  }
+
+  .mobile-entry-spike-panel > div:first-child {
+    min-height: 1.35rem !important;
+    margin-bottom: 0.72rem !important;
+  }
+
+  .mobile-entry-task-row {
+    grid-template-columns: minmax(0, 1fr) 4.1rem !important;
+  }
+
+  .mobile-entry-task-row .mobile-entry-row-action {
+    font-size: 0.63rem !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  .ng-vo-dialog__fields {
+    gap: 0.68rem !important;
+  }
+
+  .ng-vo-dialog__field textarea {
+    min-height: 5.2rem !important;
+  }
+
+  .ng-project-pulse__metric {
+    padding-inline: 0.12rem;
+  }
+
+  .ng-project-pulse__metric small {
+    font-size: 0.35rem;
+    letter-spacing: 0.025em;
+  }
+
+  .ng-project-pulse__metric strong {
+    font-size: 0.56rem;
+  }
+}

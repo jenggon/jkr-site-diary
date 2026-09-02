@@ -83,18 +83,19 @@ export default function WorkforceEntry({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [activeCell, setActiveCell] = useState<ActiveCountCell>(null);
 
-  const overallTotal = useMemo(
-    () =>
-      manpower.reduce(
-        (total, row) =>
-          total +
-          Math.max(0, row.bumi_count || 0) +
-          Math.max(0, row.non_bumi_count || 0) +
-          Math.max(0, row.foreign_count || 0),
-        0,
-      ),
+  const classificationTotals = useMemo(
+    () => manpower.reduce(
+      (totals, row) => ({
+        bumi: totals.bumi + Math.max(0, row.bumi_count || 0),
+        nonBumi: totals.nonBumi + Math.max(0, row.non_bumi_count || 0),
+        foreign: totals.foreign + Math.max(0, row.foreign_count || 0),
+      }),
+      { bumi: 0, nonBumi: 0, foreign: 0 },
+    ),
     [manpower],
   );
+
+  const overallTotal = classificationTotals.bumi + classificationTotals.nonBumi + classificationTotals.foreign;
 
   const availableCatalogTrades = useMemo(() => {
     const existing = new Set(manpower.map((row) => row.trade_name.trim().toLowerCase()));
@@ -124,6 +125,11 @@ export default function WorkforceEntry({
   const handleActiveStep = (delta: number) => {
     if (!activeCell || !activeRow || disabled) return;
     handleStepCount(activeCell.rowIndex, activeCell.field, delta);
+  };
+
+  const handleActiveDirectEntry = (rawValue: string) => {
+    if (!activeCell || disabled) return;
+    handleCountChange(activeCell.rowIndex, activeCell.field, rawValue);
   };
 
   const handleAddTrade = (tradeToAdd: string) => {
@@ -178,12 +184,24 @@ export default function WorkforceEntry({
         <div role="alert" className="ng-workforce__alert">{validationError}</div>
       )}
 
-      <div className="ng-workforce__matrix-head" aria-hidden="true">
-        <span>TRED</span>
-        <span title="Bumiputera">B</span>
-        <span title="Bukan Bumiputera">BB</span>
-        <span title="Asing">A</span>
-        <span>JUMLAH</span>
+      <div className="ng-workforce__matrix-head" aria-label="Jumlah tenaga kerja mengikut klasifikasi">
+        <span className="ng-workforce__matrix-trade">TRED</span>
+        <span className="ng-workforce__matrix-metric" title="Bumiputera">
+          <small>B</small>
+          <strong data-testid="workforce-b-total">{classificationTotals.bumi}</strong>
+        </span>
+        <span className="ng-workforce__matrix-metric" title="Bukan Bumiputera">
+          <small>BB</small>
+          <strong data-testid="workforce-bb-total">{classificationTotals.nonBumi}</strong>
+        </span>
+        <span className="ng-workforce__matrix-metric" title="Asing">
+          <small>A</small>
+          <strong data-testid="workforce-a-total">{classificationTotals.foreign}</strong>
+        </span>
+        <span className="ng-workforce__matrix-metric ng-workforce__matrix-metric--total">
+          <small>JUMLAH</small>
+          <strong data-testid="workforce-classified-total">{overallTotal}</strong>
+        </span>
       </div>
 
       <div className="ng-workforce__rows">
@@ -264,7 +282,7 @@ export default function WorkforceEntry({
                   </div>
                 </div>
 
-                {rowIsActive && activeRow && activeClassification && (
+                {rowIsActive && activeRow && activeClassification && activeCell && (
                   <div
                     className="ng-workforce__controller is-active"
                     data-testid="workforce-active-controller"
@@ -283,9 +301,20 @@ export default function WorkforceEntry({
                       >
                         −
                       </button>
-                      <output aria-live="polite" data-testid="workforce-active-value">
-                        {activeValue ?? 0}
-                      </output>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={1}
+                        value={activeValue ?? 0}
+                        onChange={(event) => handleActiveDirectEntry(event.target.value)}
+                        onFocus={(event) => event.currentTarget.select()}
+                        onClick={(event) => event.currentTarget.select()}
+                        onWheel={(event) => event.currentTarget.blur()}
+                        disabled={disabled}
+                        aria-label={`Bilangan ${activeClassification.ariaLabel} untuk ${row.trade_name}`}
+                        data-testid="workforce-active-value"
+                      />
                       <button
                         type="button"
                         onClick={() => handleActiveStep(1)}

@@ -56,7 +56,7 @@ describe('F2.6-B02 canonical landing and navigation contract', () => {
     expect(siteDiaryPageSource).toContain("import DailyEntryShell from './DailyEntryShell'");
     expect(siteDiaryPageSource).toContain("import SiteDiaryWorkspace from './SiteDiaryWorkspace'");
     expect(siteDiaryPageSource).toMatch(/<DailyEntryShell>[\s\S]*<SiteDiaryWorkspace\s*\/>[\s\S]*<\/DailyEntryShell>/);
-    expect(shellSource).toContain("fetch('/api/programme?status=Active')");
+    expect(shellSource).toContain("fetchApp('/api/programme?status=Active')");
     expect(shellSource).toContain('project-summary?programmeId=');
   });
 

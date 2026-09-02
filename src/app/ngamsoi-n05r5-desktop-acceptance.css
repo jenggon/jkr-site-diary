@@ -1,0 +1,283 @@
+/* N05R.5 desktop physical-acceptance parity.
+ * Loaded last. Scope is presentation only: the desktop fieldbook must use the same
+ * source/header/spine grammar already accepted on physical mobile.
+ * Canonical NGAMSOI mark geometry and domain behaviour remain untouched.
+ */
+
+/* A source state change should feel like one instrument changing state, not two
+ * unrelated cards replacing one another. */
+.mobile-entry-spike-panel,
+.mobile-entry-selected-source {
+  transform-origin: top left;
+  animation: ng-n05r5-source-state 170ms cubic-bezier(0.22, 0.72, 0.24, 1) both;
+}
+
+@keyframes ng-n05r5-source-state {
+  from {
+    opacity: 0.74;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 768px) {
+  /* ---------- Desktop project pulse ----------
+   * Mobile already has the right density. Desktop gets a compact instrument cluster
+   * so revision/day/time read as one deliberate dashboard unit beside the project title. */
+  .ng-project-context {
+    min-height: 4.65rem !important;
+    align-items: center !important;
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+  }
+
+  .ng-project-context__meta {
+    align-self: end !important;
+  }
+
+  .ng-project-title {
+    align-self: start !important;
+    padding-right: 1.5rem;
+  }
+
+  .ng-project-pulse {
+    width: min(31rem, 48vw) !important;
+    min-width: 27rem;
+    align-self: center !important;
+    grid-template-columns: 5.8rem minmax(9.5rem, 1fr) minmax(10.5rem, 1fr) !important;
+    overflow: hidden;
+    border: 1px solid var(--ng-rule) !important;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.018), transparent 62%),
+      var(--ng-graphite-925) !important;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.018),
+      0 8px 22px rgb(0 0 0 / 0.12);
+  }
+
+  .ng-project-pulse__item {
+    min-height: 3.25rem !important;
+    justify-items: center !important;
+    gap: 0.32rem !important;
+    padding: 0.5rem 0.62rem !important;
+    border-right: 1px solid var(--ng-rule) !important;
+    background: transparent !important;
+    text-align: center;
+  }
+
+  .ng-project-pulse__item:last-child {
+    border-right: 0 !important;
+  }
+
+  .ng-project-pulse__item:first-child {
+    position: relative;
+    background: color-mix(in srgb, var(--ng-established) 3.5%, transparent) !important;
+  }
+
+  .ng-project-pulse__item:first-child::after {
+    content: "";
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0;
+    left: 0.65rem;
+    height: 2px;
+    background: var(--ng-established);
+  }
+
+  .ng-project-pulse__item small,
+  .ng-project-pulse__metric small {
+    color: var(--ng-grey-500) !important;
+    font-size: 0.42rem !important;
+    font-weight: 720 !important;
+    letter-spacing: 0.07em !important;
+  }
+
+  .ng-project-pulse__item strong,
+  .ng-project-pulse__metric strong {
+    color: var(--ng-grey-200) !important;
+    font-size: 0.72rem !important;
+    font-weight: 780 !important;
+    letter-spacing: 0.025em !important;
+  }
+
+  .ng-project-pulse__item:first-child strong {
+    color: var(--ng-established) !important;
+    font-size: 0.82rem !important;
+  }
+
+  .ng-project-pulse__pair {
+    height: 100%;
+  }
+
+  .ng-project-pulse__metric {
+    gap: 0.3rem !important;
+    padding: 0.12rem 0.55rem !important;
+  }
+
+  .ng-project-pulse__metric + .ng-project-pulse__metric {
+    border-left: 1px solid var(--ng-rule) !important;
+  }
+
+  /* ---------- One desktop heading origin ----------
+   * Normal field sections already own ~1.3rem content inset. Source and Workforce
+   * had their own internal structures, so explicitly align their dash/title origin
+   * to HARIAN / TAPAK / CATATAN instead of letting each component invent an inset. */
+  .mobile-entry-spike-panel > div:first-child {
+    padding-left: 1.3rem !important;
+  }
+
+  .mobile-entry-selected-source {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    column-gap: 1rem !important;
+    row-gap: 0 !important;
+    min-height: 7rem !important;
+    padding: 2.25rem 0.8rem 0.8rem 1.3rem !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-entry-selected-source::before {
+    top: 0.92rem !important;
+    left: 1.3rem !important;
+    width: 1.05rem !important;
+    height: 2px !important;
+  }
+
+  .mobile-entry-selected-source::after {
+    top: 0.62rem !important;
+    left: 2.97rem !important;
+  }
+
+  .mobile-entry-selected-source > div:first-child {
+    min-width: 0 !important;
+    align-self: center !important;
+  }
+
+  .mobile-entry-selected-source > div:last-child {
+    display: grid !important;
+    width: auto !important;
+    grid-template-columns: 6.5rem 2.75rem !important;
+    align-self: center !important;
+    justify-self: end !important;
+    gap: 0 !important;
+  }
+
+  .mobile-entry-selected-source > div:last-child button:first-child {
+    width: 6.5rem !important;
+    min-width: 6.5rem !important;
+    min-height: 44px !important;
+  }
+
+  .mobile-entry-selected-source > div:last-child button:last-child {
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    min-height: 44px !important;
+  }
+
+  /* Workforce header has its own grid container. Move only its title origin; the
+   * aggregate helmet/total remains right-aligned and untouched. */
+  .ng-workforce__title {
+    padding-left: 0.58rem !important;
+  }
+
+  /* ---------- Single-rail authority ----------
+   * Desktop previously exposed two parallel state carriers: the real form datum and
+   * a legacy green section edge. State now lives on ONE physical rail only. */
+  form[aria-label="Borang Buku Harian Tapak"] > section {
+    border-left-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:focus-within,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source),
+  form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"],
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]),
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)),
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)),
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce {
+    border-left-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* A workforce section with any recorded headcount is established even while one
+   * cell is open for fine adjustment. The orange controller itself still communicates
+   * edit focus, so the section datum does not need to revert to neutral. */
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:has(.ng-workforce__alert))::before {
+    content: "" !important;
+    --ng-step-color: var(--ng-established) !important;
+    border-color: var(--ng-established) !important;
+    background: color-mix(in srgb, var(--ng-established) 8%, var(--ng-graphite-950)) !important;
+    color: var(--ng-established) !important;
+    box-shadow:
+      0 0 0 2px var(--ng-graphite-950),
+      0 0 0 3px color-mix(in srgb, var(--ng-established) 20%, transparent) !important;
+  }
+
+  /* ---------- Desktop established-flow spine ----------
+   * The green state paints directly ON TOP OF the existing 1px neutral datum.
+   * No second rail, no extra thickness, no glow. */
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-has-entry="true"]:not(:has(.ng-workforce__alert))::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    z-index: 2 !important;
+    top: 1.44rem !important;
+    bottom: -1.05rem !important;
+    left: calc(-1 * var(--ng-spine-gutter)) !important;
+    width: 1px !important;
+    height: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ng-established) 92%, var(--ng-grey-600)) 0%,
+      color-mix(in srgb, var(--ng-established) 76%, var(--ng-grey-600)) 52%,
+      color-mix(in srgb, var(--ng-established) 38%, var(--ng-spine-rail)) 86%,
+      var(--ng-spine-rail) 100%
+    ) !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+    transform-origin: top center;
+    animation: ng-n05r5-desktop-established-flow 360ms cubic-bezier(0.22, 0.72, 0.24, 1) both !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:last-of-type:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after {
+    bottom: 0.72rem !important;
+  }
+}
+
+@keyframes ng-n05r5-desktop-established-flow {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  55% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-entry-spike-panel,
+  .mobile-entry-selected-source,
+  form[aria-label="Borang Buku Harian Tapak"] > section::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

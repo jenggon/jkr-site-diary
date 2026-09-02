@@ -51,7 +51,8 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).toContain('SU');
     expect(html).toContain('ng-profile-trigger');
     expect(html).toContain('ng-profile-panel');
-    expect(html).toContain('Child Component');
+    expect(html).toContain('Memuatkan konteks projek');
+    expect(html).not.toContain('Child Component');
   });
 
   it('locks the NGAMSOI identity to one cross-free marker + locked-datum geometry everywhere', () => {
@@ -133,7 +134,7 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(shellSource).toContain('Tiada Projek Aktif Ditemui');
     expect(shellSource).toContain('options.length === 0');
     expect(shellSource).toContain('options.length === 1');
-    expect(shellSource).toContain('Pilih Projek / Program Tapak');
+    expect(shellSource).toContain('Pilih Projek');
     expect(shellSource).toContain('availableProgrammes.length > 1');
     expect(shellSource).toContain('handleSelectProgramme');
   });

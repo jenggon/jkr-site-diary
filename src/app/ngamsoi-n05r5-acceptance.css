@@ -1,0 +1,214 @@
+/* N05R.5 physical acceptance corrections.
+ * Loaded after the N05R.5 final authority layer.
+ * Scope: source grammar parity, completed-section spine flow, and save-ritual preservation.
+ */
+
+/* One heading geometry everywhere: SUMBER / HARIAN / TAPAK / PEKERJA / CATATAN. */
+form[aria-label="Borang Buku Harian Tapak"] > section > h3,
+.ng-workforce__title,
+.mobile-entry-spike-panel > div:first-child h3 {
+  display: flex !important;
+  min-height: 1.35rem !important;
+  align-items: center !important;
+  gap: 0.62rem !important;
+  margin: 0 0 0.72rem !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+  text-transform: uppercase !important;
+}
+
+form[aria-label="Borang Buku Harian Tapak"] > section > h3::before,
+.ng-workforce__title::before,
+.mobile-entry-spike-panel > div:first-child h3::before {
+  content: "" !important;
+  width: 1.05rem !important;
+  height: 2px !important;
+  flex: 0 0 1.05rem !important;
+  background: var(--ng-current) !important;
+}
+
+/* Expanded source: no nested-card or stray active rail. The only orange stroke inside
+ * the chooser is the active-tab underline; the section spine remains outside. */
+form[aria-label="Borang Buku Harian Tapak"] > section[aria-label="Pemilih Sumber Operasi"]:focus-within {
+  border-left-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-spike-panel,
+.mobile-entry-spike-panel > div:first-child {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-spike-panel {
+  padding: 0 !important;
+}
+
+.mobile-entry-spike-panel > div:first-child {
+  min-height: 1.35rem !important;
+  margin: 0 0 0.72rem !important;
+  padding: 0 !important;
+}
+
+.mobile-entry-spike-panel::before,
+.mobile-entry-spike-panel::after,
+.mobile-entry-source-switcher::before,
+.mobile-entry-source-switcher::after,
+.mobile-entry-source-control::before,
+.mobile-entry-source-control::after {
+  content: none !important;
+  display: none !important;
+}
+
+.mobile-entry-spike-panel > div:first-child > div > p {
+  display: none !important;
+}
+
+.mobile-entry-spike-panel > div:first-child h3 {
+  font-size: 0 !important;
+}
+
+.mobile-entry-spike-panel > div:first-child h3::after {
+  content: "SUMBER" !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+  text-transform: uppercase !important;
+}
+
+.mobile-entry-source-switcher {
+  margin-bottom: 0.72rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ng-rule) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-source-control,
+.mobile-entry-source-control[data-active="true"] {
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.mobile-entry-source-control[data-active="true"] {
+  background: color-mix(in srgb, var(--ng-current) 3.5%, transparent) !important;
+  box-shadow: inset 0 -2px 0 var(--ng-current) !important;
+}
+
+/* Loaded source: same exact dash origin, dash width, gap and type as every real section
+ * heading. Content beneath it keeps the accepted loaded-source layout. */
+.mobile-entry-selected-source::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0.92rem !important;
+  left: 0 !important;
+  width: 1.05rem !important;
+  height: 2px !important;
+  border: 0 !important;
+  background: var(--ng-current) !important;
+  box-shadow: none !important;
+}
+
+.mobile-entry-selected-source::after {
+  content: "SUMBER" !important;
+  display: block !important;
+  position: absolute !important;
+  top: 0.62rem !important;
+  left: 1.67rem !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ng-ivory-100) !important;
+  font-family: var(--ng-font-work) !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+}
+
+/* Save confirmation retains the full NGAMSOI ritual. Only the standalone tick is retired. */
+.ng-completion__check {
+  display: none !important;
+}
+
+/* Completed mobile sections softly establish the rail downward. The neutral form rail stays
+ * underneath, so the effect reads as progress rather than a second decorative spine. */
+@media (max-width: 767px) {
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(.mobile-entry-selected-source):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section[data-testid="continuation-banner"]:not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="date"]):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(input[type="text"][required]:not(:placeholder-shown)):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after,
+  form[aria-label="Borang Buku Harian Tapak"] > section.ng-workforce[data-workforce-editing="false"][data-workforce-has-entry="true"]::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    z-index: 2 !important;
+    top: 1.68rem !important;
+    bottom: -1.08rem !important;
+    left: calc(-1 * var(--ng-spine-gutter) - 1px) !important;
+    width: 2px !important;
+    height: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ng-established) 88%, var(--ng-grey-600)) 0%,
+      color-mix(in srgb, var(--ng-established) 72%, var(--ng-grey-600)) 58%,
+      color-mix(in srgb, var(--ng-established) 34%, var(--ng-spine-rail)) 88%,
+      var(--ng-spine-rail) 100%
+    ) !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+    transform-origin: top center;
+    animation: ng-n05r5-established-flow 360ms cubic-bezier(0.22, 0.72, 0.24, 1) both !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section:last-of-type:has(textarea[required]:not(:placeholder-shown)):not(:focus-within)::after {
+    bottom: 0.72rem !important;
+  }
+
+  form[aria-label="Borang Buku Harian Tapak"] > section > h3,
+  .ng-workforce__title,
+  .mobile-entry-spike-panel > div:first-child h3::after,
+  .mobile-entry-selected-source::after {
+    font-size: 12px !important;
+    line-height: 13.2px !important;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
+@keyframes ng-n05r5-established-flow {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.24);
+  }
+  54% {
+    opacity: 0.86;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  form[aria-label="Borang Buku Harian Tapak"] > section::after {
+    animation: none !important;
+  }
+}

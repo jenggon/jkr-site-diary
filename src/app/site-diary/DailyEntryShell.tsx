@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import NgamsoiBrand from '@/components/brand/NgamsoiBrand';
 import { useAuth } from '@/context/AuthContext';
+import { isNgamsoiPreviewMode, ngamsoiPreviewFetch } from '@/lib/ngamsoiPreview';
 
 export interface ProgrammeOption {
   readonly id: string;
@@ -52,6 +53,8 @@ interface RevisionProjection {
   readonly isCurrentRevision: boolean;
 }
 
+const MALAY_DAY_NAMES = ['AHAD', 'ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU'] as const;
+
 function formatRevision(number: number | null): string {
   if (number === null || !Number.isFinite(number)) return 'R—';
   return `R${Math.max(0, Math.trunc(number)).toString().padStart(2, '0')}`;
@@ -62,14 +65,51 @@ function formatClock(date: Date | null): string {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
-function resolveDeadlinePulse(finishDate: string | null, now: Date | null): { label: string; value: string; title?: string } {
-  if (!finishDate || !now) return { label: 'BAKI', value: '—' };
-  const finish = new Date(`${finishDate}T23:59:59`);
-  if (Number.isNaN(finish.getTime())) return { label: 'BAKI', value: '—' };
-  const days = Math.ceil((finish.getTime() - now.getTime()) / 86_400_000);
-  const title = `Tarikh tamat projek: ${finishDate}`;
-  if (days < 0) return { label: 'LEWAT', value: `${Math.abs(days)} HARI`, title };
-  return { label: 'BAKI', value: `${days} HARI`, title };
+function formatDeviceDay(date: Date | null): string {
+  if (!date) return '—';
+  return MALAY_DAY_NAMES[date.getDay()] ?? '—';
+}
+
+function formatDeviceDate(date: Date | null): string {
+  if (!date) return '--/--/--';
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear().toString().slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
+function resolveProjectDayPulse(
+  startDate: string | null,
+  finishDate: string | null,
+  now: Date | null,
+): { remainingDays: number | '—'; dayNumber: number | '—'; title: string | undefined } {
+  if (!now) return { remainingDays: '—', dayNumber: '—', title: undefined };
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  let remainingDays: number | '—' = '—';
+  let dayNumber: number | '—' = '—';
+
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    if (!Number.isNaN(start.getTime())) {
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+      const elapsedDays = Math.floor((today - startDay) / 86_400_000);
+      dayNumber = Math.max(0, elapsedDays + 1);
+    }
+  }
+
+  if (finishDate) {
+    const finish = new Date(`${finishDate}T23:59:59`);
+    if (!Number.isNaN(finish.getTime())) {
+      remainingDays = Math.max(0, Math.ceil((finish.getTime() - now.getTime()) / 86_400_000));
+    }
+  }
+
+  return {
+    remainingDays,
+    dayNumber,
+    title: finishDate ? `Tarikh tamat projek: ${finishDate}` : undefined,
+  };
 }
 
 export default function DailyEntryShell({
@@ -93,6 +133,14 @@ export default function DailyEntryShell({
   const programmeIdRef = useRef<string | null>(initialProgrammeId ?? null);
   const detailRequestRef = useRef<{ generation: number; programmeId: string; controller: AbortController } | null>(null);
   const detailGenerationRef = useRef(0);
+
+  const fetchApp = useCallback(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (isNgamsoiPreviewMode()) {
+      const previewResponse = await ngamsoiPreviewFetch(input, init);
+      if (previewResponse) return previewResponse;
+    }
+    return fetch(input, init);
+  }, []);
 
   const invalidateProgrammeDetails = useCallback(() => {
     detailRequestRef.current?.controller.abort();
@@ -121,7 +169,7 @@ export default function DailyEntryShell({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/programme?status=Active');
+      const res = await fetchApp('/api/programme?status=Active');
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
         throw new Error(errJson?.error || 'Gagal memuatkan senarai program');
@@ -170,7 +218,7 @@ export default function DailyEntryShell({
     } finally {
       setLoading(false);
     }
-  }, [changeProgramme]);
+  }, [changeProgramme, fetchApp]);
 
   const loadProgrammeDetails = useCallback(async (targetId: string) => {
     detailRequestRef.current?.controller.abort();
@@ -193,7 +241,7 @@ export default function DailyEntryShell({
     setError(null);
 
     try {
-      const summaryRes = await fetch(`/api/project-summary?programmeId=${encodeURIComponent(targetId)}`, {
+      const summaryRes = await fetchApp(`/api/project-summary?programmeId=${encodeURIComponent(targetId)}`, {
         signal: request.controller.signal,
       });
       if (!ownsRequest()) return;
@@ -218,8 +266,8 @@ export default function DailyEntryShell({
       }
 
       const [progRes, revisionsRes] = await Promise.all([
-        fetch(`/api/programme/${encodeURIComponent(targetId)}`, { signal: request.controller.signal }),
-        fetch(`/api/programme-revision?programmeId=${encodeURIComponent(targetId)}`, { signal: request.controller.signal }),
+        fetchApp(`/api/programme/${encodeURIComponent(targetId)}`, { signal: request.controller.signal }),
+        fetchApp(`/api/programme-revision?programmeId=${encodeURIComponent(targetId)}`, { signal: request.controller.signal }),
       ]);
       if (!ownsRequest()) return;
 
@@ -272,7 +320,7 @@ export default function DailyEntryShell({
         setLoading(false);
       }
     }
-  }, []);
+  }, [fetchApp]);
 
   useEffect(() => {
     void loadProgrammes();
@@ -313,7 +361,9 @@ export default function DailyEntryShell({
     : revisionState === 'ERROR'
       ? 'R!'
       : 'R—';
-  const deadlinePulse = resolveDeadlinePulse(finishDate, now);
+  const projectDayPulse = resolveProjectDayPulse(startDate, finishDate, now);
+  const deviceDay = formatDeviceDay(now);
+  const deviceDate = formatDeviceDate(now);
   const clockLabel = formatClock(now);
 
   return (
@@ -393,20 +443,38 @@ export default function DailyEntryShell({
 
             <div className="ng-project-pulse" aria-label="Ringkasan projek semasa">
               <span className="ng-project-pulse__item" title="Semakan program kerja semasa">
-                <small>SEMAKAN</small>
+                <small>PROGRAM KERJA</small>
                 <strong
                   className={`ng-project-revision ${revisionState === 'RESOLVING' || revisionState === 'UNAVAILABLE' || revisionState === 'IDLE' ? 'ng-project-revision--pending' : ''} ${revisionState === 'ERROR' ? 'ng-project-revision--error' : ''}`.trim()}
                 >
                   {revisionLabel}
                 </strong>
               </span>
-              <span className="ng-project-pulse__item" title={deadlinePulse.title}>
-                <small>{deadlinePulse.label}</small>
-                <strong>{deadlinePulse.value}</strong>
+
+              <span className="ng-project-pulse__item ng-project-pulse__item--split" title={projectDayPulse.title}>
+                <span className="ng-project-pulse__pair">
+                  <span className="ng-project-pulse__metric">
+                    <small>TINGGAL</small>
+                    <strong>{projectDayPulse.remainingDays}</strong>
+                  </span>
+                  <span className="ng-project-pulse__metric">
+                    <small>HARI KE</small>
+                    <strong>{projectDayPulse.dayNumber}</strong>
+                  </span>
+                </span>
               </span>
-              <span className="ng-project-pulse__item" title="Masa peranti semasa">
-                <small>MASA</small>
-                <strong>{clockLabel}</strong>
+
+              <span className="ng-project-pulse__item ng-project-pulse__item--split" title="Hari, tarikh dan masa peranti semasa">
+                <span className="ng-project-pulse__pair">
+                  <span className="ng-project-pulse__metric">
+                    <small>{deviceDay}</small>
+                    <strong>{deviceDate}</strong>
+                  </span>
+                  <span className="ng-project-pulse__metric">
+                    <small>MASA</small>
+                    <strong>{clockLabel}</strong>
+                  </span>
+                </span>
               </span>
             </div>
           </section>
@@ -414,25 +482,12 @@ export default function DailyEntryShell({
 
         {error && (
           <div className="w-full px-4 py-3 shrink-0">
-            <div className="max-w-3xl mx-auto rounded-xl border border-red-800/60 bg-red-950/40 p-3.5 text-red-200 flex items-center justify-between gap-3 text-xs sm:text-sm">
-              <div className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-5 h-5 text-red-400 shrink-0"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1-2 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span>{error}</span>
-              </div>
+            <div className="rounded-xl border border-red-800 bg-red-950/60 px-4 py-3 text-sm text-red-200 flex items-center justify-between gap-3">
+              <span>● {error}</span>
               <button
+                type="button"
                 onClick={() => void loadProgrammes()}
-                className="px-2.5 py-1 rounded bg-red-900 hover:bg-red-800 text-white text-xs font-semibold shrink-0 transition-colors"
+                className="rounded-md bg-red-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
               >
                 Cuba Semula
               </button>
@@ -440,60 +495,48 @@ export default function DailyEntryShell({
           </div>
         )}
 
-        <main className="flex-1 w-full min-h-0 flex flex-col relative">
-          {!loading && availableProgrammes.length === 0 && (
-            <div className="flex-1 overflow-y-auto px-4 py-6">
-              <div className="max-w-3xl mx-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center my-6">
-                <div className="w-12 h-12 rounded-full bg-zinc-800 text-zinc-400 flex items-center justify-center mx-auto mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <h3 className="text-base font-bold text-zinc-200">Tiada Projek Aktif Ditemui</h3>
-                <p className="text-xs text-zinc-400 mt-1 max-w-md mx-auto">
+        <main className="flex-1 min-h-0 overflow-hidden">
+          {loading && availableProgrammes.length === 0 ? (
+            <div className="h-full flex items-center justify-center px-4">
+              <div className="text-center text-sm text-tactical-text-secondary">Memuatkan konteks projek…</div>
+            </div>
+          ) : availableProgrammes.length === 0 ? (
+            <div className="h-full flex items-start justify-center px-4 pt-12">
+              <div className="w-full max-w-3xl rounded-2xl border border-surface-border bg-surface-secondary p-8 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-elevated text-tactical-text-secondary">▣</div>
+                <h3 className="text-base font-bold text-tactical-text-primary">Tiada Projek Aktif Ditemui</h3>
+                <p className="mx-auto mt-2 max-w-lg text-sm text-tactical-text-secondary">
                   Tiada program atau projek aktif dalam pangkalan data untuk akaun ini. Sila hubungi pentadbir sistem untuk mendaftarkan projek.
                 </p>
                 <button
+                  type="button"
                   onClick={() => void loadProgrammes()}
-                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold text-white transition-colors"
+                  className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
                 >
                   Muat Semula
                 </button>
               </div>
             </div>
-          )}
-
-          {!loading && availableProgrammes.length > 1 && !programmeId && (
-            <div className="flex-1 overflow-y-auto px-4 py-6">
-              <div className="max-w-3xl mx-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-5 my-4">
-                <div className="mb-4">
-                  <h3 className="text-sm sm:text-base font-bold text-zinc-100">Pilih Projek / Program Tapak</h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Terdapat {availableProgrammes.length} projek aktif. Sila pilih projek untuk merekod buku harian.
-                  </p>
+          ) : !programmeId && availableProgrammes.length > 1 ? (
+            <div className="h-full overflow-y-auto px-4 py-6">
+              <div className="mx-auto w-full max-w-3xl">
+                <div className="mb-5">
+                  <h1 className="text-xl font-bold text-tactical-text-primary">Pilih Projek</h1>
+                  <p className="mt-1 text-sm text-tactical-text-secondary">Pilih satu projek aktif untuk meneruskan Buku Harian Tapak.</p>
                 </div>
-
                 <div className="grid gap-3">
-                  {availableProgrammes.map((prog) => (
+                  {availableProgrammes.map((programme) => (
                     <button
-                      key={prog.id}
-                      onClick={() => handleSelectProgramme(prog.id)}
-                      className="w-full text-left p-3.5 rounded-xl border border-zinc-800 bg-zinc-950/80 hover:bg-zinc-800/80 hover:border-blue-600/50 transition-all group flex flex-col gap-1"
+                      key={programme.id}
+                      type="button"
+                      onClick={() => handleSelectProgramme(programme.id)}
+                      className="rounded-xl border border-surface-border bg-surface-secondary p-4 text-left transition hover:border-blue-500/60 hover:bg-surface-elevated"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="ng-reference-voice text-xs font-bold text-blue-400 tracking-wider uppercase">
-                          {prog.shortName ?? prog.code}
-                        </span>
-                        <span className="text-[11px] text-zinc-500 group-hover:text-blue-400 transition-colors font-medium">
-                          Pilih &rarr;
-                        </span>
-                      </div>
-                      <div className="ng-work-voice text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors">
-                        {prog.name}
-                      </div>
-                      {prog.contractorName && (
-                        <div className="text-[11px] text-zinc-400">
-                          Kontraktor: {prog.contractorName}
+                      <div className="text-xs font-semibold uppercase tracking-wide text-blue-400">{programme.code}</div>
+                      <div className="mt-1 font-semibold text-tactical-text-primary">{programme.name}</div>
+                      {(programme.contractorName || programme.employerName) && (
+                        <div className="mt-2 text-xs text-tactical-text-secondary">
+                          {[programme.employerName, programme.contractorName].filter(Boolean).join(' · ')}
                         </div>
                       )}
                     </button>
@@ -501,9 +544,9 @@ export default function DailyEntryShell({
                 </div>
               </div>
             </div>
+          ) : (
+            children
           )}
-
-          {programmeId && children}
         </main>
       </div>
     </DailyEntryContext.Provider>

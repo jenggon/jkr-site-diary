@@ -6,7 +6,7 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 }
 
-describe('N05R.4 NGAMSOI harmony contract', () => {
+describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentation', () => {
   it('locks the approved canonical mark geometry across component and app icon', () => {
     const brand = read('src/components/brand/NgamsoiBrand.tsx');
     const icon = read('public/ngamsoi-mark.svg');
@@ -21,6 +21,7 @@ describe('N05R.4 NGAMSOI harmony contract', () => {
 
     expect(completion).toContain("import { NgamsoiMark } from './NgamsoiBrand'");
     expect(completion).toContain('<NgamsoiMark className="ng-completion__mark" />');
+    expect(completion).not.toContain('ng-completion__check');
   });
 
   it('loads the harmony grammar after all legacy NGAMSOI presentation layers', () => {
@@ -52,12 +53,18 @@ describe('N05R.4 NGAMSOI harmony contract', () => {
     expect(harmony).toContain('.ng-workforce__overall-icon');
   });
 
-  it('turns project context into meaningful live instrumentation', () => {
+  it('turns project context into meaningful live instrumentation with N05R.5 operator grammar', () => {
     const shell = read('src/app/site-diary/DailyEntryShell.tsx');
 
     expect(shell).toContain('ng-project-pulse');
-    expect(shell).toContain('<small>SEMAKAN</small>');
-    expect(shell).toContain('deadlinePulse.label');
+    expect(shell).toContain('<small>PROGRAM KERJA</small>');
+    expect(shell).toContain('<small>TINGGAL</small>');
+    expect(shell).toContain('<small>HARI KE</small>');
+    expect(shell).toContain('projectDayPulse.remainingDays');
+    expect(shell).toContain('projectDayPulse.dayNumber');
+    expect(shell).toContain('<small>{deviceDay}</small>');
+    expect(shell).toContain('<strong>{deviceDate}</strong>');
     expect(shell).toContain('<small>MASA</small>');
+    expect(shell).toContain('<strong>{clockLabel}</strong>');
   });
 });
