@@ -194,11 +194,8 @@ async function assertExpandedSourceGrammar(page: Page) {
   expect(sourceMetrics.dashWidth).toBe(harianMetrics.dashWidth);
   expect(sourceMetrics.dashHeight).toBe(harianMetrics.dashHeight);
   expect(sourceMetrics.fontSize).toBe(harianMetrics.fontSize);
-
-  const animationName = await page.locator('.mobile-entry-spike-panel').evaluate((node) => getComputedStyle(node).animationName);
-  expect(animationName).toContain('ng-n05r5-source-state');
-
-  return sourceSection.boundingBox();
+  expect(await page.locator('.mobile-entry-spike-panel').evaluate((node) => getComputedStyle(node).animationName))
+    .toContain('ng-n05r5-source-state');
 }
 
 async function exerciseVoDialog(page: Page, label: string) {
@@ -230,19 +227,21 @@ async function exerciseVoDialog(page: Page, label: string) {
   expect(layers[0]).toBeGreaterThan(layers[1]);
   expect(layers[2]).toBe('hidden');
 
-  await page.screenshot({
-    path: path.join(EVIDENCE_DIR, `n08-02-vo-dialog-${label}.png`),
-    fullPage: false,
-  });
-
+  await page.screenshot({ path: path.join(EVIDENCE_DIR, `n08-02-vo-dialog-${label}.png`), fullPage: false });
   await page.getByRole('button', { name: 'Tutup pendaftaran VO' }).click();
   await expect(dialog).toBeHidden();
   await page.getByRole('tab', { name: 'MSP', exact: true }).click();
 }
 
-async function selectMspAndAssertTransition(page: Page, expandedBox: Awaited<ReturnType<Page['locator']>['boundingBox']>) {
+async function selectMspAndAssertTransition(page: Page) {
+  const sourceSection = page.locator('section[aria-label="Pemilih Sumber Operasi"]');
   const taskButton = page.getByRole('button', { name: new RegExp('Kerja konkrit rasuk aras bawah') }).first();
   await expect(taskButton).toBeVisible();
+
+  // Capture the expanded geometry immediately before the state transition. The VO sheet
+  // intentionally changes body overflow while open, so a box captured before that modal
+  // lifecycle is not a valid source-transition datum on classic-scrollbar CI runners.
+  const expandedBox = await sourceSection.boundingBox();
   const pick = taskButton.locator('.mobile-entry-row-action');
   const pickStyle = await pick.evaluate((node) => {
     const style = getComputedStyle(node);
@@ -251,7 +250,6 @@ async function selectMspAndAssertTransition(page: Page, expandedBox: Awaited<Ret
   expect((await pick.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(40);
 
   await taskButton.click();
-  const sourceSection = page.locator('section[aria-label="Pemilih Sumber Operasi"]');
   const selected = page.locator('.mobile-entry-selected-source');
   const switchButton = page.getByRole('button', { name: 'Tukar sumber aktiviti' });
   await expect(selected).toBeVisible();
@@ -263,8 +261,7 @@ async function selectMspAndAssertTransition(page: Page, expandedBox: Awaited<Ret
     expect(Math.abs(selectedBox.width - expandedBox.width)).toBeLessThanOrEqual(1);
   }
 
-  const selectedTitle = selected.locator('h3');
-  await expect(selectedTitle).toHaveText(LONG_TASK);
+  await expect(selected.locator('h3')).toHaveText(LONG_TASK);
   const selectedMetrics = await selected.evaluate((node) => ({
     dashWidth: getComputedStyle(node, '::before').width,
     dashHeight: getComputedStyle(node, '::before').height,
@@ -311,8 +308,7 @@ async function fillNewEntry(page: Page) {
 
   const workforce = page.locator('.ng-workforce');
   await workforce.scrollIntoViewIfNeeded();
-  const workforceCell = workforce.locator('[data-testid="workforce-cell-0-foreign_count"]');
-  await workforceCell.click();
+  await workforce.locator('[data-testid="workforce-cell-0-foreign_count"]').click();
   const workforceInput = workforce.locator('[data-testid="workforce-active-value"]');
   await workforceInput.fill('12');
   await expect(workforce.locator('[data-testid="workforce-a-total"]')).toHaveText('12');
@@ -325,7 +321,7 @@ async function fillNewEntry(page: Page) {
 
 async function assertUniformSectionsAndSpine(page: Page) {
   const form = page.locator('form[aria-label="Borang Buku Harian Tapak"]');
-  const headingLocators = [
+  const headings = [
     page.getByRole('heading', { name: 'Harian', exact: true }),
     page.getByRole('heading', { name: 'Tapak', exact: true }),
     page.locator('.ng-workforce__title'),
@@ -333,7 +329,7 @@ async function assertUniformSectionsAndSpine(page: Page) {
   ];
 
   const headingMetrics: Array<{ fontSize: string; dashWidth: string; dashHeight: string }> = [];
-  for (const heading of headingLocators) {
+  for (const heading of headings) {
     await heading.scrollIntoViewIfNeeded();
     headingMetrics.push(await heading.evaluate((node) => ({
       fontSize: getComputedStyle(node).fontSize,
@@ -380,9 +376,8 @@ async function assertCompletion(page: Page) {
   await expect(completion.locator('.ng-completion__signature')).toContainText('Ngamsoi.');
   await expect(completion.locator('.ng-completion__check')).toHaveCount(0);
   await expect(completion).not.toContainText('✓');
-
-  const markAnimation = await completion.locator('.ng-completion__mark-shell').evaluate((node) => getComputedStyle(node).animationName);
-  expect(markAnimation).toContain('ng-n05r5-mark-establish');
+  expect(await completion.locator('.ng-completion__mark-shell').evaluate((node) => getComputedStyle(node).animationName))
+    .toContain('ng-n05r5-mark-establish');
 
   const actions = page.locator('.ng-completion-actions');
   await expect(actions).toBeVisible();
@@ -390,7 +385,6 @@ async function assertCompletion(page: Page) {
   await expect(actions.getByRole('link', { name: 'Lihat format JKR' })).toBeVisible();
   await expect(actions.getByRole('button', { name: 'Aktiviti terbuka' })).toBeVisible();
   await expect(actions.getByRole('button', { name: 'Laporan baharu' })).toBeVisible();
-
   await completion.scrollIntoViewIfNeeded();
   await page.waitForTimeout(700);
 }
@@ -412,31 +406,20 @@ async function fullMobileGate(browser: import('playwright').Browser) {
     await assertCanonicalMark(page);
     await assertProjectPulse(page);
     await enterNewWorkspace(page);
-
-    const expandedBox = await assertExpandedSourceGrammar(page);
+    await assertExpandedSourceGrammar(page);
     await assertNoHorizontalOverflow(page);
-    await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n08-01-new-entry-empty-390x844.png'),
-      fullPage: false,
-    });
+    await page.screenshot({ path: path.join(EVIDENCE_DIR, 'n08-01-new-entry-empty-390x844.png'), fullPage: false });
 
     await exerciseVoDialog(page, '390x844');
-    await selectMspAndAssertTransition(page, expandedBox);
+    await selectMspAndAssertTransition(page);
     await fillNewEntry(page);
     await assertUniformSectionsAndSpine(page);
     await assertNoHorizontalOverflow(page);
-
-    await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n08-03-filled-fieldbook-390x844.png'),
-      fullPage: false,
-    });
+    await page.screenshot({ path: path.join(EVIDENCE_DIR, 'n08-03-filled-fieldbook-390x844.png'), fullPage: false });
 
     await assertCompletion(page);
     await assertNoHorizontalOverflow(page);
-    await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n08-04-completion-390x844.png'),
-      fullPage: false,
-    });
+    await page.screenshot({ path: path.join(EVIDENCE_DIR, 'n08-04-completion-390x844.png'), fullPage: false });
   } finally {
     await context.close();
   }
@@ -457,14 +440,11 @@ async function narrowMobileGate(browser: import('playwright').Browser) {
     await installCoreRoutes(page);
     await page.goto(`${BASE_URL}/site-diary`, { waitUntil: 'domcontentloaded' });
     await enterNewWorkspace(page);
-    const expandedBox = await assertExpandedSourceGrammar(page);
+    await assertExpandedSourceGrammar(page);
     await exerciseVoDialog(page, '375x812');
-    await selectMspAndAssertTransition(page, expandedBox);
+    await selectMspAndAssertTransition(page);
     await assertNoHorizontalOverflow(page);
-    await page.screenshot({
-      path: path.join(EVIDENCE_DIR, 'n08-05-narrow-source-375x812.png'),
-      fullPage: false,
-    });
+    await page.screenshot({ path: path.join(EVIDENCE_DIR, 'n08-05-narrow-source-375x812.png'), fullPage: false });
   } finally {
     await context.close();
   }
