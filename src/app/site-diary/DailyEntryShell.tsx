@@ -82,8 +82,8 @@ function resolveProjectDayPulse(
   startDate: string | null,
   finishDate: string | null,
   now: Date | null,
-): { remainingDays: number | '—'; dayNumber: number | '—'; title?: string } {
-  if (!now) return { remainingDays: '—', dayNumber: '—' };
+): { remainingDays: number | '—'; dayNumber: number | '—'; title: string | undefined } {
+  if (!now) return { remainingDays: '—', dayNumber: '—', title: undefined };
 
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   let remainingDays: number | '—' = '—';
