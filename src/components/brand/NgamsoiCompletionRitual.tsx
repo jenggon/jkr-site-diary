@@ -33,8 +33,6 @@ export default function NgamsoiCompletionRitual({
     navigatorWithVibration.vibrate?.([16, 24, 28]);
   }, [savedSiteDiaryId]);
 
-  const shortId = savedSiteDiaryId?.slice(0, 8);
-
   return (
     <div
       className="ng-completion"
@@ -47,30 +45,10 @@ export default function NgamsoiCompletionRitual({
       <span className="sr-only">{successText}</span>
 
       <div className="ng-completion__instrument" aria-hidden="true">
-        <span className="ng-completion__particle ng-completion__particle--1" />
-        <span className="ng-completion__particle ng-completion__particle--2" />
-        <span className="ng-completion__particle ng-completion__particle--3" />
-        <span className="ng-completion__particle ng-completion__particle--4" />
-        <span className="ng-completion__particle ng-completion__particle--5" />
-        <span className="ng-completion__particle ng-completion__particle--6" />
-
         <span className="ng-completion__mark-shell">
           <NgamsoiMark className="ng-completion__mark" />
         </span>
-
-        <span className="ng-completion__baseline" />
       </div>
-
-      <p className="ng-completion__signature" aria-hidden="true">
-        <span>Kena boh!</span>
-        <span>Ngamsoi.</span>
-      </p>
-
-      {shortId && (
-        <span className="ng-completion__id" aria-hidden="true">
-          #{shortId}
-        </span>
-      )}
     </div>
   );
 }
