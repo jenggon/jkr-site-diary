@@ -53,6 +53,8 @@ interface RevisionProjection {
   readonly isCurrentRevision: boolean;
 }
 
+const MALAY_DAY_NAMES = ['AHAD', 'ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU'] as const;
+
 function formatRevision(number: number | null): string {
   if (number === null || !Number.isFinite(number)) return 'R—';
   return `R${Math.max(0, Math.trunc(number)).toString().padStart(2, '0')}`;
@@ -63,14 +65,51 @@ function formatClock(date: Date | null): string {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
-function resolveDeadlinePulse(finishDate: string | null, now: Date | null): { label: string; value: string; title?: string } {
-  if (!finishDate || !now) return { label: 'BAKI', value: '—' };
-  const finish = new Date(`${finishDate}T23:59:59`);
-  if (Number.isNaN(finish.getTime())) return { label: 'BAKI', value: '—' };
-  const days = Math.ceil((finish.getTime() - now.getTime()) / 86_400_000);
-  const title = `Tarikh tamat projek: ${finishDate}`;
-  if (days < 0) return { label: 'LEWAT', value: `${Math.abs(days)} HARI`, title };
-  return { label: 'BAKI', value: `${days} HARI`, title };
+function formatDeviceDay(date: Date | null): string {
+  if (!date) return '—';
+  return MALAY_DAY_NAMES[date.getDay()] ?? '—';
+}
+
+function formatDeviceDate(date: Date | null): string {
+  if (!date) return '--/--/--';
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear().toString().slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
+function resolveProjectDayPulse(
+  startDate: string | null,
+  finishDate: string | null,
+  now: Date | null,
+): { remainingDays: number | '—'; dayNumber: number | '—'; title?: string } {
+  if (!now) return { remainingDays: '—', dayNumber: '—' };
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  let remainingDays: number | '—' = '—';
+  let dayNumber: number | '—' = '—';
+
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    if (!Number.isNaN(start.getTime())) {
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+      const elapsedDays = Math.floor((today - startDay) / 86_400_000);
+      dayNumber = Math.max(0, elapsedDays + 1);
+    }
+  }
+
+  if (finishDate) {
+    const finish = new Date(`${finishDate}T23:59:59`);
+    if (!Number.isNaN(finish.getTime())) {
+      remainingDays = Math.max(0, Math.ceil((finish.getTime() - now.getTime()) / 86_400_000));
+    }
+  }
+
+  return {
+    remainingDays,
+    dayNumber,
+    title: finishDate ? `Tarikh tamat projek: ${finishDate}` : undefined,
+  };
 }
 
 export default function DailyEntryShell({
@@ -322,7 +361,9 @@ export default function DailyEntryShell({
     : revisionState === 'ERROR'
       ? 'R!'
       : 'R—';
-  const deadlinePulse = resolveDeadlinePulse(finishDate, now);
+  const projectDayPulse = resolveProjectDayPulse(startDate, finishDate, now);
+  const deviceDay = formatDeviceDay(now);
+  const deviceDate = formatDeviceDate(now);
   const clockLabel = formatClock(now);
 
   return (
@@ -409,13 +450,31 @@ export default function DailyEntryShell({
                   {revisionLabel}
                 </strong>
               </span>
-              <span className="ng-project-pulse__item" title={deadlinePulse.title}>
-                <small>{deadlinePulse.label}</small>
-                <strong>{deadlinePulse.value}</strong>
+
+              <span className="ng-project-pulse__item ng-project-pulse__item--split" title={projectDayPulse.title}>
+                <span className="ng-project-pulse__pair">
+                  <span className="ng-project-pulse__metric">
+                    <small>TINGGAL</small>
+                    <strong>{projectDayPulse.remainingDays}</strong>
+                  </span>
+                  <span className="ng-project-pulse__metric">
+                    <small>HARI KE</small>
+                    <strong>{projectDayPulse.dayNumber}</strong>
+                  </span>
+                </span>
               </span>
-              <span className="ng-project-pulse__item" title="Masa peranti semasa">
-                <small>MASA</small>
-                <strong>{clockLabel}</strong>
+
+              <span className="ng-project-pulse__item ng-project-pulse__item--split" title="Hari, tarikh dan masa peranti semasa">
+                <span className="ng-project-pulse__pair">
+                  <span className="ng-project-pulse__metric">
+                    <small>{deviceDay}</small>
+                    <strong>{deviceDate}</strong>
+                  </span>
+                  <span className="ng-project-pulse__metric">
+                    <small>MASA</small>
+                    <strong>{clockLabel}</strong>
+                  </span>
+                </span>
               </span>
             </div>
           </section>
