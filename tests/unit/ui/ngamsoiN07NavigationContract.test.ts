@@ -39,6 +39,12 @@ describe('N07 NGAMSOI homecoming/navigation contract', () => {
     expect(workspaceSource).toContain('role="tabpanel"');
   });
 
+  it('keeps desktop and mobile selected-state indicators orientation-safe', () => {
+    expect(navigationCss).toMatch(/\.ng-workspace-nav--desktop \.ng-workspace-nav__item::before\s*\{\s*content: none;/);
+    expect(navigationCss).toMatch(/\.ng-workspace-nav--mobile \.ng-workspace-nav__item\[data-selected="true"\]\s*\{[\s\S]*?box-shadow: none !important;/);
+    expect(navigationCss).toMatch(/\.ng-workspace-nav--mobile \.ng-workspace-nav__item\[data-selected="true"\]::before\s*\{[\s\S]*?background: var\(--ng-current\);/);
+  });
+
   it('keeps adaptive disclosure accessible without changing workspace state', () => {
     expect(workspaceSource).toContain('aria-expanded={navigationExpanded}');
     expect(workspaceSource).toContain('aria-controls="site-diary-desktop-navigation-items"');
