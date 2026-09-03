@@ -30,6 +30,12 @@ export default function SiteDiaryWorkspace() {
   }, []);
 
   useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      setCompactViewport(false);
+      setCompactOverlayOpen(false);
+      return;
+    }
+
     const media = window.matchMedia('(min-width: 768px) and (max-width: 1199px)');
     const sync = () => {
       setCompactViewport(media.matches);
