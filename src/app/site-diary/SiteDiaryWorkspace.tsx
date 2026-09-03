@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import CatatEntryForm from './CatatEntryForm';
 import DailyEntryForm from './DailyEntryForm';
 import DiaryManagementList from './DiaryManagementList';
 import ApprovalQueue from './ApprovalQueue';
@@ -9,105 +10,37 @@ import { useDailyEntryContext } from './DailyEntryShell';
 
 type WorkspaceTab = 'NEW' | 'OPEN' | 'RECORDS' | 'APPROVALS';
 
+function Icon({ type }: { type: WorkspaceTab }) {
+  if (type === 'NEW') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5"><path strokeWidth="2" strokeLinecap="round" d="M12 5v14M5 12h14" /></svg>;
+  if (type === 'OPEN') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5"><path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4 7h6l2 2h8v10H4z" /></svg>;
+  if (type === 'RECORDS') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5"><path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 5h14v14H5zM8 9h8M8 13h8M8 17h5" /></svg>;
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5"><path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z" /></svg>;
+}
+
 export default function SiteDiaryWorkspace() {
   const { programmeId } = useDailyEntryContext();
   const [tab, setTab] = useState<WorkspaceTab>('RECORDS');
-  const [reviewContext, setReviewContext] = useState<{
-    programmeId: string;
-    siteDiaryId: string;
-    approvalId: string;
-  } | null>(null);
-
-  const tabs: Array<{ id: WorkspaceTab; label: string; icon: React.ReactNode }> = [
-    {
-      id: 'NEW',
-      label: 'Baharu',
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5 sm:w-6 sm:h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: 'OPEN',
-      label: 'Aktiviti',
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5 sm:w-6 sm:h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: 'RECORDS',
-      label: 'Rekod',
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5 sm:w-6 sm:h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: 'APPROVALS',
-      label: 'Semak',
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5 sm:w-6 sm:h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-      ),
-    },
-  ];
+  const [reviewContext, setReviewContext] = useState<{ programmeId: string; siteDiaryId: string; approvalId: string } | null>(null);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [compactOverlayOpen, setCompactOverlayOpen] = useState(false);
 
   useEffect(() => {
-    setReviewContext(null);
-  }, [programmeId]);
+    try { setDesktopCollapsed(window.localStorage.getItem('site-diary-nav-collapsed') === '1'); } catch { /* no-op */ }
+  }, []);
+
+  useEffect(() => { setReviewContext(null); }, [programmeId]);
+
+  const tabs: Array<{ id: WorkspaceTab; label: string; meaning: string }> = [
+    { id: 'NEW', label: 'Catat', meaning: 'Catat kerja' },
+    { id: 'OPEN', label: 'Aktiviti', meaning: 'Aktiviti terbuka' },
+    { id: 'RECORDS', label: 'Rekod', meaning: 'Rekod kerja' },
+    { id: 'APPROVALS', label: 'Semak', meaning: 'Semakan' },
+  ];
 
   const navigateToTab = useCallback((nextTab: WorkspaceTab) => {
     setReviewContext(null);
     setTab(nextTab);
+    setCompactOverlayOpen(false);
   }, []);
 
   const isReviewingApproval = reviewContext?.programmeId === programmeId;
@@ -116,10 +49,7 @@ export default function SiteDiaryWorkspace() {
   const renderContent = () => {
     if (isReviewingApproval && reviewContext) {
       return (
-        <div
-          className="ng-workspace-review w-full"
-          data-workspace-detail="approval-review"
-        >
+        <div className="ng-workspace-review w-full" data-workspace-detail="approval-review">
           <ApprovalReview
             siteDiaryId={reviewContext.siteDiaryId}
             approvalId={reviewContext.approvalId}
@@ -130,90 +60,81 @@ export default function SiteDiaryWorkspace() {
       );
     }
 
+    if (tab === 'NEW') return <CatatEntryForm />;
+    if (tab === 'OPEN') return <DailyEntryForm key="open" initialTab="OPEN_ACTIVITIES" hideModeNavigation />;
+    if (tab === 'RECORDS') return <DiaryManagementList />;
     return (
-      <div
-        key={programmeId ?? 'no-programme'}
-        data-programme-context={programmeId ?? ''}
-        className="w-full"
-      >
-        {tab === 'RECORDS' ? (
-          <DiaryManagementList />
-        ) : tab === 'APPROVALS' ? (
-          <ApprovalQueue
-            onSelectReview={(siteDiaryId, approvalId) => {
-              if (programmeId) setReviewContext({ programmeId, siteDiaryId, approvalId });
-            }}
-          />
-        ) : (
-          <DailyEntryForm
-            key={tab}
-            initialTab={tab === 'OPEN' ? 'OPEN_ACTIVITIES' : 'NEW_ACTIVITY'}
-            hideModeNavigation
-          />
-        )}
-      </div>
+      <ApprovalQueue
+        onSelectReview={(siteDiaryId, approvalId) => {
+          if (programmeId) setReviewContext({ programmeId, siteDiaryId, approvalId });
+        }}
+      />
     );
+  };
+
+  const toggleDesktopCollapsed = () => {
+    setDesktopCollapsed((current) => {
+      const next = !current;
+      try { window.localStorage.setItem('site-diary-nav-collapsed', next ? '1' : '0'); } catch { /* no-op */ }
+      return next;
+    });
   };
 
   return (
     <div
-      className="ng-workspace flex-1 flex flex-col md:flex-row w-full h-full min-h-0 overflow-hidden relative"
+      className="ng-workspace relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row"
       data-workspace-tab={effectiveTab}
       data-workspace-review={isReviewingApproval ? 'true' : 'false'}
     >
-      {/* Desktop Sidebar Rail */}
       <nav
         aria-label="Navigasi Buku Harian Tapak"
-        className="ng-workspace-nav ng-workspace-nav--desktop hidden md:flex flex-col w-20 lg:w-64 shrink-0 bg-surface-canvas border-r border-surface-border overflow-y-auto"
+        className={`ng-adaptive-nav hidden shrink-0 flex-col border-r border-surface-border bg-surface-canvas md:flex ${desktopCollapsed ? 'is-collapsed' : ''} ${compactOverlayOpen ? 'is-overlay-open' : ''}`}
       >
-        <div
-          role="tablist"
-          aria-label="Ruang kerja Buku Harian Tapak"
-          className="ng-workspace-nav__list flex-1 py-4 px-2 lg:px-3 space-y-1 lg:space-y-2"
-        >
+        <div role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="flex-1 space-y-1 p-2">
           {tabs.map((item) => {
-            const isSelected = effectiveTab === item.id;
+            const selected = effectiveTab === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
                 role="tab"
-                aria-selected={isSelected}
+                aria-selected={selected}
                 aria-controls="site-diary-workspace-panel"
-                data-workspace-nav={item.id}
-                data-selected={isSelected ? 'true' : 'false'}
                 onClick={() => navigateToTab(item.id)}
-                className={`ng-workspace-nav__item w-full flex items-center p-3 rounded-xl transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-accent-selected active:duration-75 ${
-                  isSelected
-                    ? 'bg-surface-raised text-accent-selected border-l-4 border-accent-selected shadow-sm active:bg-surface-interactive'
-                    : 'text-tactical-text-secondary hover:bg-surface-raised hover:text-tactical-text-primary border-l-4 border-transparent active:bg-surface-interactive'
-                }`}
-                title={item.label}
+                title={item.meaning}
+                className={`ng-adaptive-nav__item flex min-h-[48px] w-full items-center rounded-lg border-l-2 px-3 outline-none transition ${selected ? 'border-accent-selected bg-surface-raised text-accent-selected' : 'border-transparent text-tactical-text-muted hover:bg-surface-raised hover:text-tactical-text-primary'}`}
               >
-                <div
-                  className={`ng-workspace-nav__icon shrink-0 flex items-center justify-center ${isSelected ? 'text-accent-selected' : 'text-tactical-text-muted'}`}
-                >
-                  {item.icon}
-                </div>
-                <span
-                  className={`ng-workspace-nav__label ml-3 hidden lg:block text-sm font-semibold tracking-wide ${isSelected ? 'text-tactical-text-primary' : ''}`}
-                >
-                  {item.label}
-                </span>
+                <span className="ng-adaptive-nav__icon flex w-7 shrink-0 justify-center"><Icon type={item.id} /></span>
+                <span className="ng-adaptive-nav__label ml-3 text-sm font-semibold">{item.label}</span>
               </button>
             );
           })}
         </div>
+        <div className="border-t border-surface-border p-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.matchMedia('(max-width: 1199px)').matches) setCompactOverlayOpen((current) => !current);
+              else toggleDesktopCollapsed();
+            }}
+            className="ng-adaptive-nav__toggle flex min-h-[44px] w-full items-center justify-center rounded-lg text-tactical-text-muted hover:bg-surface-raised hover:text-tactical-text-primary"
+            aria-label="Kembang atau kecilkan navigasi"
+            title="Kembang / kecil"
+          >
+            <span aria-hidden="true">{desktopCollapsed || !compactOverlayOpen ? '›' : '‹'}</span>
+          </button>
+        </div>
       </nav>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col w-full h-full min-w-0 overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto bg-surface-canvas w-full px-2 sm:px-4 md:px-6 py-4 pb-24 md:pb-6">
+      {compactOverlayOpen && <button type="button" aria-label="Tutup navigasi" className="ng-adaptive-nav-backdrop hidden md:block" onClick={() => setCompactOverlayOpen(false)} />}
+
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto bg-surface-canvas px-2 py-4 pb-24 sm:px-4 md:px-6 md:pb-6" data-workspace-scroll>
           <div
             id="site-diary-workspace-panel"
             role="tabpanel"
             aria-label={tabs.find((item) => item.id === effectiveTab)?.label}
-            className="ng-workspace-content w-full max-w-5xl mx-auto"
+            className="ng-workspace-content mx-auto w-full max-w-5xl"
             key={`${programmeId ?? 'no-programme'}-${effectiveTab}-${isReviewingApproval ? 'review' : 'root'}`}
           >
             {renderContent()}
@@ -221,49 +142,43 @@ export default function SiteDiaryWorkspace() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <nav
-        aria-label="Navigasi Buku Harian Tapak"
-        className="ng-workspace-nav ng-workspace-nav--mobile mobile-entry-bottom-nav md:hidden absolute bottom-0 left-0 right-0 z-40 bg-surface-primary/95 backdrop-blur-xl border-t border-surface-border shadow-[0_-4px_12px_rgba(0,0,0,0.3)] pb-safe"
-      >
-        <div
-          role="tablist"
-          aria-label="Ruang kerja Buku Harian Tapak"
-          className="ng-workspace-nav__list flex items-center justify-around px-1 py-2"
-        >
+      <nav aria-label="Navigasi Buku Harian Tapak" className="mobile-entry-bottom-nav absolute bottom-0 left-0 right-0 z-40 border-t border-surface-border bg-surface-primary/95 pb-safe backdrop-blur-xl md:hidden">
+        <div role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="flex items-center justify-around px-1 py-2">
           {tabs.map((item) => {
-            const isSelected = effectiveTab === item.id;
+            const selected = effectiveTab === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
                 role="tab"
-                aria-selected={isSelected}
+                aria-selected={selected}
                 aria-controls="site-diary-workspace-panel"
-                data-workspace-nav={item.id}
-                data-selected={isSelected ? 'true' : 'false'}
                 onClick={() => navigateToTab(item.id)}
-                className={`ng-workspace-nav__item mobile-entry-nav-item flex flex-col items-center justify-center flex-1 min-h-[56px] rounded-lg transition-colors duration-150 motion-safe:active:scale-95 active:duration-75 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-selected ${
-                  isSelected
-                    ? 'bg-surface-raised text-accent-selected border-t-2 border-accent-selected'
-                    : 'text-tactical-text-muted hover:bg-surface-primary hover:text-tactical-text-secondary border-t-2 border-transparent'
-                }`}
+                className={`mobile-entry-nav-item flex min-h-[56px] flex-1 flex-col items-center justify-center rounded-lg border-t-2 transition ${selected ? 'border-accent-selected bg-surface-raised text-accent-selected' : 'border-transparent text-tactical-text-muted'}`}
               >
-                <div
-                  className={`ng-workspace-nav__icon mb-1 motion-safe:transition-transform motion-safe:duration-150 ${isSelected ? 'motion-safe:scale-110' : ''}`}
-                >
-                  {item.icon}
-                </div>
-                <span
-                  className={`ng-workspace-nav__label text-xs font-bold tracking-tight ${isSelected ? 'text-tactical-text-primary' : ''}`}
-                >
-                  {item.label}
-                </span>
+                <span className="mb-1"><Icon type={item.id} /></span>
+                <span className="text-xs font-bold tracking-tight">{item.label}</span>
               </button>
             );
           })}
         </div>
       </nav>
+
+      <style jsx global>{`
+        .ng-adaptive-nav { width: 224px; transition: width 160ms ease, box-shadow 160ms ease; z-index: 45; }
+        .ng-adaptive-nav.is-collapsed { width: 72px; }
+        .ng-adaptive-nav.is-collapsed .ng-adaptive-nav__label { display: none; }
+        .ng-adaptive-nav-backdrop { position: absolute; inset: 0; z-index: 44; background: rgb(0 0 0 / .24); }
+        @media (min-width: 768px) and (max-width: 1199px) {
+          .ng-adaptive-nav { width: 72px; }
+          .ng-adaptive-nav .ng-adaptive-nav__label { display: none; }
+          .ng-adaptive-nav.is-overlay-open { position: absolute; inset-block: 0; left: 0; width: 224px; box-shadow: 18px 0 40px rgb(0 0 0 / .35); }
+          .ng-adaptive-nav.is-overlay-open .ng-adaptive-nav__label { display: inline; }
+        }
+        @media (min-width: 1200px) {
+          .ng-adaptive-nav-backdrop { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
