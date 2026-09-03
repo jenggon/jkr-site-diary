@@ -19,7 +19,7 @@ function Icon({ type }: { type: WorkspaceTab }) {
 
 export default function SiteDiaryWorkspace() {
   const { programmeId } = useDailyEntryContext();
-  const [tab, setTab] = useState<WorkspaceTab>('RECORDS');
+  const [tab, setTab] = useState<WorkspaceTab>('NEW');
   const [reviewContext, setReviewContext] = useState<{ programmeId: string; siteDiaryId: string; approvalId: string } | null>(null);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [compactOverlayOpen, setCompactOverlayOpen] = useState(false);
@@ -48,10 +48,10 @@ export default function SiteDiaryWorkspace() {
   useEffect(() => { setReviewContext(null); }, [programmeId]);
 
   const tabs: Array<{ id: WorkspaceTab; label: string; meaning: string }> = [
-    { id: 'NEW', label: 'Catat', meaning: 'Catat kerja' },
-    { id: 'OPEN', label: 'Aktiviti', meaning: 'Aktiviti terbuka' },
-    { id: 'RECORDS', label: 'Rekod', meaning: 'Rekod kerja' },
-    { id: 'APPROVALS', label: 'Semak', meaning: 'Semakan' },
+    { id: 'NEW', label: 'Catat', meaning: 'Catat' },
+    { id: 'OPEN', label: 'Aktiviti', meaning: 'Sambung' },
+    { id: 'RECORDS', label: 'Rekod', meaning: 'Rekod' },
+    { id: 'APPROVALS', label: 'Semak', meaning: 'Semak' },
   ];
 
   const navigateToTab = useCallback((nextTab: WorkspaceTab) => {
@@ -141,7 +141,7 @@ export default function SiteDiaryWorkspace() {
           {tabs.map((item) => {
             const isSelected = effectiveTab === item.id;
             return (
-              <button key={item.id} type="button" role="tab" aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} className="ng-workspace-nav__item mobile-entry-nav-item">
+              <button key={item.id} type="button" role="tab" aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} title={item.meaning} className="ng-workspace-nav__item mobile-entry-nav-item">
                 <span className="ng-workspace-nav__icon"><Icon type={item.id} /></span>
                 <span className="ng-workspace-nav__label">{item.label}</span>
               </button>
