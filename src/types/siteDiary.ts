@@ -38,6 +38,8 @@ export interface SiteDiaryPrintContext {
   work_start_time: string | null;
   work_end_time: string | null;
   weather_condition: SiteDiaryWeatherCondition | null;
+  /** Daily snapshot is carried through the existing atomic print-context boundary. */
+  daily_work_status?: SiteDiaryDailyWorkStatus | null;
   /** Legacy first interval fields retained until date-level output #7. */
   rain_start_time: string | null;
   rain_end_time: string | null;
