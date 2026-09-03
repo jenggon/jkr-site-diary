@@ -67,7 +67,7 @@ export default function ProjectWeatherPulse() {
     );
   }
 
-  const temperature = snapshot.current?.temperatureC;
+  const temperature = snapshot.current?.temperatureC ?? null;
   const rainWindow = snapshot.nextRainWindow;
   return (
     <span className="ng-project-pulse__item ng-project-weather" title={`Visual Crossing · dikemas kini ${new Date(snapshot.fetchedAt).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}`}>
