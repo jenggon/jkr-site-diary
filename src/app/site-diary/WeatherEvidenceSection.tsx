@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import type { SiteDiaryRainInterval, SiteDiaryWeatherCondition, SiteDiaryWeatherSource } from '@/types/siteDiary';
 
 export interface WeatherEvidenceValue {
@@ -90,6 +91,7 @@ export default function WeatherEvidenceSection({
   readonly onChange: (value: WeatherEvidenceValue) => void;
   readonly disabled?: boolean;
 }) {
+  const { session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -104,8 +106,17 @@ export default function WeatherEvidenceSection({
       return () => { active = false; };
     }
 
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setProviderError('Cadangan cuaca tidak tersedia. Sahkan secara manual.');
+      onChange({ ...EMPTY_WEATHER_EVIDENCE, source: 'MANUAL' });
+      return () => { active = false; };
+    }
+
     setLoading(true);
-    fetch(`/api/weather/site?mode=historical&date=${encodeURIComponent(date)}`)
+    fetch(`/api/weather/site?mode=historical&date=${encodeURIComponent(date)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error('provider');
         const body = await response.json() as { data?: WeatherApiPayload };
@@ -134,7 +145,7 @@ export default function WeatherEvidenceSection({
       .finally(() => { if (active) setLoading(false); });
 
     return () => { active = false; };
-  }, [date, historical, onChange]);
+  }, [date, historical, onChange, session?.access_token]);
 
   const condition = value.intervals.length > 0 ? 'HUJAN' : value.condition;
   const needsConfirmation = value.source === 'AUTO';
@@ -168,9 +179,7 @@ export default function WeatherEvidenceSection({
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">CUACA</div>
           <h3 className="mt-1 text-sm font-bold text-zinc-100">{condition}</h3>
-          <p className="mt-1 text-xs text-zinc-500">
-            {historical ? 'Bukti sejam · penyelia sahkan' : 'Hari semasa · catatan penyelia'}
-          </p>
+          <p className="mt-1 text-xs text-zinc-500">{historical ? 'Bukti sejam · penyelia sahkan' : 'Hari semasa · catatan penyelia'}</p>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={() => setManualCondition('ELOK')} disabled={disabled} className={`rounded-lg border px-3 py-2 text-xs font-bold ${condition === 'ELOK' ? 'border-emerald-600 bg-emerald-950/50 text-emerald-200' : 'border-zinc-700 text-zinc-400'}`}>ELOK</button>
@@ -190,22 +199,8 @@ export default function WeatherEvidenceSection({
             </div>
             {needsConfirmation && (
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...value, source: 'USER_CONFIRMED' })}
-                  disabled={disabled}
-                  className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-200"
-                >
-                  SAH
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditing(true); onChange({ ...value, source: 'USER_CONFIRMED' }); }}
-                  disabled={disabled}
-                  className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-300"
-                >
-                  UBAH
-                </button>
+                <button type="button" onClick={() => onChange({ ...value, source: 'USER_CONFIRMED' })} disabled={disabled} className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-200">SAH</button>
+                <button type="button" onClick={() => { setEditing(true); onChange({ ...value, source: 'USER_CONFIRMED' }); }} disabled={disabled} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-300">UBAH</button>
               </div>
             )}
           </div>
@@ -222,16 +217,10 @@ export default function WeatherEvidenceSection({
               <select value={interval.end} onChange={(event) => updateInterval(index, 'end', event.target.value)} disabled={disabled} className="min-h-[42px] rounded-lg border border-zinc-700 bg-zinc-950 px-2 text-xs text-zinc-200">
                 {END_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = value.intervals.filter((_, rowIndex) => rowIndex !== index);
-                  onChange({ ...value, intervals: next, condition: next.length ? 'HUJAN' : 'ELOK', source: value.provider ? 'USER_CONFIRMED' : 'MANUAL' });
-                }}
-                disabled={disabled}
-                aria-label="Padam sela hujan"
-                className="min-h-[42px] rounded-lg border border-zinc-800 px-3 text-zinc-500 hover:text-red-300"
-              >×</button>
+              <button type="button" onClick={() => {
+                const next = value.intervals.filter((_, rowIndex) => rowIndex !== index);
+                onChange({ ...value, intervals: next, condition: next.length ? 'HUJAN' : 'ELOK', source: value.provider ? 'USER_CONFIRMED' : 'MANUAL' });
+              }} disabled={disabled} aria-label="Padam sela hujan" className="min-h-[42px] rounded-lg border border-zinc-800 px-3 text-zinc-500 hover:text-red-300">×</button>
             </div>
           ))}
           <button type="button" onClick={addInterval} disabled={disabled} className="rounded-lg border border-dashed border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200">+ Sela hujan</button>
