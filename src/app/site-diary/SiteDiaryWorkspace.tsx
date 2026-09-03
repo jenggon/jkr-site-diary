@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import CatatEntryForm from './CatatEntryForm';
-import DailyEntryForm from './DailyEntryForm';
+import AktivitiEntryForm from './AktivitiEntryForm';
 import DiaryManagementList from './DiaryManagementList';
 import ApprovalQueue from './ApprovalQueue';
 import ApprovalReview from './ApprovalReview';
@@ -35,7 +35,6 @@ export default function SiteDiaryWorkspace() {
       setCompactOverlayOpen(false);
       return;
     }
-
     const media = window.matchMedia('(min-width: 768px) and (max-width: 1199px)');
     const sync = () => {
       setCompactViewport(media.matches);
@@ -78,9 +77,8 @@ export default function SiteDiaryWorkspace() {
         </div>
       );
     }
-
     if (tab === 'NEW') return <CatatEntryForm />;
-    if (tab === 'OPEN') return <DailyEntryForm key="open" initialTab="OPEN_ACTIVITIES" hideModeNavigation />;
+    if (tab === 'OPEN') return <AktivitiEntryForm />;
     if (tab === 'RECORDS') return <DiaryManagementList />;
     return (
       <ApprovalQueue
@@ -108,31 +106,13 @@ export default function SiteDiaryWorkspace() {
   };
 
   return (
-    <div
-      className="ng-workspace relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row"
-      data-workspace-tab={effectiveTab}
-      data-workspace-review={isReviewingApproval ? 'true' : 'false'}
-    >
-      <nav
-        id="site-diary-desktop-navigation"
-        aria-label="Navigasi Buku Harian Tapak"
-        className={`ng-workspace-nav ng-workspace-nav--desktop ng-adaptive-nav hidden shrink-0 flex-col md:flex ${desktopCollapsed ? 'is-collapsed' : ''} ${compactOverlayOpen ? 'is-overlay-open' : ''}`}
-      >
+    <div className="ng-workspace relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row" data-workspace-tab={effectiveTab} data-workspace-review={isReviewingApproval ? 'true' : 'false'}>
+      <nav id="site-diary-desktop-navigation" aria-label="Navigasi Buku Harian Tapak" className={`ng-workspace-nav ng-workspace-nav--desktop ng-adaptive-nav hidden shrink-0 flex-col md:flex ${desktopCollapsed ? 'is-collapsed' : ''} ${compactOverlayOpen ? 'is-overlay-open' : ''}`}>
         <div id="site-diary-desktop-navigation-items" role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="ng-workspace-nav__list flex-1">
           {tabs.map((item) => {
             const isSelected = effectiveTab === item.id;
             return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                data-selected={isSelected ? 'true' : 'false'}
-                aria-controls="site-diary-workspace-panel"
-                onClick={() => navigateToTab(item.id)}
-                title={item.meaning}
-                className="ng-workspace-nav__item ng-adaptive-nav__item"
-              >
+              <button key={item.id} type="button" role="tab" aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} title={item.meaning} className="ng-workspace-nav__item ng-adaptive-nav__item">
                 <span className="ng-workspace-nav__icon ng-adaptive-nav__icon"><Icon type={item.id} /></span>
                 <span className="ng-workspace-nav__label ng-adaptive-nav__label">{item.label}</span>
               </button>
@@ -140,15 +120,7 @@ export default function SiteDiaryWorkspace() {
           })}
         </div>
         <div className="ng-adaptive-nav__controls">
-          <button
-            type="button"
-            onClick={toggleNavigation}
-            className="ng-adaptive-nav__toggle"
-            aria-expanded={navigationExpanded}
-            aria-controls="site-diary-desktop-navigation-items"
-            aria-label={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'}
-            title={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'}
-          >
+          <button type="button" onClick={toggleNavigation} className="ng-adaptive-nav__toggle" aria-expanded={navigationExpanded} aria-controls="site-diary-desktop-navigation-items" aria-label={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'} title={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'}>
             <span aria-hidden="true">{navigationExpanded ? '‹' : '›'}</span>
           </button>
         </div>
@@ -158,13 +130,7 @@ export default function SiteDiaryWorkspace() {
 
       <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto bg-surface-canvas px-2 py-4 pb-24 sm:px-4 md:px-6 md:pb-6" data-workspace-scroll>
-          <div
-            id="site-diary-workspace-panel"
-            role="tabpanel"
-            aria-label={tabs.find((item) => item.id === effectiveTab)?.label}
-            className="ng-workspace-content mx-auto w-full max-w-5xl"
-            key={`${programmeId ?? 'no-programme'}-${effectiveTab}-${isReviewingApproval ? 'review' : 'root'}`}
-          >
+          <div id="site-diary-workspace-panel" role="tabpanel" aria-label={tabs.find((item) => item.id === effectiveTab)?.label} className="ng-workspace-content mx-auto w-full max-w-5xl" key={`${programmeId ?? 'no-programme'}-${effectiveTab}-${isReviewingApproval ? 'review' : 'root'}`}>
             {renderContent()}
           </div>
         </div>
@@ -175,16 +141,7 @@ export default function SiteDiaryWorkspace() {
           {tabs.map((item) => {
             const isSelected = effectiveTab === item.id;
             return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                data-selected={isSelected ? 'true' : 'false'}
-                aria-controls="site-diary-workspace-panel"
-                onClick={() => navigateToTab(item.id)}
-                className="ng-workspace-nav__item mobile-entry-nav-item"
-              >
+              <button key={item.id} type="button" role="tab" aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} className="ng-workspace-nav__item mobile-entry-nav-item">
                 <span className="ng-workspace-nav__icon"><Icon type={item.id} /></span>
                 <span className="ng-workspace-nav__label">{item.label}</span>
               </button>
