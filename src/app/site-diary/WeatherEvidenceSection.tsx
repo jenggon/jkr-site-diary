@@ -100,7 +100,7 @@ export default function WeatherEvidenceSection({
     setProviderError(null);
     setEditing(false);
     if (!date || !historical) {
-      onChange({ ...EMPTY_WEATHER_EVIDENCE, condition: value.condition, intervals: value.intervals });
+      onChange({ ...EMPTY_WEATHER_EVIDENCE });
       return () => { active = false; };
     }
 
@@ -134,9 +134,7 @@ export default function WeatherEvidenceSection({
       .finally(() => { if (active) setLoading(false); });
 
     return () => { active = false; };
-    // Weather evidence intentionally re-resolves when the Site Diary date changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, historical]);
+  }, [date, historical, onChange]);
 
   const condition = value.intervals.length > 0 ? 'HUJAN' : value.condition;
   const needsConfirmation = value.source === 'AUTO';
