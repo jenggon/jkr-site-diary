@@ -36,11 +36,16 @@ const createSiteDiarySchema = z.object({
   activity_id: z.string().refine(isValidUuid, 'Invalid UUID for activity_id'),
   activity_date: z.string().refine(isValidIso8601, 'Invalid ISO8601 format for activity_date'),
   operation_intent: z.enum(['IN_PROGRESS_DIARY', 'FINAL_COMPLETION_DIARY', 'CARRY_FORWARD_DIARY']),
+  // Legacy DB field. F4.5 official ELOK/HUJAN authority lives in print_context.weather_condition.
   weather: z.string().nullable().optional(),
   notes: z.string().min(1, 'notes cannot be empty'),
   manpower: z.any().optional(),
   print_context: printContextSchema,
 });
+
+function legacyWeatherSession(value: string | null | undefined): 'Morning' | 'Afternoon' | 'Night' | null {
+  return value === 'Morning' || value === 'Afternoon' || value === 'Night' ? value : null;
+}
 
 export async function POST(request: Request) {
   try {
@@ -67,7 +72,7 @@ export async function POST(request: Request) {
       activityId: parseResult.data.activity_id,
       activityDate: parseResult.data.activity_date,
       operationIntent: parseResult.data.operation_intent,
-      weather: parseResult.data.weather as any,
+      weather: legacyWeatherSession(parseResult.data.weather),
       notes: parseResult.data.notes,
       manpower: parseResult.data.manpower as any,
       printContext: parseResult.data.print_context as any,
