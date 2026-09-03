@@ -92,6 +92,7 @@ describe('Site Diary runtime workspace navigation', () => {
       'Semak',
     ]);
     expect(tabs[2]?.getAttribute('aria-selected')).toBe('true');
+    expect(tabs[2]?.getAttribute('data-selected')).toBe('true');
 
     await act(async () => (tabs[0] as HTMLButtonElement).click());
     expect(container.textContent).toContain('CATAT_programme-A');
@@ -114,6 +115,7 @@ describe('Site Diary runtime workspace navigation', () => {
     expect(container.textContent).not.toContain('HISTORICAL_A_PRINT_EDIT_TARGET');
     const tabs = [...container.querySelectorAll('[role="tab"]')];
     expect(tabs[2]?.getAttribute('aria-selected')).toBe('true');
+    expect(tabs[2]?.getAttribute('data-selected')).toBe('true');
 
     await act(async () => (tabs[1] as HTMLButtonElement).click());
     const selectActivity = [...container.querySelectorAll('button')].find(
@@ -170,7 +172,8 @@ describe('Site Diary runtime workspace navigation', () => {
       await act(async () => tab.click());
       const currentTabs = [...container.querySelectorAll('[role="tab"]')];
       expect(currentTabs.filter((item) => item.getAttribute('aria-selected') === 'true')).toHaveLength(2);
-      expect(currentTabs[index]?.className).toContain('text-accent-selected');
+      expect(currentTabs.filter((item) => item.getAttribute('data-selected') === 'true')).toHaveLength(2);
+      expect(currentTabs[index]?.getAttribute('data-selected')).toBe('true');
     }
     expect(container.textContent).not.toContain('Cetak / PDF');
   });
