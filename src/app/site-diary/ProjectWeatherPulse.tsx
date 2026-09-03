@@ -48,7 +48,7 @@ export default function ProjectWeatherPulse() {
         });
         if (!response.ok) throw new Error('weather');
         const body = await response.json() as ApiBody;
-        if (!active || !body.data) return;
+        if (!active || !body.data || Array.isArray(body.data)) return;
         setSnapshot(body.data);
         setUnavailable(false);
       } catch {
@@ -71,10 +71,11 @@ export default function ProjectWeatherPulse() {
   );
 
   if (!snapshot) {
+    const label = unavailable ? 'Ramalan tidak tersedia' : 'Memuat ramalan';
     return (
-      <span className="ng-project-pulse__item ng-project-weather" title={unavailable ? 'Cuaca tidak tersedia' : 'Memuat cuaca'}>
-        <small>CUACA</small>
-        <strong>{unavailable ? 'TIADA DATA' : 'MUAT'}</strong>
+      <span className="ng-project-pulse__item ng-project-weather" data-weather-state={unavailable ? 'unavailable' : 'loading'} aria-label={label}>
+        <small>RAMALAN</small>
+        <strong>{unavailable ? 'TIADA' : 'MUAT'}</strong>
       </span>
     );
   }
@@ -82,11 +83,15 @@ export default function ProjectWeatherPulse() {
   const temperature = snapshot.current?.temperatureC ?? null;
   const rainWindow = snapshot.nextRainWindow;
   const dryLabel = temperature === null ? '☀ KERING' : `☀ ${Math.round(temperature)}°`;
+  const updatedAt = new Date(snapshot.fetchedAt).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
+  const display = rainWindow ? `☔ ${rainProbability ?? 0}%` : dryLabel;
+  const detail = rainWindow ? `${rainWindow.start.replace(':00', '')}–${rainWindow.end.replace(':00', '')}` : 'Tiada hujan dekat';
+
   return (
-    <span className="ng-project-pulse__item ng-project-weather" title={`Visual Crossing · dikemas kini ${new Date(snapshot.fetchedAt).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}`}>
-      <small>CUACA</small>
-      <strong>{rainWindow ? `☔ ${rainProbability ?? 0}%` : dryLabel}</strong>
-      {rainWindow && <span className="ng-project-weather__sub">{`${rainWindow.start.replace(':00', '')}–${rainWindow.end.replace(':00', '')}`}</span>}
+    <span className="ng-project-pulse__item ng-project-weather" data-weather-state={rainWindow ? 'rain' : 'dry'} aria-label={`Ramalan cuaca ${display}, ${detail}. Visual Crossing, dikemas kini ${updatedAt}.`}>
+      <small>RAMALAN</small>
+      <strong>{display}</strong>
+      {rainWindow && <span className="ng-project-weather__sub">{detail}</span>}
     </span>
   );
 }
