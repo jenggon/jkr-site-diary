@@ -48,10 +48,10 @@ export default function SiteDiaryWorkspace() {
   useEffect(() => { setReviewContext(null); }, [programmeId]);
 
   const tabs: Array<{ id: WorkspaceTab; label: string; meaning: string }> = [
-    { id: 'NEW', label: 'Catat', meaning: 'Catat' },
-    { id: 'OPEN', label: 'Aktiviti', meaning: 'Sambung' },
-    { id: 'RECORDS', label: 'Rekod', meaning: 'Rekod' },
-    { id: 'APPROVALS', label: 'Semak', meaning: 'Semak' },
+    { id: 'NEW', label: 'Catat', meaning: 'Catat kerja' },
+    { id: 'OPEN', label: 'Aktiviti', meaning: 'Sambung kerja' },
+    { id: 'RECORDS', label: 'Rekod', meaning: 'Lihat rekod' },
+    { id: 'APPROVALS', label: 'Semak', meaning: 'Semak rekod' },
   ];
 
   const navigateToTab = useCallback((nextTab: WorkspaceTab) => {
@@ -59,6 +59,9 @@ export default function SiteDiaryWorkspace() {
     setTab(nextTab);
     setCompactOverlayOpen(false);
   }, []);
+
+  const showRecords = useCallback(() => navigateToTab('RECORDS'), [navigateToTab]);
+  const startNewObservation = useCallback(() => navigateToTab('NEW'), [navigateToTab]);
 
   const isReviewingApproval = reviewContext?.programmeId === programmeId;
   const effectiveTab: WorkspaceTab = isReviewingApproval ? 'APPROVALS' : tab;
@@ -77,8 +80,8 @@ export default function SiteDiaryWorkspace() {
         </div>
       );
     }
-    if (tab === 'NEW') return <CatatEntryForm />;
-    if (tab === 'OPEN') return <AktivitiEntryForm />;
+    if (tab === 'NEW') return <CatatEntryForm onShowRecords={showRecords} />;
+    if (tab === 'OPEN') return <AktivitiEntryForm onShowRecords={showRecords} onAddActivity={startNewObservation} />;
     if (tab === 'RECORDS') return <DiaryManagementList />;
     return <ApprovalQueue onSelectReview={(siteDiaryId, approvalId) => { if (programmeId) setReviewContext({ programmeId, siteDiaryId, approvalId }); }} />;
   };
@@ -98,21 +101,21 @@ export default function SiteDiaryWorkspace() {
 
   return (
     <div className="ng-workspace relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row" data-workspace-tab={effectiveTab} data-workspace-review={isReviewingApproval ? 'true' : 'false'}>
-      <nav id="site-diary-desktop-navigation" aria-label="Navigasi Buku Harian Tapak" className={`ng-workspace-nav ng-workspace-nav--desktop ng-adaptive-nav hidden shrink-0 flex-col md:flex ${desktopCollapsed ? 'is-collapsed' : ''} ${compactOverlayOpen ? 'is-overlay-open' : ''}`}>
+      <nav id="site-diary-desktop-navigation" data-workspace-nav="desktop" aria-label="Navigasi Buku Harian Tapak" className={`ng-workspace-nav ng-workspace-nav--desktop ng-adaptive-nav hidden shrink-0 flex-col md:flex ${desktopCollapsed ? 'is-collapsed' : ''} ${compactOverlayOpen ? 'is-overlay-open' : ''}`}>
         <div id="site-diary-desktop-navigation-items" role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="ng-workspace-nav__list flex-1">
           {tabs.map((item) => {
             const isSelected = effectiveTab === item.id;
-            return <button key={item.id} type="button" role="tab" aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} title={item.meaning} className="ng-workspace-nav__item ng-adaptive-nav__item"><span className="ng-workspace-nav__icon ng-adaptive-nav__icon"><Icon type={item.id} /></span><span className="ng-workspace-nav__label ng-adaptive-nav__label">{item.label}</span></button>;
+            return <button key={item.id} type="button" role="tab" aria-label={item.meaning} aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} data-tooltip={navigationExpanded ? undefined : item.meaning} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} className="ng-workspace-nav__item ng-adaptive-nav__item"><span className="ng-workspace-nav__icon ng-adaptive-nav__icon"><Icon type={item.id} /></span><span className="ng-workspace-nav__label ng-adaptive-nav__label">{item.label}</span></button>;
           })}
         </div>
-        <div className="ng-adaptive-nav__controls"><button type="button" onClick={toggleNavigation} className="ng-adaptive-nav__toggle" aria-expanded={navigationExpanded} aria-controls="site-diary-desktop-navigation-items" aria-label={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'} title={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'}><span aria-hidden="true">{navigationExpanded ? '‹' : '›'}</span></button></div>
+        <div className="ng-adaptive-nav__controls"><button type="button" onClick={toggleNavigation} className="ng-adaptive-nav__toggle" aria-expanded={navigationExpanded} aria-controls="site-diary-desktop-navigation-items" aria-label={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'}><span aria-hidden="true">{navigationExpanded ? '‹' : '›'}</span></button></div>
       </nav>
 
       {compactOverlayOpen && <button type="button" aria-label="Tutup navigasi" className="ng-adaptive-nav-backdrop hidden md:block" onClick={() => setCompactOverlayOpen(false)} />}
 
       <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden"><div className="flex-1 overflow-y-auto bg-surface-canvas px-2 py-4 pb-24 sm:px-4 md:px-6 md:pb-6" data-workspace-scroll><div id="site-diary-workspace-panel" role="tabpanel" aria-label={tabs.find((item) => item.id === effectiveTab)?.label} className="ng-workspace-content mx-auto w-full max-w-5xl" key={`${programmeId ?? 'no-programme'}-${effectiveTab}-${isReviewingApproval ? 'review' : 'root'}`}>{renderContent()}</div></div></div>
 
-      <nav aria-label="Navigasi Buku Harian Tapak" className="ng-workspace-nav ng-workspace-nav--mobile mobile-entry-bottom-nav absolute bottom-0 left-0 right-0 z-40 md:hidden"><div role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="ng-workspace-nav__list">{tabs.map((item) => { const isSelected = effectiveTab === item.id; return <button key={item.id} type="button" role="tab" aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} title={item.meaning} className="ng-workspace-nav__item mobile-entry-nav-item"><span className="ng-workspace-nav__icon"><Icon type={item.id} /></span><span className="ng-workspace-nav__label">{item.label}</span></button>; })}</div></nav>
+      <nav data-workspace-nav="mobile" aria-label="Navigasi Buku Harian Tapak" className="ng-workspace-nav ng-workspace-nav--mobile mobile-entry-bottom-nav absolute bottom-0 left-0 right-0 z-40 md:hidden"><div role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="ng-workspace-nav__list">{tabs.map((item) => { const isSelected = effectiveTab === item.id; return <button key={item.id} type="button" role="tab" aria-label={item.meaning} aria-selected={isSelected} data-selected={isSelected ? 'true' : 'false'} aria-controls="site-diary-workspace-panel" onClick={() => navigateToTab(item.id)} className="ng-workspace-nav__item mobile-entry-nav-item"><span className="ng-workspace-nav__icon"><Icon type={item.id} /></span><span className="ng-workspace-nav__label">{item.label}</span></button>; })}</div></nav>
     </div>
   );
 }
