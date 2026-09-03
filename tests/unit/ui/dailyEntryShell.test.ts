@@ -41,13 +41,10 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(html).not.toContain('Digital Fieldbook · Project Ground Truth');
     expect(html).not.toContain('>DATUM<');
     expect(html).not.toContain('Sistem Pengurusan Tapak Digital');
-
     expect(html).toContain('h-[100dvh]');
     expect(html).toContain('w-full');
-
     expect(html).not.toContain('href="/site-diary/print"');
     expect(html).not.toContain('Cetak / PDF');
-
     expect(html).toContain('SU');
     expect(html).toContain('ng-profile-trigger');
     expect(html).toContain('ng-profile-panel');
@@ -68,7 +65,6 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(brandSource).toContain('ngamsoi-mark-baseline');
     expect(brandSource).not.toContain('ngamsoi-mark-stem');
     expect(brandSource).not.toContain('M32 28V51');
-
     expect(identityCss).toContain('--ng-graphite-950');
     expect(identityCss).toContain('--ng-current: #ff7a1a');
     expect(identityCss).toContain('--ng-established: #55b879');
@@ -76,7 +72,6 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(identityCss).toContain('--ng-font-reference');
     expect(identityCss).toContain('--ng-font-brand');
     expect(headerCss).toContain('.ngamsoi-brand-lockup .ngamsoi-mark-datum');
-
     expect(layoutSource).toContain('NGAMSOI | JKR Site Diary');
     expect(layoutSource).toContain('/ngamsoi-mark.svg');
     expect(layoutSource).toContain('ngamsoi-n05r2-header.css');
@@ -90,7 +85,6 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
 
   it('locks header hierarchy to project identity plus the five F4.5 operational blocks', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
-
     expect(shellSource).toContain('programmeShortName');
     expect(shellSource).toContain('ng-project-short-name');
     expect(shellSource).toContain('ng-project-title');
@@ -107,26 +101,25 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(shellSource).not.toContain('Semakan Semasa');
   });
 
-  it('preserves native DailyEntryForm through the bounded Site Diary workspace composition', () => {
+  it('composes CATAT and AKTIVITI through their bounded F4.5 workspace surfaces', () => {
     const pageContent = read('src/app/site-diary/page.tsx');
     const workspaceContent = read('src/app/site-diary/SiteDiaryWorkspace.tsx');
-
     expect(pageContent).toContain("import DailyEntryShell from './DailyEntryShell'");
     expect(pageContent).toContain("import SiteDiaryWorkspace from './SiteDiaryWorkspace'");
     expect(pageContent).toContain('<DailyEntryShell>');
     expect(pageContent).toContain('<SiteDiaryWorkspace />');
-    expect(workspaceContent).toContain("import DailyEntryForm from './DailyEntryForm'");
-    expect(workspaceContent).toContain('<DailyEntryForm');
+    expect(workspaceContent).toContain("import CatatEntryForm from './CatatEntryForm'");
+    expect(workspaceContent).toContain("import AktivitiEntryForm from './AktivitiEntryForm'");
+    expect(workspaceContent).toContain('<CatatEntryForm />');
+    expect(workspaceContent).toContain('<AktivitiEntryForm />');
   });
 
   it('uses canonical programme and revision discovery without a default programme shortcut', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
-
     expect(shellSource).toContain('/api/programme?status=Active');
     expect(shellSource).toContain('/api/project-summary?programmeId=');
     expect(shellSource).toContain('/api/programme-revision?programmeId=');
     expect(shellSource).not.toMatch(/\/api\/project-summary['"`]\s*\)/);
-
     expect(shellSource).toContain('revisionId');
     expect(shellSource).toContain('revisionNumber');
     expect(shellSource).toContain('programmeName');
@@ -135,7 +128,6 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
 
   it('handles 0, 1, and multiple active programme scenarios according to HQ authority', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
-
     expect(shellSource).toContain('Tiada Projek Aktif Ditemui');
     expect(shellSource).toContain('options.length === 0');
     expect(shellSource).toContain('options.length === 1');
@@ -147,7 +139,6 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
 
   it('REGRESSION: F2.1-A DailyEntryShell does NOT import or rely on DEFAULT_PROGRAMME_ID', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
-
     expect(shellSource).not.toContain('DEFAULT_PROGRAMME_ID');
     expect(shellSource).not.toContain('0651e125-3ef4-47c4-a3fa-8aec49bdf979');
   });
