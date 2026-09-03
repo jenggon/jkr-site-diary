@@ -105,7 +105,7 @@ export default function OpenActivitiesList({
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          <span className="text-xs font-semibold text-zinc-300">Muat</span>
+          <span className="text-xs font-semibold text-zinc-300">Muat…</span>
         </div>
       </div>
     );
@@ -141,7 +141,7 @@ export default function OpenActivitiesList({
         </div>
         <h3 className="mt-3 text-sm font-bold text-zinc-100">Tiada aktiviti</h3>
         {showCreateNewActivity && (
-          <button type="button" onClick={onCreateNewActivity} data-testid="create-new-activity-empty-btn" aria-label="Catat kerja" className="mt-4 min-h-[40px] rounded-lg border border-orange-700/70 bg-orange-950/20 px-4 text-xs font-bold text-orange-200">
+          <button type="button" onClick={onCreateNewActivity} data-testid="create-new-activity-empty-btn" data-legacy-label="Baharu" aria-label="Catat kerja" className="mt-4 min-h-[40px] rounded-lg border border-orange-700/70 bg-orange-950/20 px-4 text-xs font-bold text-orange-200">
             Catat
           </button>
         )}
