@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/F4.5-catat-corrections-1-6
+      - feature/F4.5-final-visual-reconciliation
   workflow_dispatch:
 
 jobs:
