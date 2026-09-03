@@ -74,8 +74,8 @@ export default function AktivitiEntryForm() {
   const [knownStartDate, setKnownStartDate] = useState('');
   const [location, setLocation] = useState('');
   const [contractorScope, setContractorScope] = useState<'CONTRACTOR' | 'NSC'>('CONTRACTOR');
-  const [workStartTime, setWorkStartTime] = useState('');
-  const [workEndTime, setWorkEndTime] = useState('');
+  const [workStartTime, setWorkStartTime] = useState('08:00');
+  const [workEndTime, setWorkEndTime] = useState('17:00');
   const [weather, setWeather] = useState<WeatherEvidenceValue>(EMPTY_WEATHER_EVIDENCE);
   const [manpower, setManpower] = useState<ManpowerRow[]>([]);
   const [notes, setNotes] = useState('');
@@ -108,8 +108,8 @@ export default function AktivitiEntryForm() {
     setKnownStartDate('');
     setLocation('');
     setContractorScope('CONTRACTOR');
-    setWorkStartTime('');
-    setWorkEndTime('');
+    setWorkStartTime('08:00');
+    setWorkEndTime('17:00');
     setWeather({ ...EMPTY_WEATHER_EVIDENCE });
     setManpower([]);
     setNotes('');
@@ -142,8 +142,8 @@ export default function AktivitiEntryForm() {
     setKnownStartDate('');
     setLocation('');
     setContractorScope('CONTRACTOR');
-    setWorkStartTime('');
-    setWorkEndTime('');
+    setWorkStartTime('08:00');
+    setWorkEndTime('17:00');
     setWeather({ ...EMPTY_WEATHER_EVIDENCE });
     setManpower([]);
     setNotes('');
@@ -318,7 +318,7 @@ export default function AktivitiEntryForm() {
   const isInProgress = activity.status === 'In Progress';
 
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-4" aria-label="Borang Lanjut Aktiviti">
+    <form onSubmit={handleSubmit} className="ng-catat-flow w-full space-y-4" aria-label="Borang Buku Harian Tapak" data-entry-mode="AKTIVITI">
       <section className="rounded-2xl border border-blue-800/60 bg-blue-950/40 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -382,7 +382,7 @@ export default function AktivitiEntryForm() {
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
         <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">CATATAN</div>
-        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting} rows={4} placeholder="Catat kerja" className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-100" />
+        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting} rows={3} placeholder="Catat kerja" className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-100" />
       </section>
 
       {error && <div role="alert" className="rounded-xl border border-red-800/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
