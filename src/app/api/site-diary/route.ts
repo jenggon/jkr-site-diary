@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { isValidUuid } from '@/lib/uuid';
 import { isValidIso8601 } from '@/lib/clock';
 import { isSuccess } from '@/lib/result';
+import { ActivityWeather } from '@/types/activity';
 
 const timeValue = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid HH:MM time').nullable();
 const hourBoundary = z.string().regex(/^(?:[01]\d|2[0-3]|24):00$/, 'Invalid hourly boundary');
@@ -43,8 +44,11 @@ const createSiteDiarySchema = z.object({
   print_context: printContextSchema,
 });
 
-function legacyWeatherSession(value: string | null | undefined): 'Morning' | 'Afternoon' | 'Night' | null {
-  return value === 'Morning' || value === 'Afternoon' || value === 'Night' ? value : null;
+function legacyWeatherSession(value: string | null | undefined): ActivityWeather | null {
+  if (value === ActivityWeather.Morning) return ActivityWeather.Morning;
+  if (value === ActivityWeather.Afternoon) return ActivityWeather.Afternoon;
+  if (value === ActivityWeather.Night) return ActivityWeather.Night;
+  return null;
 }
 
 export async function POST(request: Request) {
