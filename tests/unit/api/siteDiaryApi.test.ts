@@ -50,7 +50,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     it('2. Accepts authenticated valid create and delegates to domain', async () => {
       vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.createSiteDiary.mockResolvedValue(Success({ site_diary_id: 'sd-1' }));
-      
+
       const payload = {
         programme_id: generateUuid(),
         revision_id: generateUuid(),
@@ -62,23 +62,68 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
       const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify(payload) });
       // @ts-ignore
       const res = await createSiteDiary(req);
-      
+
       expect(res.status).toBe(201);
-      expect(mockService.createSiteDiary).toHaveBeenCalledWith({
+      expect(mockService.createSiteDiary).toHaveBeenCalledWith(expect.objectContaining({
         programmeId: payload.programme_id,
         revisionId: payload.revision_id,
         activityId: payload.activity_id,
         activityDate: payload.activity_date,
         operationIntent: 'IN_PROGRESS_DIARY',
+        weather: null,
         notes: payload.notes,
         submittedBy: 'user-1'
-      });
+      }));
+    });
+
+    it('isolates F4.5 ELOK/HUJAN payloads from the legacy activity-weather session enum', async () => {
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
+      mockService.createSiteDiary.mockResolvedValue(Success({ site_diary_id: 'sd-weather' }));
+      const payload = {
+        programme_id: generateUuid(),
+        revision_id: generateUuid(),
+        activity_id: generateUuid(),
+        activity_date: '2026-09-01',
+        operation_intent: 'IN_PROGRESS_DIARY',
+        weather: 'Sunny',
+        notes: 'Cuaca rasmi disimpan dalam print context',
+        print_context: {
+          location: 'Tapak A',
+          daily_work_status: 'LAKSANA',
+          weather_condition: 'ELOK',
+          rain_intervals: [],
+          weather_suggested_intervals: [],
+          weather_source: 'MANUAL',
+          contractor_scope: 'CONTRACTOR',
+        },
+      };
+      const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify(payload) });
+      const res = await createSiteDiary(req);
+
+      expect(res.status).toBe(201);
+      expect(mockService.createSiteDiary).toHaveBeenCalledWith(expect.objectContaining({
+        weather: null,
+        printContext: expect.objectContaining({ weather_condition: 'ELOK' }),
+      }));
+    });
+
+    it('preserves valid legacy activity-weather session values for backward compatibility', async () => {
+      vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
+      mockService.createSiteDiary.mockResolvedValue(Success({ site_diary_id: 'sd-legacy-weather' }));
+      const payload = {
+        programme_id: generateUuid(), revision_id: generateUuid(), activity_id: generateUuid(),
+        activity_date: '2026-09-01', operation_intent: 'IN_PROGRESS_DIARY', weather: 'Morning', notes: 'Legacy',
+      };
+      const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify(payload) });
+      const res = await createSiteDiary(req);
+      expect(res.status).toBe(201);
+      expect(mockService.createSiteDiary).toHaveBeenCalledWith(expect.objectContaining({ weather: 'Morning' }));
     });
 
     it('6/7. Maps domain revision/locked errors correctly', async () => {
       vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.createSiteDiary.mockResolvedValue(Failure(new SiteDiaryRevisionNotApprovedError('Superseded')));
-      
+
       const payload = {
         programme_id: generateUuid(),
         revision_id: generateUuid(),
@@ -89,7 +134,7 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
       };
       const req = new Request('http://localhost/api/site-diary', { method: 'POST', body: JSON.stringify(payload) });
       const res = await createSiteDiary(req as unknown as Request);
-      
+
       expect(res.status).toBe(400);
       const json = await res.json();
       expect(json.error).toBe('Superseded');
@@ -155,18 +200,14 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     it('8. Ignores client attempts to manipulate status (status not in schema)', async () => {
       vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.updateSiteDiary.mockResolvedValue(Success({ site_diary_id: 'sd-1' }));
-      
-      const req = new Request('http://localhost/api/site-diary/sd-1', { 
-        method: 'PATCH', 
-        body: JSON.stringify({
-          notes: 'Updated',
-          status: 'Approved',
-          expected_last_modified_at: '2026-08-16T08:00:00.000Z',
-        })
+
+      const req = new Request('http://localhost/api/site-diary/sd-1', {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: 'Updated', status: 'Approved', expected_last_modified_at: '2026-08-16T08:00:00.000Z' })
       });
       // @ts-ignore
       const res = await updateSiteDiary(req, { params: Promise.resolve({ siteDiaryId: 'sd-1' }) });
-      
+
       expect(res.status).toBe(200);
       expect(mockService.updateSiteDiary).toHaveBeenCalledWith(expect.not.objectContaining({ status: 'Approved' }));
     });
@@ -176,15 +217,12 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     it('11. Works for valid current Activity (specific activity)', async () => {
       vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.continueYesterday.mockResolvedValue(Success({ site_diary_id: 'sd-2' }));
-      
+
       const payload = { activityId: generateUuid(), targetDate: '2026-09-02' };
-      const req = new Request('http://localhost/api/site-diary/carry-forward', { 
-        method: 'POST', 
-        body: JSON.stringify(payload) 
-      });
+      const req = new Request('http://localhost/api/site-diary/carry-forward', { method: 'POST', body: JSON.stringify(payload) });
       // @ts-ignore
       const res = await carryForward(req);
-      
+
       expect(res.status).toBe(200);
       expect(mockService.continueYesterday).toHaveBeenCalledWith(payload.activityId, '2026-09-02', 'user-1');
     });
@@ -192,15 +230,12 @@ describe('Site Diary API Boundaries (A20 Phase 4)', () => {
     it('13. Works for bulk carry-forward (programme)', async () => {
       vi.mocked(identityModule.extractVerifiedIdentity).mockResolvedValue({ actorId: 'user-1', accessToken: 'token-1' });
       mockService.carryForwardActiveOperations.mockResolvedValue(Success([{ site_diary_id: 'sd-3' }]));
-      
+
       const payload = { programmeId: generateUuid(), targetDate: '2026-09-02' };
-      const req = new Request('http://localhost/api/site-diary/carry-forward', { 
-        method: 'POST', 
-        body: JSON.stringify(payload) 
-      });
+      const req = new Request('http://localhost/api/site-diary/carry-forward', { method: 'POST', body: JSON.stringify(payload) });
       // @ts-ignore
       const res = await carryForward(req);
-      
+
       expect(res.status).toBe(200);
       expect(mockService.carryForwardActiveOperations).toHaveBeenCalledWith(payload.programmeId, '2026-09-02', 'user-1');
     });
