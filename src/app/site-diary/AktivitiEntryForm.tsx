@@ -1,15 +1,22 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import NgamsoiCompletionRitual from '@/components/brand/NgamsoiCompletionRitual';
 import type { ActivityStatus } from '@/types/activity';
 import type { SiteDiary, SiteDiaryDailyWorkStatus } from '@/types/siteDiary';
 import { useDailyEntryContext } from './DailyEntryShell';
 import OpenActivitiesList from './OpenActivitiesList';
+import PostSaveConfirmation from './PostSaveConfirmation';
 import SmartWorkforceEntry from './SmartWorkforceEntry';
 import type { SelectedOperationalSource } from './OperationalSourceSelector';
 import type { ManpowerRow } from './WorkforceEntry';
 import WeatherEvidenceSection, { EMPTY_WEATHER_EVIDENCE, type WeatherEvidenceValue } from './WeatherEvidenceSection';
+
+type SpineState = 'complete' | 'current' | 'upcoming';
+
+interface AktivitiEntryFormProps {
+  readonly onShowRecords?: () => void;
+  readonly onAddActivity?: () => void;
+}
 
 interface ActivityRecord {
   readonly activity_id: string;
@@ -56,16 +63,21 @@ function nextDailyStatus(current: SiteDiaryDailyWorkStatus, button: 'MULA' | 'LA
 
 function sourceFromActivity(activity: ActivityRecord): SelectedOperationalSource | null {
   const title = activity.subtask_display_name || activity.subtask || 'Aktiviti';
-  if (activity.source_type === 'VO' && activity.vo_item_id) {
-    return { sourceType: 'VO', id: activity.vo_item_id, title };
-  }
-  if ((activity.source_type === 'MSP' || !activity.source_type) && activity.task_id) {
-    return { sourceType: 'MSP', id: activity.task_id, title };
-  }
+  if (activity.source_type === 'VO' && activity.vo_item_id) return { sourceType: 'VO', id: activity.vo_item_id, title };
+  if ((activity.source_type === 'MSP' || !activity.source_type) && activity.task_id) return { sourceType: 'MSP', id: activity.task_id, title };
   return null;
 }
 
-export default function AktivitiEntryForm() {
+function stateFor(step: number, currentStep: number): SpineState {
+  if (step < currentStep) return 'complete';
+  if (step === currentStep) return 'current';
+  return 'upcoming';
+}
+
+export default function AktivitiEntryForm({
+  onShowRecords = () => undefined,
+  onAddActivity = () => undefined,
+}: AktivitiEntryFormProps) {
   const { programmeId, revisionId } = useDailyEntryContext();
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityRecord | null>(null);
@@ -76,7 +88,8 @@ export default function AktivitiEntryForm() {
   const [contractorScope, setContractorScope] = useState<'CONTRACTOR' | 'NSC'>('CONTRACTOR');
   const [workStartTime, setWorkStartTime] = useState('08:00');
   const [workEndTime, setWorkEndTime] = useState('17:00');
-  const [weather, setWeather] = useState<WeatherEvidenceValue>(EMPTY_WEATHER_EVIDENCE);
+  const [timeExpanded, setTimeExpanded] = useState(false);
+  const [weather, setWeather] = useState<WeatherEvidenceValue>({ ...EMPTY_WEATHER_EVIDENCE });
   const [manpower, setManpower] = useState<ManpowerRow[]>([]);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -97,6 +110,16 @@ export default function AktivitiEntryForm() {
     [manpower],
   );
 
+  const currentStep = useMemo(() => {
+    if (!selectedSource) return 0;
+    if (actualStartRequired && !knownStartDate) return 1;
+    if (!location.trim()) return 2;
+    if (weather.source === 'AUTO') return 3;
+    if (manpower.length === 0 && !notes.trim()) return 4;
+    if (!notes.trim()) return 5;
+    return 6;
+  }, [actualStartRequired, knownStartDate, location, manpower.length, notes, selectedSource, weather.source]);
+
   const invalidate = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -110,6 +133,7 @@ export default function AktivitiEntryForm() {
     setContractorScope('CONTRACTOR');
     setWorkStartTime('08:00');
     setWorkEndTime('17:00');
+    setTimeExpanded(false);
     setWeather({ ...EMPTY_WEATHER_EVIDENCE });
     setManpower([]);
     setNotes('');
@@ -144,6 +168,7 @@ export default function AktivitiEntryForm() {
     setContractorScope('CONTRACTOR');
     setWorkStartTime('08:00');
     setWorkEndTime('17:00');
+    setTimeExpanded(false);
     setWeather({ ...EMPTY_WEATHER_EVIDENCE });
     setManpower([]);
     setNotes('');
@@ -187,19 +212,15 @@ export default function AktivitiEntryForm() {
     }
   }, [programmeId, revisionId]);
 
-  const finishAndReturn = (siteDiaryId: string) => {
-    setSuccessId(siteDiaryId);
-    window.setTimeout(() => {
-      setListVersion((current) => current + 1);
-      invalidate();
-    }, 900);
+  const returnToList = () => {
+    setListVersion((current) => current + 1);
+    invalidate();
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitLockRef.current || !activity || !selectedActivityId) return;
+    if (submitLockRef.current || successId || !activity || !selectedActivityId) return;
     setError(null);
-    setSuccessId(null);
 
     if (!programmeId || !revisionId) return setError('Program Kerja semasa belum tersedia.');
     if (!activityDate) return setError('Tarikh catatan diperlukan.');
@@ -212,7 +233,6 @@ export default function AktivitiEntryForm() {
     submitLockRef.current = true;
     setIsSubmitting(true);
     try {
-      // Re-read lifecycle immediately before mutation so a stale open card cannot write through.
       const latestResponse = await fetch(`/api/activity/${encodeURIComponent(selectedActivityId)}`);
       if (!latestResponse.ok) throw new Error(await safeError(latestResponse, 'Gagal menyemak status terkini aktiviti.'));
       const latestBody = await latestResponse.json();
@@ -283,7 +303,7 @@ export default function AktivitiEntryForm() {
           ? diaryBody.data.siteDiaryId
           : null;
       if (!savedId) throw new Error('ID Buku Harian tidak dapat ditentukan.');
-      finishAndReturn(savedId);
+      setSuccessId(savedId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Gagal menyimpan catatan lanjutan.');
     } finally {
@@ -304,13 +324,13 @@ export default function AktivitiEntryForm() {
     );
   }
 
-  if (loading) return <div role="status" className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 text-sm text-zinc-400">Memuat aktiviti…</div>;
+  if (loading) return <div role="status" className="ng-entry-empty">Memuat aktiviti…</div>;
 
   if (!activity) {
     return (
       <div className="space-y-3">
-        {error && <div role="alert" className="rounded-xl border border-red-800/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
-        <button type="button" onClick={invalidate} className="min-h-[44px] rounded-lg border border-zinc-700 px-4 text-sm font-semibold text-zinc-200">Kembali</button>
+        {error && <div role="alert" className="ng-entry-alert">{error}</div>}
+        <button type="button" onClick={returnToList} className="ng-secondary-action">Kembali</button>
       </div>
     );
   }
@@ -318,77 +338,91 @@ export default function AktivitiEntryForm() {
   const isInProgress = activity.status === 'In Progress';
 
   return (
-    <form onSubmit={handleSubmit} className="ng-catat-flow w-full space-y-4" aria-label="Borang Buku Harian Tapak" data-entry-mode="AKTIVITI">
-      <section className="rounded-2xl border border-blue-800/60 bg-blue-950/40 p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-400">AKTIVITI</div>
-            <div className="mt-1 text-sm font-bold text-zinc-100">{activity.subtask_display_name || activity.subtask || 'Aktiviti'}</div>
-            <div className="mt-1 text-xs text-zinc-500">{activity.source_type === 'VO' ? 'VO' : 'MSP'} · {isInProgress ? 'Laksana' : 'Baharu'}</div>
+    <form onSubmit={handleSubmit} className="ng-catat-flow w-full" aria-label="Borang Buku Harian Tapak" data-entry-mode="AKTIVITI">
+      <section className="ng-entry-step ng-entry-panel ng-entry-panel--source" data-entry-step="source" data-spine-state={stateFor(0, currentStep)}>
+        <div className="ng-entry-row">
+          <div className="min-w-0">
+            <div className="ng-entry-heading">SUMBER</div>
+            <div className="ng-source-title" title={activity.subtask_display_name || activity.subtask || 'Aktiviti'}>{activity.subtask_display_name || activity.subtask || 'Aktiviti'}</div>
+            <div className="ng-entry-meta">{activity.source_type === 'VO' ? 'VO' : 'MSP'} · {isInProgress ? 'Laksana' : 'Mula'}</div>
           </div>
-          <button type="button" onClick={invalidate} disabled={isSubmitting} className="min-h-[40px] rounded-lg border border-zinc-700 px-3 text-xs font-semibold text-zinc-300">Kembali</button>
+          <button type="button" onClick={returnToList} disabled={isSubmitting || Boolean(successId)} className="ng-secondary-action">Tukar</button>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="ng-entry-step ng-entry-panel" data-entry-step="daily" data-spine-state={stateFor(1, currentStep)}>
+        <div className="ng-entry-row ng-entry-row--status">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">HARIAN</div>
-            <input type="date" value={activityDate} onChange={(event) => setActivityDate(event.target.value)} disabled={isSubmitting} aria-label="Tarikh catatan" className="mt-1 rounded-lg border border-transparent bg-transparent p-0 text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700" />
+            <div className="ng-entry-heading">HARIAN</div>
+            <input type="date" value={activityDate} onChange={(event) => setActivityDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} aria-label="Tarikh catatan" className="ng-entry-date" />
           </div>
-          <div className="grid grid-cols-3 gap-1 rounded-xl border border-zinc-800 bg-zinc-950 p-1" aria-label="Status kerja hari ini">
+          <div className="ng-segmented" aria-label="Status kerja hari ini">
             {(['MULA', 'LAKSANA', 'SIAP'] as const).map((button) => {
               const disabledByLifecycle = isInProgress && button === 'MULA';
               const active = statusPressed(dailyStatus, button);
-              return (
-                <button
-                  key={button}
-                  type="button"
-                  onClick={() => setDailyStatus((current) => nextDailyStatus(current, button))}
-                  disabled={isSubmitting || disabledByLifecycle}
-                  aria-pressed={active}
-                  className={`min-h-[42px] rounded-lg px-3 text-xs font-bold transition ${active ? 'bg-blue-600 text-white' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200'} disabled:cursor-not-allowed disabled:opacity-35`}
-                >{button}</button>
-              );
+              return <button key={button} type="button" onClick={() => setDailyStatus((current) => nextDailyStatus(current, button))} disabled={isSubmitting || Boolean(successId) || disabledByLifecycle} aria-pressed={active}>{button}</button>;
             })}
           </div>
         </div>
-        {dailyStatus === 'MULA_DAN_SIAP' && <div className="mt-2 text-[11px] font-semibold text-emerald-300">Mula + Siap hari yang sama</div>}
+        {dailyStatus === 'MULA_DAN_SIAP' && <div className="ng-entry-note ng-entry-note--valid">Mula + Siap</div>}
         {canonicalActualStart ? (
-          <div className="mt-3 text-xs text-zinc-500">Mula sebenar · <span className="font-semibold text-zinc-300">{canonicalActualStart}</span></div>
+          <div className="ng-entry-meta">Mula sebenar · <strong>{canonicalActualStart}</strong></div>
         ) : actualStartRequired ? (
-          <div className="mt-3 max-w-xs">
-            <label className="block text-xs font-semibold text-zinc-400">Mula sebenar</label>
-            <input type="date" value={knownStartDate} max={activityDate} onChange={(event) => setKnownStartDate(event.target.value)} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" />
-            <p className="mt-1 text-[11px] text-zinc-600">Bukan tarikh mula terancang MSP.</p>
+          <div className="ng-entry-field ng-entry-field--compact">
+            <label>Mula sebenar</label>
+            <input type="date" value={knownStartDate} max={activityDate} onChange={(event) => setKnownStartDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} />
+            <small>Bukan tarikh MSP.</small>
           </div>
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">TAPAK</div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div><label className="block text-xs font-semibold text-zinc-400">Lokasi</label><input value={location} onChange={(event) => setLocation(event.target.value)} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" /></div>
-          <div><label className="block text-xs font-semibold text-zinc-400">Skop</label><select value={contractorScope} onChange={(event) => setContractorScope(event.target.value as 'CONTRACTOR' | 'NSC')} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"><option value="CONTRACTOR">Utama</option><option value="NSC">NSC</option></select></div>
+      <section className="ng-entry-step ng-entry-panel" data-entry-step="site" data-spine-state={stateFor(2, currentStep)}>
+        <div className="ng-entry-heading">TAPAK</div>
+        <div className="ng-entry-grid ng-entry-grid--site">
+          <div className="ng-entry-field"><label>Lokasi</label><input value={location} onChange={(event) => setLocation(event.target.value)} disabled={isSubmitting || Boolean(successId)} /></div>
+          <div className="ng-entry-field"><label>Skop</label><select value={contractorScope} onChange={(event) => setContractorScope(event.target.value as 'CONTRACTOR' | 'NSC')} disabled={isSubmitting || Boolean(successId)}><option value="CONTRACTOR">Utama</option><option value="NSC">NSC</option></select></div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div><label className="block text-xs font-semibold text-zinc-400">Mula kerja</label><input type="time" value={workStartTime} onChange={(event) => setWorkStartTime(event.target.value)} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" /></div>
-          <div><label className="block text-xs font-semibold text-zinc-400">Tamat kerja</label><input type="time" value={workEndTime} onChange={(event) => setWorkEndTime(event.target.value)} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" /></div>
+        <div className="ng-time-summary" data-testid="work-time-summary">
+          <span><small>MASA</small><strong>{workStartTime} → {workEndTime}</strong></span>
+          <button type="button" onClick={() => setTimeExpanded((current) => !current)} disabled={isSubmitting || Boolean(successId)} aria-expanded={timeExpanded} aria-controls="aktiviti-time-adjustment">{timeExpanded ? 'Tutup' : 'Ubah'}</button>
         </div>
+        {timeExpanded && (
+          <div id="aktiviti-time-adjustment" className="ng-time-adjustment">
+            <div className="ng-entry-field"><label>Mula</label><input type="time" value={workStartTime} onChange={(event) => setWorkStartTime(event.target.value)} disabled={isSubmitting || Boolean(successId)} /></div>
+            <div className="ng-entry-field"><label>Tamat</label><input type="time" value={workEndTime} onChange={(event) => setWorkEndTime(event.target.value)} disabled={isSubmitting || Boolean(successId)} /></div>
+          </div>
+        )}
       </section>
 
-      <WeatherEvidenceSection date={activityDate} value={weather} onChange={setWeather} disabled={isSubmitting} />
-      <SmartWorkforceEntry selectedSource={selectedSource} manpower={manpower} onChange={setManpower} disabled={isSubmitting} />
+      <div className="ng-entry-step" data-entry-step="weather" data-spine-state={stateFor(3, currentStep)}>
+        <WeatherEvidenceSection date={activityDate} value={weather} onChange={setWeather} disabled={isSubmitting || Boolean(successId)} />
+      </div>
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">CATATAN</div>
-        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting} rows={3} placeholder="Catat kerja" className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-100" />
+      <div className="ng-entry-step" data-entry-step="workforce" data-spine-state={stateFor(4, currentStep)}>
+        <SmartWorkforceEntry selectedSource={selectedSource} manpower={manpower} onChange={setManpower} disabled={isSubmitting || Boolean(successId)} />
+      </div>
+
+      <section className="ng-entry-step ng-entry-panel" data-entry-step="notes" data-spine-state={stateFor(5, currentStep)}>
+        <div className="ng-entry-heading">CATATAN</div>
+        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting || Boolean(successId)} rows={3} placeholder="Catat kerja" />
       </section>
 
-      {error && <div role="alert" className="rounded-xl border border-red-800/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
-      {successId && <NgamsoiCompletionRitual savedSiteDiaryId={successId} successText="Catatan lanjutan berjaya disimpan." />}
+      {error && <div role="alert" className="ng-entry-alert">{error}</div>}
 
-      <button type="submit" disabled={isSubmitting} className="w-full min-h-[48px] rounded-xl bg-blue-600 px-4 text-sm font-bold text-white disabled:opacity-50">{isSubmitting ? 'Simpan…' : 'Simpan'}</button>
+      {!successId && (
+        <div className="ng-entry-step ng-entry-step--save" data-entry-step="save" data-spine-state={stateFor(6, currentStep)}>
+          <button type="submit" disabled={isSubmitting} className="ng-save-action">{isSubmitting ? 'Simpan…' : 'Simpan'}</button>
+        </div>
+      )}
+
+      {successId && (
+        <PostSaveConfirmation
+          savedSiteDiaryId={successId}
+          successText="Catatan lanjutan berjaya disimpan."
+          onShowRecords={onShowRecords}
+          onAddActivity={onAddActivity}
+        />
+      )}
     </form>
   );
 }
