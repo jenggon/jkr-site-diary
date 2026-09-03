@@ -72,6 +72,11 @@ export default function SmartWorkforceEntry({
     [manpower],
   );
 
+  const overallTotal = useMemo(
+    () => manpower.reduce((sum, row) => sum + row.bumi_count + row.non_bumi_count + row.foreign_count, 0),
+    [manpower],
+  );
+
   const candidates = useMemo(() => {
     const pool = [...recommended, ...COMMON_TRADES_CATALOG];
     const deduped = [...new Map(pool.map((trade) => [trade.toLowerCase(), trade])).values()];
@@ -89,80 +94,63 @@ export default function SmartWorkforceEntry({
     setQuery('');
   };
 
+  const helper = selectedSource
+    ? (loading ? 'Cari tred…' : (resolutionSource ? `TRE · ${resolutionSource}` : 'Pilih tred'))
+    : 'Pilih kerja';
+
   return (
-    <section className="space-y-3" aria-label="Cadangan dan tenaga kerja tapak">
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-3 sm:p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">CADANG</div>
-            <div className="mt-1 text-xs text-zinc-400">
-              {selectedSource
-                ? (loading ? 'Mencari tred…' : (resolutionSource ? `TRE · ${resolutionSource}` : 'Pilih tred yang hadir di tapak'))
-                : 'Pilih kerja dahulu untuk cadangan TRE'}
-            </div>
-          </div>
+    <section className="ng-entry-panel ng-workforce-smart" aria-label="Pekerja tapak" data-testid="smart-workforce-entry">
+      <div className="ng-entry-row ng-workforce-smart__head">
+        <div>
+          <div className="ng-entry-heading">PEKERJA</div>
+          <div className="ng-entry-meta">{helper}</div>
         </div>
+        <div className="ng-workforce-smart__total" aria-label={`${overallTotal} pekerja`}>
+          <span aria-hidden="true">◒</span>
+          <strong>{overallTotal}</strong>
+        </div>
+      </div>
 
-        {recommended.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2" data-testid="tre-trade-suggestions">
-            {recommended.filter((trade) => !existing.has(trade.toLowerCase())).map((trade) => (
-              <button
-                key={trade}
-                type="button"
-                onClick={() => addTrade(trade)}
-                disabled={disabled}
-                className="min-h-[36px] rounded-lg border border-blue-800/70 bg-blue-950/40 px-3 text-xs font-semibold text-blue-200 hover:border-blue-600 hover:bg-blue-950/70 disabled:opacity-50"
-              >
-                + {trade}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-3 flex gap-2">
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter') return;
-              event.preventDefault();
-              const first = candidates[0];
-              addTrade(first ?? query);
-            }}
-            disabled={disabled}
-            placeholder="Cari tred…"
-            aria-label="Cari tred"
-            className="min-h-[44px] flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-blue-500"
-          />
-          {query.trim() && (
-            <button
-              type="button"
-              onClick={() => addTrade(candidates[0] ?? query)}
-              disabled={disabled}
-              className="min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-xs font-bold text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
-            >
-              Tambah
+      {recommended.length > 0 && (
+        <div className="ng-trade-suggestions" data-testid="tre-trade-suggestions">
+          {recommended.filter((trade) => !existing.has(trade.toLowerCase())).map((trade) => (
+            <button key={trade} type="button" onClick={() => addTrade(trade)} disabled={disabled}>
+              + {trade}
             </button>
-          )}
+          ))}
         </div>
+      )}
 
-        {query.trim() && candidates.length > 0 && (
-          <div className="mt-2 grid gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1" data-testid="trade-search-results">
-            {candidates.map((trade) => (
-              <button
-                key={trade}
-                type="button"
-                onClick={() => addTrade(trade)}
-                disabled={disabled}
-                className="rounded-md px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-900 hover:text-white"
-              >
-                {trade}
-              </button>
-            ))}
-          </div>
+      <div className="ng-trade-search">
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            addTrade(candidates[0] ?? query);
+          }}
+          disabled={disabled}
+          placeholder="Cari tred"
+          aria-label="Cari tred"
+        />
+        {query.trim() && (
+          <button type="button" onClick={() => addTrade(candidates[0] ?? query)} disabled={disabled}>
+            Tambah
+          </button>
         )}
       </div>
+
+      {query.trim() && candidates.length > 0 && (
+        <div className="ng-trade-results" data-testid="trade-search-results">
+          {candidates.map((trade) => (
+            <button key={trade} type="button" onClick={() => addTrade(trade)} disabled={disabled}>
+              {trade}
+            </button>
+          ))}
+        </div>
+      )}
 
       <WorkforceEntry manpower={manpower} onChange={onChange} disabled={disabled} className="ng-workforce--smart" />
       <style jsx global>{`
