@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import NgamsoiBrand from '@/components/brand/NgamsoiBrand';
 import { useAuth } from '@/context/AuthContext';
 import { isNgamsoiPreviewMode, ngamsoiPreviewFetch } from '@/lib/ngamsoiPreview';
+import ProjectWeatherPulse from './ProjectWeatherPulse';
 
 export interface ProgrammeOption {
   readonly id: string;
@@ -35,9 +36,7 @@ const DailyEntryContext = createContext<DailyEntryContextType | undefined>(undef
 
 export function useDailyEntryContext() {
   const context = useContext(DailyEntryContext);
-  if (!context) {
-    throw new Error('useDailyEntryContext must be used within a DailyEntryShell');
-  }
+  if (!context) throw new Error('useDailyEntryContext must be used within a DailyEntryShell');
   return context;
 }
 
@@ -54,71 +53,63 @@ interface RevisionProjection {
 }
 
 const MALAY_DAY_NAMES = ['AHAD', 'ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU'] as const;
+const DAY_MS = 86_400_000;
 
 function formatRevision(number: number | null): string {
   if (number === null || !Number.isFinite(number)) return 'R—';
   return `R${Math.max(0, Math.trunc(number)).toString().padStart(2, '0')}`;
 }
 
-function formatClock(date: Date | null): string {
-  if (!date) return '--:--';
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+function dateParts(value: string | null): [number, number, number] | null {
+  if (!value) return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  return Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(day) ? [year, month, day] : null;
 }
 
-function formatDeviceDay(date: Date | null): string {
-  if (!date) return '—';
-  return MALAY_DAY_NAMES[date.getDay()] ?? '—';
+export function resolveProjectDayPulse(startDate: string | null, finishDate: string | null, now: Date | null) {
+  if (!now) return { remainingDays: '—' as const, dayNumber: '—' as const };
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  let remainingDays: number | '—' = '—';
+  let dayNumber: number | '—' = '—';
+
+  const start = dateParts(startDate);
+  if (start) {
+    const startUtc = Date.UTC(start[0], start[1] - 1, start[2]);
+    const delta = Math.floor((todayUtc - startUtc) / DAY_MS);
+    dayNumber = delta < 0 ? 0 : delta + 1;
+  }
+
+  const finish = dateParts(finishDate);
+  if (finish) {
+    const finishUtc = Date.UTC(finish[0], finish[1] - 1, finish[2]);
+    remainingDays = Math.max(0, Math.floor((finishUtc - todayUtc) / DAY_MS));
+  }
+  return { remainingDays, dayNumber };
+}
+
+function formatClock(date: Date | null): string {
+  if (!date) return '--:--';
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
 function formatDeviceDate(date: Date | null): string {
   if (!date) return '--/--/--';
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear().toString().slice(-2);
-  return `${day}/${month}/${year}`;
+  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
 }
 
-function resolveProjectDayPulse(
-  startDate: string | null,
-  finishDate: string | null,
-  now: Date | null,
-): { remainingDays: number | '—'; dayNumber: number | '—'; title: string | undefined } {
-  if (!now) return { remainingDays: '—', dayNumber: '—', title: undefined };
-
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  let remainingDays: number | '—' = '—';
-  let dayNumber: number | '—' = '—';
-
-  if (startDate) {
-    const start = new Date(`${startDate}T00:00:00`);
-    if (!Number.isNaN(start.getTime())) {
-      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
-      const elapsedDays = Math.floor((today - startDay) / 86_400_000);
-      dayNumber = Math.max(0, elapsedDays + 1);
-    }
-  }
-
-  if (finishDate) {
-    const finish = new Date(`${finishDate}T23:59:59`);
-    if (!Number.isNaN(finish.getTime())) {
-      remainingDays = Math.max(0, Math.ceil((finish.getTime() - now.getTime()) / 86_400_000));
-    }
-  }
-
-  return {
-    remainingDays,
-    dayNumber,
-    title: finishDate ? `Tarikh tamat projek: ${finishDate}` : undefined,
-  };
+function formatFinish(value: string | null): string {
+  const parts = dateParts(value);
+  return parts ? `${String(parts[2]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}/${String(parts[0]).slice(-2)}` : '—';
 }
 
-export default function DailyEntryShell({
-  children,
-  initialProgrammeId,
-}: DailyEntryShellProps) {
+export default function DailyEntryShell({ children, initialProgrammeId }: DailyEntryShellProps) {
   const { user, signOut } = useAuth();
   const [availableProgrammes, setAvailableProgrammes] = useState<ProgrammeOption[]>([]);
-  const [programmeId, setProgrammeId] = useState<string | null>(initialProgrammeId ?? null);
+  const [programmeId, setProgrammeIdState] = useState<string | null>(initialProgrammeId ?? null);
   const [programmeName, setProgrammeName] = useState<string | null>(null);
   const [programmeCode, setProgrammeCode] = useState<string | null>(null);
   const [programmeShortName, setProgrammeShortName] = useState<string | null>(null);
@@ -127,25 +118,22 @@ export default function DailyEntryShell({
   const [revisionState, setRevisionState] = useState<DailyEntryContextType['revisionState']>('IDLE');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [finishDate, setFinishDate] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const programmeIdRef = useRef<string | null>(initialProgrammeId ?? null);
-  const detailRequestRef = useRef<{ generation: number; programmeId: string; controller: AbortController } | null>(null);
-  const detailGenerationRef = useRef(0);
+  const requestGeneration = useRef(0);
 
   const fetchApp = useCallback(async (input: RequestInfo | URL, init?: RequestInit) => {
     if (isNgamsoiPreviewMode()) {
-      const previewResponse = await ngamsoiPreviewFetch(input, init);
-      if (previewResponse) return previewResponse;
+      const preview = await ngamsoiPreviewFetch(input, init);
+      if (preview) return preview;
     }
     return fetch(input, init);
   }, []);
 
-  const invalidateProgrammeDetails = useCallback(() => {
-    detailRequestRef.current?.controller.abort();
-    detailRequestRef.current = null;
-    detailGenerationRef.current += 1;
+  const clearProjectDetail = useCallback(() => {
+    requestGeneration.current += 1;
     setRevisionId(null);
     setRevisionNumber(null);
     setRevisionState('IDLE');
@@ -154,263 +142,161 @@ export default function DailyEntryShell({
     setError(null);
   }, []);
 
-  const changeProgramme = useCallback((nextProgrammeId: string | null) => {
-    if (programmeIdRef.current !== nextProgrammeId) invalidateProgrammeDetails();
-    programmeIdRef.current = nextProgrammeId;
-    setProgrammeId(nextProgrammeId);
-    if (!nextProgrammeId) {
+  const changeProgramme = useCallback((next: string | null) => {
+    if (programmeIdRef.current !== next) clearProjectDetail();
+    programmeIdRef.current = next;
+    setProgrammeIdState(next);
+    if (!next) {
       setProgrammeName(null);
       setProgrammeCode(null);
       setProgrammeShortName(null);
     }
-  }, [invalidateProgrammeDetails]);
+  }, [clearProjectDetail]);
 
   const loadProgrammes = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchApp('/api/programme?status=Active');
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error || 'Gagal memuatkan senarai program');
-      }
-
-      const json = await res.json();
-      const rawList: Array<{
-        id: string;
-        code: string;
-        name: string;
-        shortName?: string;
-        contractorName?: string;
-        employerName?: string;
-      }> = Array.isArray(json.data) ? json.data : [];
-
-      const options: ProgrammeOption[] = rawList.map((p) => ({
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        shortName: p.shortName,
-        contractorName: p.contractorName,
-        employerName: p.employerName,
-      }));
-
+      const response = await fetchApp('/api/programme?status=Active');
+      if (!response.ok) throw new Error('Gagal memuatkan senarai projek');
+      const body = await response.json();
+      const list = Array.isArray(body.data) ? body.data : [];
+      const options: ProgrammeOption[] = list.map((item: Record<string, unknown>) => ({
+        id: String(item.id ?? ''),
+        code: String(item.code ?? ''),
+        name: String(item.name ?? ''),
+        shortName: typeof item.shortName === 'string' ? item.shortName : undefined,
+        contractorName: typeof item.contractorName === 'string' ? item.contractorName : undefined,
+        employerName: typeof item.employerName === 'string' ? item.employerName : undefined,
+      })).filter((item: ProgrammeOption) => item.id && item.name);
       setAvailableProgrammes(options);
 
-      if (options.length === 0) {
-        changeProgramme(null);
-      } else if (options.length === 1) {
-        const single = options[0];
-        if (single) {
-          changeProgramme(single.id);
-          setProgrammeName(single.name);
-          setProgrammeCode(single.code);
-          setProgrammeShortName(single.shortName ?? single.code);
-        }
-      } else {
-        const currentProgrammeId = programmeIdRef.current;
-        if (!currentProgrammeId || !options.some((option) => option.id === currentProgrammeId)) {
-          changeProgramme(null);
-        }
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Ralat ketika memuatkan program';
-      setError(msg);
+      const current = programmeIdRef.current;
+      if (options.length === 0) changeProgramme(null);
+      else if (options.length === 1) {
+        const only = options[0]!;
+        changeProgramme(only.id);
+        setProgrammeName(only.name);
+        setProgrammeCode(only.code);
+        setProgrammeShortName(only.shortName ?? only.code);
+      } else if (!current || !options.some((item) => item.id === current)) changeProgramme(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Gagal memuatkan projek');
     } finally {
       setLoading(false);
     }
   }, [changeProgramme, fetchApp]);
 
   const loadProgrammeDetails = useCallback(async (targetId: string) => {
-    detailRequestRef.current?.controller.abort();
-    const request = {
-      generation: ++detailGenerationRef.current,
-      programmeId: targetId,
-      controller: new AbortController(),
-    };
-    detailRequestRef.current = request;
-    const ownsRequest = () => detailRequestRef.current === request
-      && request.generation === detailGenerationRef.current
-      && programmeIdRef.current === request.programmeId;
-
+    const generation = ++requestGeneration.current;
+    const owns = () => generation === requestGeneration.current && programmeIdRef.current === targetId;
     setLoading(true);
-    setRevisionId(null);
-    setRevisionNumber(null);
     setRevisionState('RESOLVING');
-    setStartDate(null);
-    setFinishDate(null);
     setError(null);
-
     try {
-      const summaryRes = await fetchApp(`/api/project-summary?programmeId=${encodeURIComponent(targetId)}`, {
-        signal: request.controller.signal,
-      });
-      if (!ownsRequest()) return;
-      if (!summaryRes.ok) {
-        const errJson = await summaryRes.json().catch(() => null);
-        throw new Error(errJson?.error || 'Gagal memuatkan ringkasan projek');
-      }
-
-      const summaryData = await summaryRes.json();
-      if (!ownsRequest()) return;
-      if (!summaryData) throw new Error('Maklumat ringkasan projek tidak sah');
-
-      const resolvedRevisionId: string | null = summaryData.revision_id ?? null;
+      const summaryResponse = await fetchApp(`/api/project-summary?programmeId=${encodeURIComponent(targetId)}`);
+      if (!summaryResponse.ok) throw new Error('Gagal memuatkan ringkasan projek');
+      const summary = await summaryResponse.json();
+      if (!owns()) return;
+      const resolvedRevisionId = typeof summary.revision_id === 'string' ? summary.revision_id : null;
       setRevisionId(resolvedRevisionId);
-      setStartDate(summaryData.start_date ?? null);
-      setFinishDate(summaryData.finish_date ?? null);
-      if (summaryData.task_name) setProgrammeName(summaryData.task_name);
-
+      setStartDate(typeof summary.start_date === 'string' ? summary.start_date : null);
+      setFinishDate(typeof summary.finish_date === 'string' ? summary.finish_date : null);
+      if (typeof summary.task_name === 'string') setProgrammeName(summary.task_name);
       if (!resolvedRevisionId) {
         setRevisionState('UNAVAILABLE');
         return;
       }
 
-      const [progRes, revisionsRes] = await Promise.all([
-        fetchApp(`/api/programme/${encodeURIComponent(targetId)}`, { signal: request.controller.signal }),
-        fetchApp(`/api/programme-revision?programmeId=${encodeURIComponent(targetId)}`, { signal: request.controller.signal }),
+      const [programmeResponse, revisionsResponse] = await Promise.all([
+        fetchApp(`/api/programme/${encodeURIComponent(targetId)}`),
+        fetchApp(`/api/programme-revision?programmeId=${encodeURIComponent(targetId)}`),
       ]);
-      if (!ownsRequest()) return;
-
-      if (progRes.ok) {
-        const progJson = await progRes.json();
-        if (!ownsRequest()) return;
-        if (progJson.data) {
-          if (progJson.data.programmeCode) setProgrammeCode(progJson.data.programmeCode);
-          if (progJson.data.programmeName) setProgrammeName(progJson.data.programmeName);
-          setProgrammeShortName(
-            progJson.data.programmeShortName
-              ?? progJson.data.shortName
-              ?? progJson.data.programmeCode
-              ?? null,
-          );
-        }
+      if (!owns()) return;
+      if (programmeResponse.ok) {
+        const programmeBody = await programmeResponse.json();
+        const data = programmeBody.data ?? {};
+        if (typeof data.programmeCode === 'string') setProgrammeCode(data.programmeCode);
+        if (typeof data.programmeName === 'string') setProgrammeName(data.programmeName);
+        setProgrammeShortName(data.programmeShortName ?? data.shortName ?? data.programmeCode ?? null);
       }
-
-      if (!revisionsRes.ok) {
-        throw new Error('Gagal mengesahkan semakan semasa');
-      }
-
-      const revisionsJson = await revisionsRes.json();
-      if (!ownsRequest()) return;
-      const revisions: RevisionProjection[] = Array.isArray(revisionsJson.data) ? revisionsJson.data : [];
-      const currentRevision = revisions.find((revision) =>
-        revision.revisionId === resolvedRevisionId
-        && revision.isCurrentRevision === true
-        && revision.revisionStatus === 'Approved'
-      );
-
-      if (!currentRevision) {
+      if (!revisionsResponse.ok) throw new Error('Gagal mengesahkan Program Kerja');
+      const revisionsBody = await revisionsResponse.json();
+      const revisions: RevisionProjection[] = Array.isArray(revisionsBody.data) ? revisionsBody.data : [];
+      const current = revisions.find((revision) => revision.revisionId === resolvedRevisionId && revision.isCurrentRevision && revision.revisionStatus === 'Approved');
+      if (!current) {
         setRevisionNumber(null);
         setRevisionState('UNAVAILABLE');
-        return;
+      } else {
+        setRevisionNumber(current.revisionNumber);
+        setRevisionState('RESOLVED');
       }
-
-      setRevisionNumber(currentRevision.revisionNumber);
-      setRevisionState('RESOLVED');
-    } catch (err: unknown) {
-      if (!ownsRequest() || (err instanceof Error && err.name === 'AbortError')) return;
-      const msg = err instanceof Error ? err.message : 'Ralat ketika memuatkan perincian program';
+    } catch (caught) {
+      if (!owns()) return;
       setRevisionId(null);
       setRevisionNumber(null);
       setRevisionState('ERROR');
-      setError(msg);
+      setError(caught instanceof Error ? caught.message : 'Gagal memuatkan konteks projek');
     } finally {
-      if (ownsRequest()) {
-        detailRequestRef.current = null;
-        setLoading(false);
-      }
+      if (owns()) setLoading(false);
     }
   }, [fetchApp]);
 
+  useEffect(() => { void loadProgrammes(); }, [loadProgrammes]);
   useEffect(() => {
-    void loadProgrammes();
-  }, [loadProgrammes]);
-
-  useEffect(() => {
-    if (programmeId) {
-      void loadProgrammeDetails(programmeId);
-    } else {
-      invalidateProgrammeDetails();
-    }
-    return () => {
-      detailRequestRef.current?.controller.abort();
-    };
-  }, [programmeId, invalidateProgrammeDetails, loadProgrammeDetails]);
-
+    if (programmeId) void loadProgrammeDetails(programmeId);
+    else clearProjectDetail();
+  }, [clearProjectDetail, loadProgrammeDetails, programmeId]);
   useEffect(() => {
     const tick = () => setNow(new Date());
     tick();
-    const intervalId = window.setInterval(tick, 60_000);
-    return () => window.clearInterval(intervalId);
+    const timer = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(timer);
   }, []);
 
-  const handleSelectProgramme = (selectedId: string) => {
-    const matched = availableProgrammes.find((p) => p.id === selectedId);
-    if (matched) {
-      changeProgramme(matched.id);
-      setProgrammeName(matched.name);
-      setProgrammeCode(matched.code);
-      setProgrammeShortName(matched.shortName ?? matched.code);
-    }
+  const selectProgramme = (id: string) => {
+    const matched = availableProgrammes.find((item) => item.id === id);
+    if (!matched) return;
+    changeProgramme(matched.id);
+    setProgrammeName(matched.name);
+    setProgrammeCode(matched.code);
+    setProgrammeShortName(matched.shortName ?? matched.code);
   };
 
-  const userInitials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'PT';
-  const displayShortName = (programmeShortName || programmeCode || 'PROJEK').toUpperCase();
-  const revisionLabel = revisionState === 'RESOLVED'
-    ? formatRevision(revisionNumber)
-    : revisionState === 'ERROR'
-      ? 'R!'
-      : 'R—';
-  const projectDayPulse = resolveProjectDayPulse(startDate, finishDate, now);
-  const deviceDay = formatDeviceDay(now);
-  const deviceDate = formatDeviceDate(now);
-  const clockLabel = formatClock(now);
+  const pulse = resolveProjectDayPulse(startDate, finishDate, now);
+  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'PT';
+  const shortName = (programmeShortName || programmeCode || 'PROJEK').toUpperCase();
+  const revisionLabel = revisionState === 'RESOLVED' ? formatRevision(revisionNumber) : revisionState === 'ERROR' ? 'R!' : 'R—';
+  const dayLabel = now ? (MALAY_DAY_NAMES[now.getDay()] ?? '—') : '—';
 
   return (
-    <DailyEntryContext.Provider
-      value={{
-        programmeId,
-        setProgrammeId: changeProgramme,
-        programmeName,
-        programmeCode,
-        programmeShortName,
-        revisionId,
-        revisionNumber,
-        revisionState,
-        startDate,
-        finishDate,
-        availableProgrammes,
-        loading,
-        error,
-        refreshContext: loadProgrammes,
-      }}
-    >
-      <div className="ngamsoi-shell datum-shell h-[100dvh] w-full bg-surface-canvas text-tactical-text-primary flex flex-col overflow-hidden">
-        <header className="ngamsoi-app-header datum-app-header shrink-0 z-40 w-full bg-surface-primary border-b border-surface-border shadow-sm">
+    <DailyEntryContext.Provider value={{
+      programmeId,
+      setProgrammeId: changeProgramme,
+      programmeName,
+      programmeCode,
+      programmeShortName,
+      revisionId,
+      revisionNumber,
+      revisionState,
+      startDate,
+      finishDate,
+      availableProgrammes,
+      loading,
+      error,
+      refreshContext: loadProgrammes,
+    }}>
+      <div className="ngamsoi-shell datum-shell flex h-[100dvh] w-full flex-col overflow-hidden bg-surface-canvas text-tactical-text-primary">
+        <header className="ngamsoi-app-header datum-app-header z-40 w-full shrink-0 border-b border-surface-border bg-surface-primary shadow-sm">
           <div className="ng-header-bar mx-auto w-full">
             <NgamsoiBrand compact />
-
             {user && (
               <details className="ng-header-profile">
-                <summary
-                  className="ng-profile-trigger"
-                  title={user.email ?? 'Profil'}
-                  aria-label="Buka profil pengguna"
-                >
-                  {userInitials}
-                </summary>
+                <summary className="ng-profile-trigger" title={user.email ?? 'Profil'} aria-label="Buka profil pengguna">{initials}</summary>
                 <div className="ng-profile-panel">
-                  <div className="ng-profile-copy">
-                    <span className="ng-profile-label">Akaun</span>
-                    <span className="ng-profile-email" title={user.email ?? ''}>{user.email ?? '—'}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void signOut()}
-                    className="ng-profile-signout"
-                  >
-                    Keluar
-                  </button>
+                  <div className="ng-profile-copy"><span className="ng-profile-label">Akaun</span><span className="ng-profile-email" title={user.email ?? ''}>{user.email ?? '—'}</span></div>
+                  <div className="border-t border-surface-border pt-2 text-xs text-tactical-text-muted">Tetapan projek akan diletakkan di sini.</div>
+                  <button type="button" onClick={() => void signOut()} className="ng-profile-signout">Keluar</button>
                 </div>
               </details>
             )}
@@ -418,136 +304,61 @@ export default function DailyEntryShell({
         </header>
 
         {programmeId && (
-          <section className="ng-project-context datum-project-strip shrink-0 w-full" aria-label="Konteks projek semasa">
+          <section className="ng-project-context datum-project-strip w-full shrink-0" aria-label="Konteks projek semasa">
             <div className="ng-project-context__meta">
               <div className="ng-project-context__identity">
-                <span className="ng-project-short-name" title={programmeShortName || programmeCode || ''}>
-                  {displayShortName}
-                </span>
-                {availableProgrammes.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => changeProgramme(null)}
-                    className="ng-project-switch"
-                    title="Pilih projek lain"
-                  >
-                    Tukar
-                  </button>
-                )}
+                <span className="ng-project-short-name" title={programmeShortName || programmeCode || ''}>{shortName}</span>
+                {availableProgrammes.length > 1 && <button type="button" onClick={() => changeProgramme(null)} className="ng-project-switch" title="Pilih projek lain">Tukar</button>}
               </div>
             </div>
+            <h2 className="ng-project-title" title={programmeName || ''}>{programmeName || 'Nama Projek'}</h2>
 
-            <h2 className="ng-project-title" title={programmeName || ''}>
-              {programmeName || 'Nama Projek'}
-            </h2>
-
-            <div className="ng-project-pulse" aria-label="Ringkasan projek semasa">
-              <span className="ng-project-pulse__item" title="Semakan program kerja semasa">
-                <small>PROGRAM KERJA</small>
-                <strong
-                  className={`ng-project-revision ${revisionState === 'RESOLVING' || revisionState === 'UNAVAILABLE' || revisionState === 'IDLE' ? 'ng-project-revision--pending' : ''} ${revisionState === 'ERROR' ? 'ng-project-revision--error' : ''}`.trim()}
-                >
-                  {revisionLabel}
-                </strong>
-              </span>
-
-              <span className="ng-project-pulse__item ng-project-pulse__item--split" title={projectDayPulse.title}>
-                <span className="ng-project-pulse__pair">
-                  <span className="ng-project-pulse__metric">
-                    <small>TINGGAL</small>
-                    <strong>{projectDayPulse.remainingDays}</strong>
-                  </span>
-                  <span className="ng-project-pulse__metric">
-                    <small>HARI KE</small>
-                    <strong>{projectDayPulse.dayNumber}</strong>
-                  </span>
-                </span>
-              </span>
-
-              <span className="ng-project-pulse__item ng-project-pulse__item--split" title="Hari, tarikh dan masa peranti semasa">
-                <span className="ng-project-pulse__pair">
-                  <span className="ng-project-pulse__metric">
-                    <small>{deviceDay}</small>
-                    <strong>{deviceDate}</strong>
-                  </span>
-                  <span className="ng-project-pulse__metric">
-                    <small>MASA</small>
-                    <strong>{clockLabel}</strong>
-                  </span>
-                </span>
-              </span>
+            <div className="ng-project-pulse ng-project-pulse--f45" aria-label="Ringkasan projek semasa">
+              <span className="ng-project-pulse__item" data-pulse="programme" title="Program Kerja semasa"><small>PROGRAM KERJA</small><strong>{revisionLabel}</strong></span>
+              <span className="ng-project-pulse__item" data-pulse="remaining" title={`Siap semasa ${finishDate ?? '—'}`}><small>TINGGAL</small><strong>{pulse.remainingDays}</strong><span className="ng-project-pulse__sub">SIAP {formatFinish(finishDate)}</span></span>
+              <span className="ng-project-pulse__item" data-pulse="day"><small>HARI KE</small><strong>{pulse.dayNumber}</strong></span>
+              <span className="ng-project-pulse__item" data-pulse="now" title="Tarikh dan masa peranti semasa"><small>{dayLabel}</small><strong>{formatDeviceDate(now)} · {formatClock(now)}</strong></span>
+              <ProjectWeatherPulse />
             </div>
           </section>
         )}
 
-        {error && (
-          <div className="w-full px-4 py-3 shrink-0">
-            <div className="rounded-xl border border-red-800 bg-red-950/60 px-4 py-3 text-sm text-red-200 flex items-center justify-between gap-3">
-              <span>● {error}</span>
-              <button
-                type="button"
-                onClick={() => void loadProgrammes()}
-                className="rounded-md bg-red-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
-              >
-                Cuba Semula
-              </button>
-            </div>
-          </div>
-        )}
+        {error && <div className="w-full shrink-0 px-4 py-2"><div className="flex items-center justify-between gap-3 rounded-xl border border-red-800 bg-red-950/60 px-4 py-3 text-sm text-red-200"><span>● {error}</span><button type="button" onClick={() => void loadProgrammes()} className="rounded-md bg-red-800 px-3 py-1.5 text-xs font-semibold text-white">Cuba Semula</button></div></div>}
 
-        <main className="flex-1 min-h-0 overflow-hidden">
+        <main className="min-h-0 flex-1 overflow-hidden">
           {loading && availableProgrammes.length === 0 ? (
-            <div className="h-full flex items-center justify-center px-4">
-              <div className="text-center text-sm text-tactical-text-secondary">Memuatkan konteks projek…</div>
-            </div>
+            <div className="flex h-full items-center justify-center px-4 text-sm text-tactical-text-secondary">Memuatkan konteks projek…</div>
           ) : availableProgrammes.length === 0 ? (
-            <div className="h-full flex items-start justify-center px-4 pt-12">
-              <div className="w-full max-w-3xl rounded-2xl border border-surface-border bg-surface-secondary p-8 text-center shadow-sm">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-elevated text-tactical-text-secondary">▣</div>
-                <h3 className="text-base font-bold text-tactical-text-primary">Tiada Projek Aktif Ditemui</h3>
-                <p className="mx-auto mt-2 max-w-lg text-sm text-tactical-text-secondary">
-                  Tiada program atau projek aktif dalam pangkalan data untuk akaun ini. Sila hubungi pentadbir sistem untuk mendaftarkan projek.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void loadProgrammes()}
-                  className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-                >
-                  Muat Semula
-                </button>
-              </div>
-            </div>
+            <div className="flex h-full items-start justify-center px-4 pt-12"><div className="w-full max-w-3xl rounded-2xl border border-surface-border bg-surface-secondary p-8 text-center"><h3 className="font-bold">Tiada Projek Aktif Ditemui</h3><p className="mt-2 text-sm text-tactical-text-secondary">Sila hubungi pentadbir sistem untuk mendaftarkan projek.</p><button type="button" onClick={() => void loadProgrammes()} className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Muat Semula</button></div></div>
           ) : !programmeId && availableProgrammes.length > 1 ? (
-            <div className="h-full overflow-y-auto px-4 py-6">
-              <div className="mx-auto w-full max-w-3xl">
-                <div className="mb-5">
-                  <h1 className="text-xl font-bold text-tactical-text-primary">Pilih Projek</h1>
-                  <p className="mt-1 text-sm text-tactical-text-secondary">Pilih satu projek aktif untuk meneruskan Buku Harian Tapak.</p>
-                </div>
-                <div className="grid gap-3">
-                  {availableProgrammes.map((programme) => (
-                    <button
-                      key={programme.id}
-                      type="button"
-                      onClick={() => handleSelectProgramme(programme.id)}
-                      className="rounded-xl border border-surface-border bg-surface-secondary p-4 text-left transition hover:border-blue-500/60 hover:bg-surface-elevated"
-                    >
-                      <div className="text-xs font-semibold uppercase tracking-wide text-blue-400">{programme.code}</div>
-                      <div className="mt-1 font-semibold text-tactical-text-primary">{programme.name}</div>
-                      {(programme.contractorName || programme.employerName) && (
-                        <div className="mt-2 text-xs text-tactical-text-secondary">
-                          {[programme.employerName, programme.contractorName].filter(Boolean).join(' · ')}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            children
-          )}
+            <div className="h-full overflow-y-auto px-4 py-6"><div className="mx-auto w-full max-w-3xl"><h1 className="text-xl font-bold">Pilih Projek</h1><p className="mt-1 text-sm text-tactical-text-secondary">Pilih satu projek aktif untuk meneruskan Buku Harian Tapak.</p><div className="mt-5 grid gap-3">{availableProgrammes.map((programme) => <button key={programme.id} type="button" onClick={() => selectProgramme(programme.id)} className="rounded-xl border border-surface-border bg-surface-secondary p-4 text-left hover:border-blue-500/60"><div className="text-xs font-semibold uppercase tracking-wide text-blue-400">{programme.code}</div><div className="mt-1 font-semibold">{programme.name}</div>{(programme.employerName || programme.contractorName) && <div className="mt-2 text-xs text-tactical-text-secondary">{[programme.employerName, programme.contractorName].filter(Boolean).join(' · ')}</div>}</button>)}</div></div></div>
+          ) : children}
         </main>
+
+        <style jsx global>{`
+          .ng-project-pulse--f45 { display: grid; grid-template-columns: 1fr .9fr .72fr 1.35fr 1.05fr; align-items: stretch; }
+          .ng-project-pulse--f45 .ng-project-pulse__item { min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: .55rem .75rem; border-right: 1px solid var(--datum-graphite-700); }
+          .ng-project-pulse--f45 .ng-project-pulse__item:last-child { border-right: 0; }
+          .ng-project-pulse--f45 small { font-size: .61rem; letter-spacing: .08em; color: var(--datum-grey-500); white-space: nowrap; }
+          .ng-project-pulse--f45 strong { margin-top: .1rem; font-size: .9rem; line-height: 1.15; color: var(--datum-white); white-space: nowrap; }
+          .ng-project-pulse__sub, .ng-project-weather__sub { margin-top: .15rem; font-size: .58rem; color: var(--datum-grey-500); white-space: nowrap; }
+          @media (max-width: 767px) {
+            .ng-project-pulse--f45 { grid-template-columns: repeat(6, 1fr); }
+            .ng-project-pulse--f45 [data-pulse='programme'], .ng-project-pulse--f45 [data-pulse='remaining'], .ng-project-pulse--f45 [data-pulse='day'] { grid-column: span 2; }
+            .ng-project-pulse--f45 [data-pulse='now'] { grid-column: span 4; border-top: 1px solid var(--datum-graphite-700); }
+            .ng-project-pulse--f45 .ng-project-weather { grid-column: span 2; border-top: 1px solid var(--datum-graphite-700); }
+            .ng-project-pulse--f45 [data-pulse='day'] { border-right: 0; }
+            .ng-project-pulse--f45 strong { font-size: .8rem; }
+            .ng-project-pulse--f45 [data-pulse='now'] strong { font-size: .76rem; }
+            .ng-project-pulse__sub { display: none; }
+          }
+          @media (min-width: 768px) and (max-width: 1050px) {
+            .ng-project-pulse--f45 { grid-template-columns: .82fr .72fr .62fr 1.15fr .9fr; }
+            .ng-project-pulse--f45 .ng-project-pulse__item { padding-inline: .5rem; }
+            .ng-project-pulse--f45 strong { font-size: .78rem; }
+            .ng-project-pulse--f45 small { font-size: .55rem; }
+          }
+        `}</style>
       </div>
     </DailyEntryContext.Provider>
   );
