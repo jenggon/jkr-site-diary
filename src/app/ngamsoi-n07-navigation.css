@@ -105,20 +105,10 @@
     text-align: left;
   }
 
+  /* F4.5 is the final desktop presentation authority. Keep the historical pseudo-element
+   * neutral so the selected rail has exactly one left-edge indicator rather than a double mark. */
   .ng-workspace-nav--desktop .ng-workspace-nav__item::before {
-    content: "";
-    position: absolute;
-    top: .52rem;
-    bottom: .52rem;
-    left: 0;
-    width: 2px;
-    border-radius: 999px;
-    background: transparent;
-    transition: background-color 150ms ease;
-  }
-
-  .ng-workspace-nav--desktop .ng-workspace-nav__item[data-selected="true"]::before {
-    background: var(--ng-current);
+    content: none;
   }
 
   .ng-workspace-nav--desktop .ng-workspace-nav__item[data-selected="true"] .ng-workspace-nav__icon {
@@ -293,6 +283,12 @@
     transform: scaleX(0.28);
     transform-origin: center;
     transition: background-color 150ms ease, transform 170ms cubic-bezier(0.2, 0.82, 0.22, 1);
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__item[data-selected="true"] {
+    /* F4.5 owns the desktop left-edge shadow. Mobile explicitly cancels it and uses
+     * the orientation-correct top indicator below. */
+    box-shadow: none !important;
   }
 
   .ng-workspace-nav--mobile .ng-workspace-nav__item[data-selected="true"]::before {
