@@ -1,13 +1,19 @@
 'use client';
 
 import React, { FormEvent, useMemo, useRef, useState } from 'react';
-import NgamsoiCompletionRitual from '@/components/brand/NgamsoiCompletionRitual';
 import { useDailyEntryContext } from './DailyEntryShell';
 import OperationalSourceSelector, { SelectedOperationalSource } from './OperationalSourceSelector';
+import PostSaveConfirmation from './PostSaveConfirmation';
 import SmartWorkforceEntry from './SmartWorkforceEntry';
 import type { ManpowerRow } from './WorkforceEntry';
 import WeatherEvidenceSection, { EMPTY_WEATHER_EVIDENCE, WeatherEvidenceValue } from './WeatherEvidenceSection';
 import type { SiteDiaryDailyWorkStatus } from '@/types/siteDiary';
+
+type SpineState = 'complete' | 'current' | 'upcoming';
+
+interface CatatEntryFormProps {
+  readonly onShowRecords?: () => void;
+}
 
 function todayIso(): string {
   const now = new Date();
@@ -49,7 +55,13 @@ function resolveActivityId(payload: unknown): string | null {
   return null;
 }
 
-export default function CatatEntryForm() {
+function stateFor(step: number, currentStep: number): SpineState {
+  if (step < currentStep) return 'complete';
+  if (step === currentStep) return 'current';
+  return 'upcoming';
+}
+
+export default function CatatEntryForm({ onShowRecords = () => undefined }: CatatEntryFormProps) {
   const { programmeId, revisionId } = useDailyEntryContext();
   const sourceRef = useRef<HTMLDivElement | null>(null);
   const submitLock = useRef(false);
@@ -61,7 +73,8 @@ export default function CatatEntryForm() {
   const [contractorScope, setContractorScope] = useState<'CONTRACTOR' | 'NSC'>('CONTRACTOR');
   const [workStartTime, setWorkStartTime] = useState('08:00');
   const [workEndTime, setWorkEndTime] = useState('17:00');
-  const [weather, setWeather] = useState<WeatherEvidenceValue>(EMPTY_WEATHER_EVIDENCE);
+  const [timeExpanded, setTimeExpanded] = useState(false);
+  const [weather, setWeather] = useState<WeatherEvidenceValue>({ ...EMPTY_WEATHER_EVIDENCE });
   const [manpower, setManpower] = useState<ManpowerRow[]>([]);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,8 +88,18 @@ export default function CatatEntryForm() {
     [manpower],
   );
 
-  const softReset = (savedId: string) => {
-    setSuccessId(savedId);
+  const currentStep = useMemo(() => {
+    if (!selectedSource) return 0;
+    if (knownStartRequired && !knownStartDate) return 1;
+    if (!location.trim()) return 2;
+    if (weather.source === 'AUTO') return 3;
+    if (manpower.length === 0 && !notes.trim()) return 4;
+    if (!notes.trim()) return 5;
+    return 6;
+  }, [knownStartDate, knownStartRequired, location, manpower.length, notes, selectedSource, weather.source]);
+
+  const resetForNextActivity = () => {
+    setSuccessId(null);
     setSelectedSource(null);
     setDailyStatus('MULA');
     setKnownStartDate('');
@@ -84,22 +107,23 @@ export default function CatatEntryForm() {
     setContractorScope('CONTRACTOR');
     setWorkStartTime('08:00');
     setWorkEndTime('17:00');
+    setTimeExpanded(false);
+    setWeather({ ...EMPTY_WEATHER_EVIDENCE });
     setManpower([]);
     setNotes('');
+    setError(null);
 
-    window.setTimeout(() => {
+    window.requestAnimationFrame(() => {
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
       sourceRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-      const search = sourceRef.current?.querySelector<HTMLInputElement>('input[type="search"], input[type="text"]');
-      search?.focus({ preventScroll: true });
-    }, 850);
+      sourceRef.current?.querySelector<HTMLInputElement>('input[type="search"], input[type="text"]')?.focus({ preventScroll: true });
+    });
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitLock.current) return;
+    if (submitLock.current || successId) return;
     setError(null);
-    setSuccessId(null);
 
     if (!programmeId || !revisionId) return setError('Program Kerja semasa belum tersedia.');
     if (!selectedSource) return setError('Pilih kerja MSP atau VO dahulu.');
@@ -186,8 +210,9 @@ export default function CatatEntryForm() {
         ? diaryBody.data.site_diary_id
         : typeof diaryBody?.data?.siteDiaryId === 'string'
           ? diaryBody.data.siteDiaryId
-          : activityId;
-      softReset(savedId);
+          : null;
+      if (!savedId) throw new Error('ID Buku Harian tidak dapat ditentukan.');
+      setSuccessId(savedId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Gagal menyimpan catatan.');
     } finally {
@@ -197,93 +222,90 @@ export default function CatatEntryForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="ng-catat-flow w-full space-y-4" aria-label="Borang Buku Harian Tapak" data-entry-mode="CATAT">
-      <div ref={sourceRef} className="ng-catat-source-step" data-catat-start>
-        <OperationalSourceSelector selectedSource={selectedSource} onSelectSource={setSelectedSource} disabled={isSubmitting} />
+    <form onSubmit={handleSubmit} className="ng-catat-flow w-full" aria-label="Borang Buku Harian Tapak" data-entry-mode="CATAT">
+      <div ref={sourceRef} className="ng-entry-step ng-entry-step--source" data-entry-step="source" data-spine-state={stateFor(0, currentStep)} data-catat-start>
+        <OperationalSourceSelector selectedSource={selectedSource} onSelectSource={setSelectedSource} disabled={isSubmitting || Boolean(successId)} />
       </div>
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="ng-entry-step ng-entry-panel" data-entry-step="daily" data-spine-state={stateFor(1, currentStep)}>
+        <div className="ng-entry-row ng-entry-row--status">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">HARIAN</div>
-            <input
-              type="date"
-              value={activityDate}
-              onChange={(event) => setActivityDate(event.target.value)}
-              disabled={isSubmitting}
-              aria-label="Tarikh catatan"
-              className="mt-1 rounded-lg border border-transparent bg-transparent p-0 text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700"
-            />
+            <div className="ng-entry-heading">HARIAN</div>
+            <input type="date" value={activityDate} onChange={(event) => setActivityDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} aria-label="Tarikh catatan" className="ng-entry-date" />
           </div>
-          <div className="grid grid-cols-3 gap-1 rounded-xl border border-zinc-800 bg-zinc-950 p-1" aria-label="Status kerja hari ini">
+          <div className="ng-segmented" aria-label="Status kerja hari ini">
             {(['MULA', 'LAKSANA', 'SIAP'] as const).map((button) => {
               const active = dailyButtonState(dailyStatus, button);
-              return (
-                <button
-                  key={button}
-                  type="button"
-                  onClick={() => setDailyStatus((current) => nextStatus(current, button))}
-                  disabled={isSubmitting}
-                  aria-pressed={active}
-                  className={`min-h-[42px] rounded-lg px-3 text-xs font-bold transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200'}`}
-                >
-                  {button}
-                </button>
-              );
+              return <button key={button} type="button" onClick={() => setDailyStatus((current) => nextStatus(current, button))} disabled={isSubmitting || Boolean(successId)} aria-pressed={active}>{button}</button>;
             })}
           </div>
         </div>
-        {dailyStatus === 'MULA_DAN_SIAP' && (
-          <div className="mt-2 text-[11px] font-semibold text-emerald-300" data-testid="same-day-start-complete">Mula + Siap hari yang sama</div>
-        )}
+        {dailyStatus === 'MULA_DAN_SIAP' && <div className="ng-entry-note ng-entry-note--valid" data-testid="same-day-start-complete">Mula + Siap</div>}
         {knownStartRequired && (
-          <div className="mt-3 max-w-xs">
-            <label className="block text-xs font-semibold text-zinc-400">Mula sebenar</label>
-            <input type="date" value={knownStartDate} max={activityDate} onChange={(event) => setKnownStartDate(event.target.value)} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" />
-            <p className="mt-1 text-[11px] text-zinc-600">Bukan tarikh mula terancang MSP.</p>
+          <div className="ng-entry-field ng-entry-field--compact">
+            <label>Mula sebenar</label>
+            <input type="date" value={knownStartDate} max={activityDate} onChange={(event) => setKnownStartDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} />
+            <small>Bukan tarikh MSP.</small>
           </div>
         )}
       </section>
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">TAPAK</div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-400">Lokasi</label>
-            <input value={location} onChange={(event) => setLocation(event.target.value)} disabled={isSubmitting} placeholder="cth: Aras 2 · Grid 4–8" className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" />
+      <section className="ng-entry-step ng-entry-panel" data-entry-step="site" data-spine-state={stateFor(2, currentStep)}>
+        <div className="ng-entry-heading">TAPAK</div>
+        <div className="ng-entry-grid ng-entry-grid--site">
+          <div className="ng-entry-field">
+            <label>Lokasi</label>
+            <input value={location} onChange={(event) => setLocation(event.target.value)} disabled={isSubmitting || Boolean(successId)} placeholder="cth: Aras 2 · Grid 4–8" />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-zinc-400">Skop</label>
-            <select value={contractorScope} onChange={(event) => setContractorScope(event.target.value as 'CONTRACTOR' | 'NSC')} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100">
+          <div className="ng-entry-field">
+            <label>Skop</label>
+            <select value={contractorScope} onChange={(event) => setContractorScope(event.target.value as 'CONTRACTOR' | 'NSC')} disabled={isSubmitting || Boolean(successId)}>
               <option value="CONTRACTOR">Utama</option>
               <option value="NSC">NSC</option>
             </select>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div><label className="block text-xs font-semibold text-zinc-400">Mula kerja</label><input type="time" value={workStartTime} onChange={(event) => setWorkStartTime(event.target.value)} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" /></div>
-          <div><label className="block text-xs font-semibold text-zinc-400">Tamat kerja</label><input type="time" value={workEndTime} onChange={(event) => setWorkEndTime(event.target.value)} disabled={isSubmitting} className="mt-1 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100" /></div>
+        <div className="ng-time-summary" data-testid="work-time-summary">
+          <span><small>MASA</small><strong>{workStartTime} → {workEndTime}</strong></span>
+          <button type="button" onClick={() => setTimeExpanded((current) => !current)} disabled={isSubmitting || Boolean(successId)} aria-expanded={timeExpanded} aria-controls="catat-time-adjustment">{timeExpanded ? 'Tutup' : 'Ubah'}</button>
         </div>
+        {timeExpanded && (
+          <div id="catat-time-adjustment" className="ng-time-adjustment">
+            <div className="ng-entry-field"><label>Mula</label><input type="time" value={workStartTime} onChange={(event) => setWorkStartTime(event.target.value)} disabled={isSubmitting || Boolean(successId)} /></div>
+            <div className="ng-entry-field"><label>Tamat</label><input type="time" value={workEndTime} onChange={(event) => setWorkEndTime(event.target.value)} disabled={isSubmitting || Boolean(successId)} /></div>
+          </div>
+        )}
       </section>
 
-      <WeatherEvidenceSection date={activityDate} value={weather} onChange={setWeather} disabled={isSubmitting} />
-      <SmartWorkforceEntry selectedSource={selectedSource} manpower={manpower} onChange={setManpower} disabled={isSubmitting} />
+      <div className="ng-entry-step" data-entry-step="weather" data-spine-state={stateFor(3, currentStep)}>
+        <WeatherEvidenceSection date={activityDate} value={weather} onChange={setWeather} disabled={isSubmitting || Boolean(successId)} />
+      </div>
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg">
-        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">CATATAN</div>
-        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting} rows={3} placeholder="Catat kerja" className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-100" />
+      <div className="ng-entry-step" data-entry-step="workforce" data-spine-state={stateFor(4, currentStep)}>
+        <SmartWorkforceEntry selectedSource={selectedSource} manpower={manpower} onChange={setManpower} disabled={isSubmitting || Boolean(successId)} />
+      </div>
+
+      <section className="ng-entry-step ng-entry-panel" data-entry-step="notes" data-spine-state={stateFor(5, currentStep)}>
+        <div className="ng-entry-heading">CATATAN</div>
+        <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting || Boolean(successId)} rows={3} placeholder="Catat kerja" />
       </section>
 
-      {error && <div role="alert" className="rounded-xl border border-red-800/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
-      {successId && (
-        <div data-testid="catat-completion">
-          <NgamsoiCompletionRitual savedSiteDiaryId={successId} isEditMode={false} successText="Buku Harian Tapak berjaya disimpan." />
+      {error && <div role="alert" className="ng-entry-alert">{error}</div>}
+
+      {!successId && (
+        <div className="ng-entry-step ng-entry-step--save" data-entry-step="save" data-spine-state={stateFor(6, currentStep)}>
+          <button type="submit" disabled={isSubmitting} className="ng-save-action">{isSubmitting ? 'Simpan…' : 'Simpan'}</button>
         </div>
       )}
 
-      <button type="submit" disabled={isSubmitting} className="min-h-[50px] w-full rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg hover:bg-blue-500 disabled:opacity-50">
-        {isSubmitting ? 'Simpan…' : 'Simpan'}
-      </button>
+      {successId && (
+        <PostSaveConfirmation
+          savedSiteDiaryId={successId}
+          successText="Buku Harian Tapak berjaya disimpan."
+          onShowRecords={onShowRecords}
+          onAddActivity={resetForNextActivity}
+        />
+      )}
     </form>
   );
 }
