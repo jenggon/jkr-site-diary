@@ -1,0 +1,431 @@
+/* F4.5 visual reconciliation — restores accepted NGAMSOI harmony after semantic corrections.
+ * Scope: shell/header/navigation/CATAT-AKTIVITI operational surfaces only.
+ * REKOD internal semantics remain intentionally untouched for #7.
+ * NGAMSOI mark geometry is not addressed here and remains frozen.
+ */
+
+:root {
+  --ng-f45-rule: color-mix(in srgb, var(--datum-graphite-700) 82%, transparent);
+  --ng-f45-panel: color-mix(in srgb, var(--datum-graphite-900) 76%, var(--datum-graphite-950));
+  --ng-f45-panel-soft: color-mix(in srgb, var(--datum-graphite-900) 48%, var(--datum-graphite-950));
+  --ng-f45-text-dim: color-mix(in srgb, var(--datum-grey-500) 88%, var(--datum-white));
+}
+
+/* ---------- Global instrument rhythm ---------- */
+.ng-workspace-content {
+  max-width: 72rem !important;
+}
+
+.ng-workspace [data-workspace-scroll] {
+  scrollbar-gutter: stable;
+}
+
+.ng-workspace-content,
+.ng-project-context,
+.ng-workspace-nav,
+.ngamsoi-app-header {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Keep legacy Records behaviour intact while making its shell belong to the same instrument. */
+.ng-workspace[data-workspace-tab='RECORDS'] .ng-workspace-content {
+  max-width: 66rem !important;
+}
+
+/* ---------- Project header: one coherent surface ---------- */
+.ng-project-context {
+  display: grid !important;
+  grid-template-columns: minmax(15rem, 1fr) minmax(34rem, 45rem) !important;
+  grid-template-areas:
+    'meta pulse'
+    'title pulse' !important;
+  align-items: center !important;
+  column-gap: 1.5rem !important;
+  row-gap: .25rem !important;
+  padding: .78rem 1rem !important;
+  border-bottom: 1px solid var(--ng-f45-rule) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--datum-graphite-950) 96%, transparent), var(--datum-graphite-950)) !important;
+}
+
+.ng-project-context__meta { grid-area: meta !important; min-width: 0 !important; }
+.ng-project-title { grid-area: title !important; min-width: 0 !important; margin: 0 !important; font-size: .88rem !important; line-height: 1.25 !important; font-weight: 720 !important; color: var(--datum-white) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+.ng-project-short-name { font-size: .68rem !important; letter-spacing: .11em !important; color: color-mix(in srgb, var(--datum-white) 76%, var(--datum-grey-500)) !important; }
+.ng-project-switch { font-size: .64rem !important; letter-spacing: .08em !important; text-transform: uppercase !important; }
+
+.ng-project-pulse--f45 {
+  grid-area: pulse !important;
+  align-self: stretch !important;
+  border: 1px solid var(--ng-f45-rule) !important;
+  border-radius: .7rem !important;
+  overflow: hidden !important;
+  background: color-mix(in srgb, var(--datum-graphite-900) 42%, var(--datum-graphite-950)) !important;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 14%) !important;
+}
+
+.ng-project-pulse--f45 .ng-project-pulse__item {
+  min-height: 3.15rem !important;
+  padding: .55rem .72rem !important;
+  border-right-color: var(--ng-f45-rule) !important;
+}
+
+.ng-project-pulse--f45 small {
+  font-size: .54rem !important;
+  font-weight: 720 !important;
+  letter-spacing: .115em !important;
+  color: var(--ng-f45-text-dim) !important;
+}
+
+.ng-project-pulse--f45 strong {
+  margin-top: .16rem !important;
+  font-size: .84rem !important;
+  line-height: 1.1 !important;
+  letter-spacing: -.01em !important;
+}
+
+.ng-project-pulse__sub,
+.ng-project-weather__sub {
+  margin-top: .18rem !important;
+  font-size: .56rem !important;
+  letter-spacing: .025em !important;
+  color: var(--ng-f45-text-dim) !important;
+}
+
+.ng-project-pulse--f45 [data-pulse='programme'] strong {
+  color: var(--ng-established) !important;
+}
+
+/* ---------- Navigation: quieter, closer to content, still tactile ---------- */
+.ng-workspace-nav--desktop {
+  border-right: 1px solid var(--ng-f45-rule) !important;
+  background: color-mix(in srgb, var(--datum-graphite-950) 96%, transparent) !important;
+}
+
+.ng-workspace-nav--desktop:not(.is-collapsed) {
+  width: 10.75rem !important;
+}
+
+.ng-workspace-nav--desktop.is-collapsed {
+  width: 3.6rem !important;
+}
+
+.ng-workspace-nav__item {
+  min-height: 3rem !important;
+  border-radius: .62rem !important;
+  margin: .18rem .42rem !important;
+  color: var(--ng-f45-text-dim) !important;
+}
+
+.ng-workspace-nav__item[data-selected='true'] {
+  color: var(--datum-white) !important;
+  background: color-mix(in srgb, var(--ng-current) 8%, var(--datum-graphite-900)) !important;
+  box-shadow: inset 2px 0 0 var(--ng-current) !important;
+}
+
+.ng-workspace-nav__label {
+  font-size: .69rem !important;
+  font-weight: 720 !important;
+  letter-spacing: .055em !important;
+  text-transform: uppercase !important;
+}
+
+.ng-adaptive-nav__toggle {
+  opacity: .72 !important;
+}
+
+.ng-adaptive-nav__toggle:hover,
+.ng-adaptive-nav__toggle:focus-visible {
+  opacity: 1 !important;
+}
+
+/* ---------- CATAT / AKTIVITI: restore compile-flow spine ---------- */
+form[aria-label='Borang Buku Harian Tapak'] {
+  --ng-spine-gutter: 1.2rem;
+  --ng-spine-x: .55rem;
+  --ng-spine-rail: color-mix(in srgb, var(--ng-grey-600) 56%, var(--ng-graphite-950));
+  position: relative !important;
+  padding-left: var(--ng-spine-x) !important;
+  gap: 0 !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak']::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: .95rem;
+  bottom: 4.8rem;
+  left: var(--ng-spine-x);
+  width: 2px;
+  background: var(--ng-spine-rail);
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > section,
+form[aria-label='Borang Buku Harian Tapak'] > .ng-catat-source-step {
+  position: relative !important;
+  margin: 0 0 .68rem var(--ng-spine-gutter) !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > section,
+form[aria-label='Borang Buku Harian Tapak'] > .ng-catat-source-step > section,
+form[aria-label='Borang Buku Harian Tapak'] .rounded-2xl,
+form[aria-label='Borang Buku Harian Tapak'] .rounded-xl {
+  border-radius: .7rem !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > section,
+form[aria-label='Borang Buku Harian Tapak'] > .ng-catat-source-step > section {
+  border-color: var(--ng-f45-rule) !important;
+  background: var(--ng-f45-panel-soft) !important;
+  box-shadow: none !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > section::before,
+form[aria-label='Borang Buku Harian Tapak'] > .ng-catat-source-step::before {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  top: 1rem;
+  left: calc(-1 * var(--ng-spine-gutter) - .36rem);
+  width: .72rem;
+  height: .72rem;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--ng-grey-600) 82%, var(--ng-graphite-950));
+  background: var(--ng-graphite-950);
+  box-shadow: 0 0 0 2px var(--ng-graphite-950);
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > section:focus-within::before,
+form[aria-label='Borang Buku Harian Tapak'] > .ng-catat-source-step:focus-within::before {
+  border-color: var(--ng-current) !important;
+  box-shadow: 0 0 0 2px var(--ng-graphite-950), 0 0 0 3px color-mix(in srgb, var(--ng-current) 25%, transparent) !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > .ng-catat-source-step:has(.mobile-entry-selected-source)::before {
+  content: '✓';
+  display: grid;
+  place-items: center;
+  border-color: var(--ng-established) !important;
+  color: var(--ng-established);
+  font-size: .48rem;
+  font-weight: 850;
+}
+
+/* Section grammar: one dash, one concise heading, one hierarchy. */
+form[aria-label='Borang Buku Harian Tapak'] > section > div:first-child > div:first-child,
+form[aria-label='Borang Buku Harian Tapak'] > section > div:first-child > div:first-child > div:first-child,
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__kicker {
+  letter-spacing: .105em !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > section > div:first-child > div:first-child > div:first-child::before,
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__kicker::before {
+  content: '— ';
+  color: var(--ng-current);
+}
+
+/* Remove duplicated workforce heading/hint: PEKERJA is the single authority. */
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__title,
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__hint {
+  display: none !important;
+}
+
+/* Workforce totals: headers name categories, rows carry numbers. */
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__matrix-head .ng-workforce__matrix-metric > strong:not([data-testid='workforce-classified-total']) {
+  display: none !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__matrix-head {
+  min-height: 2.6rem !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__figure {
+  min-height: 3.3rem !important;
+  font-size: 1rem !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce__empty {
+  min-height: 3.25rem !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: .72rem !important;
+  color: var(--ng-f45-text-dim) !important;
+}
+
+/* CATAT is not a stack of SaaS cards. */
+form[aria-label='Borang Buku Harian Tapak'] textarea,
+form[aria-label='Borang Buku Harian Tapak'] input,
+form[aria-label='Borang Buku Harian Tapak'] select {
+  border-radius: .52rem !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] textarea {
+  min-height: 5.5rem !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--ng-current) 15%, var(--datum-graphite-900)) !important;
+  border-color: color-mix(in srgb, var(--ng-current) 66%, var(--datum-graphite-700)) !important;
+  color: var(--datum-white) !important;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-current) 42%, transparent) !important;
+}
+
+/* Weather observation: state + controls first, evidence secondary. */
+form[aria-label='Borang Buku Harian Tapak'] section[aria-label='Cuaca Site Diary'] > div:first-child p {
+  display: none !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] section[aria-label='Cuaca Site Diary'] > div:first-child h3 {
+  font-size: .82rem !important;
+}
+
+/* TRE helper should not read like diagnostics. */
+form[aria-label='Borang Buku Harian Tapak'] section[aria-label='Cadangan dan tenaga kerja tapak'] > div:first-child > div:first-child > div:first-child > div:nth-child(2) {
+  color: var(--ng-f45-text-dim) !important;
+}
+
+/* Primary action: tactile NGAMSOI instrument, not generic blue SaaS CTA. */
+form[aria-label='Borang Buku Harian Tapak'] > button[type='submit'] {
+  margin: .78rem 0 1rem var(--ng-spine-gutter) !important;
+  width: calc(100% - var(--ng-spine-gutter)) !important;
+  min-height: 3rem !important;
+  border: 1px solid color-mix(in srgb, var(--ng-current) 65%, var(--datum-graphite-700)) !important;
+  border-radius: .62rem !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ng-current) 18%, var(--datum-graphite-900)), color-mix(in srgb, var(--ng-current) 8%, var(--datum-graphite-950))) !important;
+  color: var(--datum-white) !important;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-current) 42%, transparent), 0 8px 24px rgb(0 0 0 / 16%) !important;
+  letter-spacing: .02em !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > button[type='submit']:hover,
+form[aria-label='Borang Buku Harian Tapak'] > button[type='submit']:focus-visible {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ng-current) 24%, var(--datum-graphite-900)), color-mix(in srgb, var(--ng-current) 12%, var(--datum-graphite-950))) !important;
+}
+
+/* Empty states stay compact and calm. */
+.ng-workspace-content [data-testid*='empty'],
+.ng-workspace-content .ng-workforce__empty {
+  letter-spacing: .01em !important;
+}
+
+/* ---------- Medium / half-window: real recomposition, never squeezed desktop ---------- */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .ng-project-context {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      'meta'
+      'title'
+      'pulse' !important;
+    gap: .25rem !important;
+    padding: .65rem .8rem .72rem !important;
+  }
+
+  .ng-project-title {
+    padding-right: 0 !important;
+    font-size: .82rem !important;
+  }
+
+  .ng-project-pulse--f45 {
+    margin-top: .32rem !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+  }
+
+  .ng-project-pulse--f45 [data-pulse='programme'],
+  .ng-project-pulse--f45 [data-pulse='remaining'],
+  .ng-project-pulse--f45 [data-pulse='day'] {
+    grid-column: span 2 !important;
+  }
+
+  .ng-project-pulse--f45 [data-pulse='now'] {
+    grid-column: span 4 !important;
+    border-top: 1px solid var(--ng-f45-rule) !important;
+  }
+
+  .ng-project-pulse--f45 .ng-project-weather {
+    grid-column: span 2 !important;
+    border-top: 1px solid var(--ng-f45-rule) !important;
+  }
+
+  .ng-project-pulse--f45 [data-pulse='day'] {
+    border-right: 0 !important;
+  }
+
+  .ng-workspace-nav--desktop {
+    width: 3.6rem !important;
+  }
+
+  .ng-workspace-nav--desktop .ng-workspace-nav__label {
+    display: none !important;
+  }
+
+  .ng-workspace-content {
+    max-width: 58rem !important;
+  }
+}
+
+/* ---------- Phone: preserve bottom nav and compile-flow ---------- */
+@media (max-width: 767px) {
+  .ng-project-context {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      'meta'
+      'title'
+      'pulse' !important;
+    padding: .62rem .72rem .66rem !important;
+    gap: .2rem !important;
+  }
+
+  .ng-project-title {
+    font-size: .78rem !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+  }
+
+  .ng-project-pulse--f45 {
+    margin-top: .34rem !important;
+    border-radius: .58rem !important;
+  }
+
+  .ng-project-pulse--f45 .ng-project-pulse__item {
+    min-height: 2.8rem !important;
+    padding: .46rem .52rem !important;
+  }
+
+  .ng-project-pulse--f45 strong {
+    font-size: .74rem !important;
+  }
+
+  .ng-project-pulse--f45 small {
+    font-size: .49rem !important;
+  }
+
+  .ng-workspace-nav--mobile {
+    border-top: 1px solid var(--ng-f45-rule) !important;
+    background: color-mix(in srgb, var(--datum-graphite-950) 96%, transparent) !important;
+  }
+
+  .ng-workspace-nav--mobile .ng-workspace-nav__item {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    min-height: 3.7rem !important;
+  }
+
+  form[aria-label='Borang Buku Harian Tapak'] > section,
+  form[aria-label='Borang Buku Harian Tapak'] > .ng-catat-source-step {
+    margin-bottom: .58rem !important;
+  }
+
+  form[aria-label='Borang Buku Harian Tapak'] > button[type='submit'] {
+    margin-bottom: 5rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  form[aria-label='Borang Buku Harian Tapak'] *,
+  .ng-workspace-nav *,
+  .ng-project-pulse--f45 * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
