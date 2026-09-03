@@ -10,7 +10,7 @@ const navigationCss = source('src/app/ngamsoi-n07-navigation.css');
 describe('N07 NGAMSOI homecoming/navigation contract', () => {
   it('keeps one canonical four-tab workspace vocabulary across desktop and mobile', () => {
     expect(workspaceSource).toContain("type WorkspaceTab = 'NEW' | 'OPEN' | 'RECORDS' | 'APPROVALS'");
-    for (const label of ['Baharu', 'Aktiviti', 'Rekod', 'Semak']) {
+    for (const label of ['Catat', 'Aktiviti', 'Rekod', 'Semak']) {
       expect(workspaceSource).toContain(`label: '${label}'`);
     }
     expect(workspaceSource.match(/aria-label=\"Navigasi Buku Harian Tapak\"/g)?.length).toBe(2);
@@ -33,9 +33,18 @@ describe('N07 NGAMSOI homecoming/navigation contract', () => {
 
   it('binds both navigation surfaces to the same explicit selected state and content panel', () => {
     expect(workspaceSource.match(/data-selected=\{isSelected \? 'true' : 'false'\}/g)?.length).toBe(2);
+    expect(workspaceSource.match(/aria-selected=\{isSelected\}/g)?.length).toBe(2);
     expect(workspaceSource.match(/aria-controls=\"site-diary-workspace-panel\"/g)?.length).toBe(2);
     expect(workspaceSource).toContain('id="site-diary-workspace-panel"');
     expect(workspaceSource).toContain('role="tabpanel"');
+  });
+
+  it('keeps adaptive disclosure accessible without changing workspace state', () => {
+    expect(workspaceSource).toContain('aria-expanded={navigationExpanded}');
+    expect(workspaceSource).toContain('aria-controls="site-diary-desktop-navigation-items"');
+    expect(workspaceSource).toContain("navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'");
+    expect(workspaceSource).toContain('if (compactViewport)');
+    expect(workspaceSource).toContain('setCompactOverlayOpen((current) => !current)');
   });
 
   it('loads N07 navigation authority after all accepted N05R.5 visual layers', () => {
@@ -45,8 +54,11 @@ describe('N07 NGAMSOI homecoming/navigation contract', () => {
     expect(n07).toBeGreaterThan(n05r5Desktop);
   });
 
-  it('limits the N07 visual authority to workspace navigation/homecoming surfaces', () => {
+  it('keeps N07 as the adaptive navigation/homecoming authority only', () => {
     expect(navigationCss).toContain('.ng-workspace-nav');
+    expect(navigationCss).toContain('.ng-workspace-nav__item[data-selected="true"]');
+    expect(navigationCss).toContain('.ng-workspace-nav--desktop.is-overlay-open');
+    expect(navigationCss).toContain('@media (min-width: 768px) and (max-width: 1199px)');
     expect(navigationCss).toContain('.ng-workspace-content');
     expect(navigationCss).not.toMatch(/ngamsoi-mark|ng-completion|ng-workforce|mobile-entry-selected-source/);
     expect(navigationCss).not.toMatch(/form\[aria-label=/);
