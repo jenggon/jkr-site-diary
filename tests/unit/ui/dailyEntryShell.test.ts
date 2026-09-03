@@ -88,15 +88,20 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(appIcon).toContain('aria-label="NGAMSOI mark"');
   });
 
-  it('locks header hierarchy to nickname, official project name, current revision, and avatar only', () => {
+  it('locks header hierarchy to project identity plus the five F4.5 operational blocks', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
 
     expect(shellSource).toContain('programmeShortName');
     expect(shellSource).toContain('ng-project-short-name');
     expect(shellSource).toContain('ng-project-title');
-    expect(shellSource).toContain('ng-project-revision');
-    expect(shellSource).toContain('revisionNumber');
-    expect(shellSource).toContain('padStart(2,');
+    expect(shellSource).toContain('<small>PROGRAM KERJA</small>');
+    expect(shellSource).toContain('<small>TINGGAL</small>');
+    expect(shellSource).toContain('<small>HARI KE</small>');
+    expect(shellSource).toContain('<small>SEMASA</small>');
+    expect(shellSource).toContain('<ProjectWeatherPulse />');
+    expect(shellSource).toContain('revisionLabel');
+    expect(shellSource).toContain('formatDeviceDate(now)');
+    expect(shellSource).toContain('formatClock(now)');
     expect(shellSource).toContain('ng-profile-trigger');
     expect(shellSource).not.toContain('Semakan Sah');
     expect(shellSource).not.toContain('Semakan Semasa');
@@ -136,7 +141,8 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(shellSource).toContain('options.length === 1');
     expect(shellSource).toContain('Pilih Projek');
     expect(shellSource).toContain('availableProgrammes.length > 1');
-    expect(shellSource).toContain('handleSelectProgramme');
+    expect(shellSource).toContain('onClick={() => selectProgramme(programme.id)}');
+    expect(shellSource).toContain('setProgrammeShortName(matched.shortName ?? matched.code)');
   });
 
   it('REGRESSION: F2.1-A DailyEntryShell does NOT import or rely on DEFAULT_PROGRAMME_ID', () => {
