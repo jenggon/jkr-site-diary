@@ -74,18 +74,19 @@ export default function ProjectWeatherPulse() {
     return (
       <span className="ng-project-pulse__item ng-project-weather" title={unavailable ? 'Cuaca tidak tersedia' : 'Memuat cuaca'}>
         <small>CUACA</small>
-        <strong>{unavailable ? '—' : '…'}</strong>
+        <strong>{unavailable ? 'TIADA DATA' : 'MUAT'}</strong>
       </span>
     );
   }
 
   const temperature = snapshot.current?.temperatureC ?? null;
   const rainWindow = snapshot.nextRainWindow;
+  const dryLabel = temperature === null ? '☀ KERING' : `☀ ${Math.round(temperature)}°`;
   return (
     <span className="ng-project-pulse__item ng-project-weather" title={`Visual Crossing · dikemas kini ${new Date(snapshot.fetchedAt).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })}`}>
       <small>CUACA</small>
-      <strong>{rainWindow ? `☔ ${rainProbability ?? '—'}%` : `☀ ${temperature === null ? '—' : `${Math.round(temperature)}°`}`}</strong>
-      <span className="ng-project-weather__sub">{rainWindow ? `${rainWindow.start.replace(':00', '')}–${rainWindow.end.replace(':00', '')}` : (snapshot.current?.conditions ?? 'Semasa')}</span>
+      <strong>{rainWindow ? `☔ ${rainProbability ?? 0}%` : dryLabel}</strong>
+      {rainWindow && <span className="ng-project-weather__sub">{`${rainWindow.start.replace(':00', '')}–${rainWindow.end.replace(':00', '')}`}</span>}
     </span>
   );
 }
