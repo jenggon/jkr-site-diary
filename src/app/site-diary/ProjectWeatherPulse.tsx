@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import type { RainInterval, SiteWeatherSnapshot } from '@/lib/weather/siteWeather';
 
 type ApiBody = { data?: SiteWeatherSnapshot };
@@ -24,16 +25,27 @@ function probabilityForWindow(snapshot: SiteWeatherSnapshot, window: RainInterva
 }
 
 export default function ProjectWeatherPulse() {
+  const { session } = useAuth();
   const [snapshot, setSnapshot] = useState<SiteWeatherSnapshot | null>(null);
   const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setSnapshot(null);
+      setUnavailable(true);
+      return;
+    }
+
     let active = true;
     let timer: number | null = null;
 
     const load = async () => {
       try {
-        const response = await fetch('/api/weather/site?mode=forecast', { cache: 'no-store' });
+        const response = await fetch('/api/weather/site?mode=forecast', {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
         if (!response.ok) throw new Error('weather');
         const body = await response.json() as ApiBody;
         if (!active || !body.data) return;
@@ -51,7 +63,7 @@ export default function ProjectWeatherPulse() {
       active = false;
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, []);
+  }, [session?.access_token]);
 
   const rainProbability = useMemo(
     () => snapshot ? probabilityForWindow(snapshot, snapshot.nextRainWindow) : null,
