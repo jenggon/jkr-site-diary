@@ -1,6 +1,8 @@
 -- F4.5 CATAT corrections #1/#2
 -- 1) Persist an immutable daily work-status observation independently from Activity lifecycle.
 -- 2) Preserve hourly weather evidence/provenance while keeping legacy Page 1 fields compatible.
+-- The existing print_context stays the authenticated atomic command boundary; the normalized
+-- daily_work_status column is projected from that context inside the same transaction.
 
 ALTER TABLE "public"."site_diary"
   ADD COLUMN IF NOT EXISTS "daily_work_status" text;
@@ -32,6 +34,7 @@ DECLARE
   v_context jsonb := coalesce(p_context, '{}'::jsonb);
   v_scope text := upper(coalesce(v_context->>'contractor_scope', 'CONTRACTOR'));
   v_weather text := upper(coalesce(v_context->>'weather_condition', ''));
+  v_daily_work_status text := upper(coalesce(v_context->>'daily_work_status', ''));
   v_source text := upper(coalesce(v_context->>'weather_source', ''));
   v_provider text := upper(coalesce(v_context->>'weather_provider', ''));
   v_resolution text := upper(coalesce(v_context->>'weather_provider_resolution', ''));
@@ -47,6 +50,10 @@ BEGIN
 
   IF v_scope NOT IN ('CONTRACTOR', 'NSC') THEN
     RAISE EXCEPTION 'F1_PRINT_CONTRACTOR_SCOPE_INVALID' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF v_daily_work_status <> '' AND v_daily_work_status NOT IN ('MULA','LAKSANA','SIAP','MULA_DAN_SIAP') THEN
+    RAISE EXCEPTION 'F45_DAILY_WORK_STATUS_INVALID' USING ERRCODE = 'P0001';
   END IF;
 
   -- Authoritative Site Diary weather is now intentionally binary.
@@ -116,6 +123,7 @@ BEGIN
     'location', trim(coalesce(v_context->>'location','')),
     'work_start_time', nullif(v_context->>'work_start_time',''),
     'work_end_time', nullif(v_context->>'work_end_time',''),
+    'daily_work_status', nullif(v_daily_work_status,''),
     'weather_condition', nullif(v_weather,''),
     -- Legacy first interval fields retained until date-level output #7 supersedes exact-record print.
     'rain_start_time', nullif(v_context->>'rain_start_time',''),
@@ -148,15 +156,12 @@ AS $$
 DECLARE
   v_diary jsonb;
   v_context jsonb;
-  v_daily_work_status text := upper(nullif(p_payload->>'daily_work_status',''));
+  v_daily_work_status text;
   v_row "public"."site_diary";
 BEGIN
   PERFORM "private"."a27_assert_actor"(p_actor_id);
   v_context := "private"."f1_validate_print_context"(p_payload->'print_context');
-
-  IF v_daily_work_status IS NULL OR v_daily_work_status NOT IN ('MULA','LAKSANA','SIAP','MULA_DAN_SIAP') THEN
-    RAISE EXCEPTION 'F45_DAILY_WORK_STATUS_REQUIRED' USING ERRCODE = 'P0001';
-  END IF;
+  v_daily_work_status := upper(nullif(v_context->>'daily_work_status',''));
 
   v_diary := "private"."f1_create_site_diary_with_workforce_core"(
     p_payload, p_actor_id, p_site_diary_id, p_log_id, p_audit_id
@@ -201,18 +206,10 @@ BEGIN
 
   IF p_payload ? 'print_context' THEN
     v_context := "private"."f1_validate_print_context"(p_payload->'print_context');
+    v_daily_work_status := upper(nullif(v_context->>'daily_work_status',''));
     UPDATE "public"."site_diary"
-    SET print_context = v_context
-    WHERE site_diary_id = p_site_diary_id;
-  END IF;
-
-  IF p_payload ? 'daily_work_status' THEN
-    v_daily_work_status := upper(nullif(p_payload->>'daily_work_status',''));
-    IF v_daily_work_status IS NULL OR v_daily_work_status NOT IN ('MULA','LAKSANA','SIAP','MULA_DAN_SIAP') THEN
-      RAISE EXCEPTION 'F45_DAILY_WORK_STATUS_INVALID' USING ERRCODE = 'P0001';
-    END IF;
-    UPDATE "public"."site_diary"
-    SET daily_work_status = v_daily_work_status
+    SET print_context = v_context,
+        daily_work_status = coalesce(v_daily_work_status, daily_work_status)
     WHERE site_diary_id = p_site_diary_id;
   END IF;
 
