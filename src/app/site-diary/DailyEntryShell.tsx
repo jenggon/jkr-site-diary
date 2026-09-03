@@ -86,7 +86,7 @@ export function resolveProjectDayPulse(startDate: string | null, finishDate: str
   const finish = dateParts(finishDate);
   if (finish) {
     const finishUtc = Date.UTC(finish[0], finish[1] - 1, finish[2]);
-    remainingDays = Math.max(0, Math.floor((finishUtc - todayUtc) / DAY_MS));
+    remainingDays = Math.floor((finishUtc - todayUtc) / DAY_MS);
   }
   return { remainingDays, dayNumber };
 }
@@ -317,7 +317,7 @@ export default function DailyEntryShell({ children, initialProgrammeId }: DailyE
               <span className="ng-project-pulse__item" data-pulse="programme" title="Program Kerja semasa"><small>PROGRAM KERJA</small><strong>{revisionLabel}</strong></span>
               <span className="ng-project-pulse__item" data-pulse="remaining" title={`Siap semasa ${finishDate ?? '—'}`}><small>TINGGAL</small><strong>{pulse.remainingDays}</strong><span className="ng-project-pulse__sub">SIAP {formatFinish(finishDate)}</span></span>
               <span className="ng-project-pulse__item" data-pulse="day"><small>HARI KE</small><strong>{pulse.dayNumber}</strong></span>
-              <span className="ng-project-pulse__item" data-pulse="now" title="Tarikh dan masa peranti semasa"><small>{dayLabel}</small><strong>{formatDeviceDate(now)} · {formatClock(now)}</strong></span>
+              <span className="ng-project-pulse__item" data-pulse="now" title="Tarikh dan masa peranti semasa"><small>SEMASA</small><strong>{dayLabel} {formatDeviceDate(now)} · {formatClock(now)}</strong></span>
               <ProjectWeatherPulse />
             </div>
           </section>
