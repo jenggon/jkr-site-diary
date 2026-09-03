@@ -45,16 +45,19 @@ describe('N07 NGAMSOI homecoming/navigation contract', () => {
     expect(workspaceSource).toContain("navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'");
     expect(workspaceSource).toContain('if (compactViewport)');
     expect(workspaceSource).toContain('setCompactOverlayOpen((current) => !current)');
+    expect(workspaceSource).toContain('data-tooltip={navigationExpanded ? undefined : item.meaning}');
   });
 
-  it('loads N07 navigation authority after all accepted N05R.5 visual layers', () => {
+  it('loads N07 after accepted historical layers but before final F4.5 presentation authority', () => {
     const n05r5Desktop = layoutSource.indexOf('ngamsoi-n05r5-desktop-acceptance.css');
     const n07 = layoutSource.indexOf('ngamsoi-n07-navigation.css');
+    const f45 = layoutSource.indexOf('ngamsoi-f45-harmony.css');
     expect(n05r5Desktop).toBeGreaterThanOrEqual(0);
     expect(n07).toBeGreaterThan(n05r5Desktop);
+    expect(f45).toBeGreaterThan(n07);
   });
 
-  it('keeps N07 as the adaptive navigation/homecoming authority only', () => {
+  it('keeps N07 as the adaptive navigation/homecoming behavior contract only', () => {
     expect(navigationCss).toContain('.ng-workspace-nav');
     expect(navigationCss).toContain('.ng-workspace-nav__item[data-selected="true"]');
     expect(navigationCss).toContain('.ng-workspace-nav--desktop.is-overlay-open');
