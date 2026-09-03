@@ -11,6 +11,9 @@ const workspaceContext = vi.hoisted(() => ({ programmeId: 'programme-A' }));
 vi.mock('@/app/site-diary/DailyEntryShell', () => ({
   useDailyEntryContext: () => ({ programmeId: workspaceContext.programmeId }),
 }));
+vi.mock('@/app/site-diary/CatatEntryForm', () => ({
+  default: () => React.createElement('div', null, `CATAT_${workspaceContext.programmeId}`),
+}));
 vi.mock('@/app/site-diary/DiaryManagementList', () => ({
   default: () => {
     const [selected, setSelected] = React.useState(false);
@@ -68,6 +71,7 @@ describe('Site Diary runtime workspace navigation', () => {
   let root: Root;
   beforeEach(() => {
     workspaceContext.programmeId = 'programme-A';
+    window.localStorage.clear();
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -77,12 +81,12 @@ describe('Site Diary runtime workspace navigation', () => {
     container.remove();
   });
 
-  it('defaults current-first to records and exposes all coherent product destinations', async () => {
+  it('defaults current-first to records and exposes the locked four semantic destinations', async () => {
     await act(async () => root.render(React.createElement(SiteDiaryWorkspace)));
     expect(container.textContent).toContain('PRODUCTION_RECORDS');
     const tabs = [...container.querySelectorAll('[role="tab"]')].slice(0, 4);
     expect(tabs.map((tab) => tab.textContent)).toEqual([
-      'Baharu',
+      'Catat',
       'Aktiviti',
       'Rekod',
       'Semak',
@@ -90,7 +94,7 @@ describe('Site Diary runtime workspace navigation', () => {
     expect(tabs[2]?.getAttribute('aria-selected')).toBe('true');
 
     await act(async () => (tabs[0] as HTMLButtonElement).click());
-    expect(container.textContent).toContain('DAILY_NEW_ACTIVITY_true');
+    expect(container.textContent).toContain('CATAT_programme-A');
     await act(async () => (tabs[1] as HTMLButtonElement).click());
     expect(container.textContent).toContain('DAILY_OPEN_ACTIVITIES_true');
   });
@@ -149,27 +153,23 @@ describe('Site Diary runtime workspace navigation', () => {
     );
   });
 
-  it('keeps all contextual destinations reachable and active state identifiable on mobile and desktop', async () => {
-    // Renders the wrapper with responsive navigation strategy
+  it('keeps all destinations reachable with desktop adaptive rail and mobile bottom navigation', async () => {
     await act(async () => root.render(React.createElement(SiteDiaryWorkspace)));
     const navigation = container.querySelector('nav[aria-label="Navigasi Buku Harian Tapak"]');
-    expect(navigation?.className).toContain('hidden md:flex flex-col');
+    expect(navigation?.className).toContain('md:flex');
+    expect(navigation?.className).toContain('ng-adaptive-nav');
 
-    // Bottom nav for mobile
     const bottomNav = container.querySelectorAll('nav')[1];
-    expect(bottomNav?.className).toContain('md:hidden absolute bottom-0');
+    expect(bottomNav?.className).toContain('md:hidden');
 
     const allTabs = [...container.querySelectorAll('[role="tab"]')] as HTMLButtonElement[];
     expect(allTabs).toHaveLength(8);
 
-    // Test clicking the desktop tabs (first 4)
     const desktopTabs = allTabs.slice(0, 4);
     for (const [index, tab] of desktopTabs.entries()) {
       await act(async () => tab.click());
       const currentTabs = [...container.querySelectorAll('[role="tab"]')];
-      expect(
-        currentTabs.filter((item) => item.getAttribute('aria-selected') === 'true'),
-      ).toHaveLength(2); // One desktop, one mobile
+      expect(currentTabs.filter((item) => item.getAttribute('aria-selected') === 'true')).toHaveLength(2);
       expect(currentTabs[index]?.className).toContain('text-accent-selected');
     }
     expect(container.textContent).not.toContain('Cetak / PDF');
