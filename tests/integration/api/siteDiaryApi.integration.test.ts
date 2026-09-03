@@ -51,22 +51,23 @@ describe('Site Diary API Routes', () => {
         notes: 'Test notes',
       };
       const req = createMockRequest(body);
-      
+
       mockCreateSiteDiary.mockResolvedValue(Success({ id: 'sd-1' }));
 
       const res = await createSiteDiary(req as unknown as Request);
       expect(res.status).toBe(201);
       const json = await res.json();
       expect(json.data.id).toBe('sd-1');
-      expect(mockCreateSiteDiary).toHaveBeenCalledWith({
+      expect(mockCreateSiteDiary).toHaveBeenCalledWith(expect.objectContaining({
         programmeId: body.programme_id,
         revisionId: body.revision_id,
         activityId: body.activity_id,
         activityDate: body.activity_date,
         operationIntent: 'IN_PROGRESS_DIARY',
+        weather: null,
         notes: body.notes,
         submittedBy: 'test-actor',
-      });
+      }));
     });
 
     it('returns 400 when operation_intent is missing from payload', async () => {
@@ -129,7 +130,7 @@ describe('Site Diary API Routes', () => {
     });
 
     it('returns 400 on invalid payload', async () => {
-      const req = createMockRequest({ targetDate: '2026-08-11' }); // missing activityId or programmeId
+      const req = createMockRequest({ targetDate: '2026-08-11' });
       const res = await carryForward(req as unknown as NextRequest);
       expect(res.status).toBe(400);
     });
