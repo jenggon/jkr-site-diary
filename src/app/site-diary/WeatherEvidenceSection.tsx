@@ -74,7 +74,7 @@ function normalizeIntervals(intervals: SiteDiaryRainInterval[]): SiteDiaryRainIn
 }
 
 function intervalsText(intervals: SiteDiaryRainInterval[]): string {
-  return intervals.length === 0 ? 'Tiada hujan direkod' : intervals.map((item) => `${item.start}–${item.end}`).join(' · ');
+  return intervals.length === 0 ? 'Tiada hujan' : intervals.map((item) => `${item.start}–${item.end}`).join(' · ');
 }
 
 const START_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
@@ -108,7 +108,7 @@ export default function WeatherEvidenceSection({
 
     const accessToken = session?.access_token;
     if (!accessToken) {
-      setProviderError('Cadangan cuaca tidak tersedia. Sahkan secara manual.');
+      setProviderError('Auto tiada · Sahkan manual');
       onChange({ ...EMPTY_WEATHER_EVIDENCE, source: 'MANUAL' });
       return () => { active = false; };
     }
@@ -139,7 +139,7 @@ export default function WeatherEvidenceSection({
       })
       .catch(() => {
         if (!active) return;
-        setProviderError('Cadangan cuaca tidak tersedia. Sahkan secara manual.');
+        setProviderError('Auto tiada · Sahkan manual');
         onChange({ ...EMPTY_WEATHER_EVIDENCE, source: 'MANUAL' });
       })
       .finally(() => { if (active) setLoading(false); });
@@ -174,62 +174,60 @@ export default function WeatherEvidenceSection({
   };
 
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 sm:p-5 shadow-lg" aria-label="Cuaca Site Diary">
-      <div className="flex items-start justify-between gap-3">
+    <section className="ng-entry-panel ng-weather-evidence" aria-label="Cuaca Site Diary">
+      <div className="ng-entry-row ng-weather-evidence__head">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">CUACA</div>
-          <h3 className="mt-1 text-sm font-bold text-zinc-100">{condition}</h3>
-          <p className="mt-1 text-xs text-zinc-500">{historical ? 'Bukti sejam · penyelia sahkan' : 'Hari semasa · catatan penyelia'}</p>
+          <div className="ng-entry-heading">CUACA</div>
+          <div className="ng-weather-evidence__value">{condition}</div>
+          <div className="ng-entry-meta">{historical ? 'Bukti jam' : 'Manual'}</div>
         </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setManualCondition('ELOK')} disabled={disabled} className={`rounded-lg border px-3 py-2 text-xs font-bold ${condition === 'ELOK' ? 'border-emerald-600 bg-emerald-950/50 text-emerald-200' : 'border-zinc-700 text-zinc-400'}`}>ELOK</button>
-          <button type="button" onClick={() => setManualCondition('HUJAN')} disabled={disabled} className={`rounded-lg border px-3 py-2 text-xs font-bold ${condition === 'HUJAN' ? 'border-blue-600 bg-blue-950/50 text-blue-200' : 'border-zinc-700 text-zinc-400'}`}>HUJAN</button>
+        <div className="ng-weather-toggle">
+          <button type="button" onClick={() => setManualCondition('ELOK')} disabled={disabled} aria-pressed={condition === 'ELOK'}>ELOK</button>
+          <button type="button" onClick={() => setManualCondition('HUJAN')} disabled={disabled} aria-pressed={condition === 'HUJAN'}>HUJAN</button>
         </div>
       </div>
 
-      {loading && <div className="mt-3 text-xs text-zinc-500">Memuat bukti cuaca…</div>}
-      {providerError && <div className="mt-3 text-xs text-amber-300" role="status">{providerError}</div>}
+      {loading && <div className="ng-entry-meta" role="status">Muat cuaca…</div>}
+      {providerError && <div className="ng-weather-evidence__warning" role="status">{providerError}</div>}
 
       {value.provider && (
-        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">VISUAL CROSSING · HOURLY</div>
-              <div className="mt-1 text-xs font-semibold text-zinc-200">{intervalsText(value.suggestedIntervals)}</div>
-            </div>
-            {needsConfirmation && (
-              <div className="flex gap-2">
-                <button type="button" onClick={() => onChange({ ...value, source: 'USER_CONFIRMED' })} disabled={disabled} className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-200">SAH</button>
-                <button type="button" onClick={() => { setEditing(true); onChange({ ...value, source: 'USER_CONFIRMED' }); }} disabled={disabled} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-300">UBAH</button>
-              </div>
-            )}
+        <div className="ng-weather-evidence__provider">
+          <div>
+            <div className="ng-entry-meta">VISUAL CROSSING · JAM</div>
+            <div className="ng-weather-evidence__intervals">{intervalsText(value.suggestedIntervals)}</div>
           </div>
+          {needsConfirmation && (
+            <div className="ng-weather-evidence__actions">
+              <button type="button" onClick={() => onChange({ ...value, source: 'USER_CONFIRMED' })} disabled={disabled}>SAH</button>
+              <button type="button" onClick={() => { setEditing(true); onChange({ ...value, source: 'USER_CONFIRMED' }); }} disabled={disabled}>UBAH</button>
+            </div>
+          )}
         </div>
       )}
 
       {condition === 'HUJAN' && (editing || !needsConfirmation) && (
-        <div className="mt-3 space-y-2">
+        <div className="ng-rain-intervals">
           {displayIntervals.map((interval, index) => (
-            <div key={`${interval.start}-${interval.end}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-              <select value={interval.start} onChange={(event) => updateInterval(index, 'start', event.target.value)} disabled={disabled} className="min-h-[42px] rounded-lg border border-zinc-700 bg-zinc-950 px-2 text-xs text-zinc-200">
+            <div key={`${interval.start}-${interval.end}-${index}`} className="ng-rain-interval">
+              <select value={interval.start} onChange={(event) => updateInterval(index, 'start', event.target.value)} disabled={disabled} aria-label={`Hujan mula ${index + 1}`}>
                 {START_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
-              <select value={interval.end} onChange={(event) => updateInterval(index, 'end', event.target.value)} disabled={disabled} className="min-h-[42px] rounded-lg border border-zinc-700 bg-zinc-950 px-2 text-xs text-zinc-200">
+              <select value={interval.end} onChange={(event) => updateInterval(index, 'end', event.target.value)} disabled={disabled} aria-label={`Hujan tamat ${index + 1}`}>
                 {END_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
               <button type="button" onClick={() => {
                 const next = value.intervals.filter((_, rowIndex) => rowIndex !== index);
                 onChange({ ...value, intervals: next, condition: next.length ? 'HUJAN' : 'ELOK', source: value.provider ? 'USER_CONFIRMED' : 'MANUAL' });
-              }} disabled={disabled} aria-label="Padam sela hujan" className="min-h-[42px] rounded-lg border border-zinc-800 px-3 text-zinc-500 hover:text-red-300">×</button>
+              }} disabled={disabled} aria-label="Padam sela hujan">×</button>
             </div>
           ))}
-          <button type="button" onClick={addInterval} disabled={disabled} className="rounded-lg border border-dashed border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200">+ Sela hujan</button>
+          <button type="button" onClick={addInterval} disabled={disabled} className="ng-rain-add">+ Sela hujan</button>
         </div>
       )}
 
       {!needsConfirmation && (
-        <div className="mt-3 text-[11px] text-zinc-500" data-testid="weather-final-state">
-          {value.source === 'USER_CONFIRMED' ? 'Disahkan penyelia' : 'Catatan manual penyelia'} · {intervalsText(displayIntervals)}
+        <div className="ng-entry-meta ng-weather-evidence__final" data-testid="weather-final-state">
+          {value.source === 'USER_CONFIRMED' ? 'Disahkan' : 'Manual'} · {intervalsText(displayIntervals)}
         </div>
       )}
     </section>
