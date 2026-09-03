@@ -9,13 +9,25 @@ type RouteParams = {
 };
 
 const timeValue = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid HH:MM time').nullable();
+const hourBoundary = z.string().regex(/^(?:[01]\d|2[0-3]|24):00$/, 'Invalid hourly boundary');
+const rainIntervalSchema = z.object({ start: hourBoundary, end: hourBoundary });
 const printContextSchema = z.object({
   location: z.string().max(240).default(''),
   work_start_time: timeValue.optional().default(null),
   work_end_time: timeValue.optional().default(null),
-  weather_condition: z.enum(['ELOK', 'HUJAN', 'MENDUNG', 'RIBUT']).nullable().optional().default(null),
+  daily_work_status: z.enum(['MULA', 'LAKSANA', 'SIAP', 'MULA_DAN_SIAP']).nullable().optional().default(null),
+  weather_condition: z.enum(['ELOK', 'HUJAN']).nullable().optional().default(null),
   rain_start_time: timeValue.optional().default(null),
   rain_end_time: timeValue.optional().default(null),
+  rain_intervals: z.array(rainIntervalSchema).max(24).optional().default([]),
+  weather_suggested_intervals: z.array(rainIntervalSchema).max(24).optional().default([]),
+  weather_source: z.enum(['AUTO', 'USER_CONFIRMED', 'MANUAL']).nullable().optional().default(null),
+  weather_provider: z.literal('VISUAL_CROSSING').nullable().optional().default(null),
+  weather_provider_fetched_at: z.string().datetime({ offset: true }).nullable().optional().default(null),
+  weather_provider_resolution: z.literal('HOURLY').nullable().optional().default(null),
+  weather_latitude: z.number().min(-90).max(90).nullable().optional().default(null),
+  weather_longitude: z.number().min(-180).max(180).nullable().optional().default(null),
+  weather_timezone: z.string().max(80).nullable().optional().default(null),
   contractor_scope: z.enum(['CONTRACTOR', 'NSC']).default('CONTRACTOR'),
 }).optional();
 
