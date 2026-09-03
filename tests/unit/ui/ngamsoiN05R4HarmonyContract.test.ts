@@ -44,7 +44,7 @@ describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentatio
   });
 
   it('keeps one visible workforce heading and makes total a first-class column', () => {
-    const harmony = read('src/app/ngamsoi-harmony.css');
+    const harmony = read('src/app/ngamsoi-harmony.css').replace(/\r\n/g, '\n');
 
     expect(harmony).toContain('.ng-workforce__kicker,\n.ng-workforce__hint');
     expect(harmony).toContain('display: none !important');
@@ -53,18 +53,20 @@ describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentatio
     expect(harmony).toContain('.ng-workforce__overall-icon');
   });
 
-  it('turns project context into meaningful live instrumentation with N05R.5 operator grammar', () => {
+  it('turns project context into the locked five-block F4.5 operator instrumentation', () => {
     const shell = read('src/app/site-diary/DailyEntryShell.tsx');
 
     expect(shell).toContain('ng-project-pulse');
     expect(shell).toContain('<small>PROGRAM KERJA</small>');
     expect(shell).toContain('<small>TINGGAL</small>');
     expect(shell).toContain('<small>HARI KE</small>');
-    expect(shell).toContain('projectDayPulse.remainingDays');
-    expect(shell).toContain('projectDayPulse.dayNumber');
-    expect(shell).toContain('<small>{deviceDay}</small>');
-    expect(shell).toContain('<strong>{deviceDate}</strong>');
-    expect(shell).toContain('<small>MASA</small>');
-    expect(shell).toContain('<strong>{clockLabel}</strong>');
+    expect(shell).toContain('<small>SEMASA</small>');
+    expect(shell).toContain('<ProjectWeatherPulse />');
+    expect(shell).toContain('pulse.remainingDays');
+    expect(shell).toContain('pulse.dayNumber');
+    expect(shell).toContain('formatDeviceDate(now)');
+    expect(shell).toContain('formatClock(now)');
+    expect(shell).toContain('grid-template-columns: repeat(6, 1fr)');
+    expect(shell).toContain("[data-pulse='now'] { grid-column: span 4");
   });
 });
