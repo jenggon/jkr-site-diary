@@ -23,9 +23,21 @@ export default function SiteDiaryWorkspace() {
   const [reviewContext, setReviewContext] = useState<{ programmeId: string; siteDiaryId: string; approvalId: string } | null>(null);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [compactOverlayOpen, setCompactOverlayOpen] = useState(false);
+  const [compactViewport, setCompactViewport] = useState(false);
 
   useEffect(() => {
     try { setDesktopCollapsed(window.localStorage.getItem('site-diary-nav-collapsed') === '1'); } catch { /* no-op */ }
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px) and (max-width: 1199px)');
+    const sync = () => {
+      setCompactViewport(media.matches);
+      if (!media.matches) setCompactOverlayOpen(false);
+    };
+    sync();
+    media.addEventListener?.('change', sync);
+    return () => media.removeEventListener?.('change', sync);
   }, []);
 
   useEffect(() => { setReviewContext(null); }, [programmeId]);
@@ -45,6 +57,7 @@ export default function SiteDiaryWorkspace() {
 
   const isReviewingApproval = reviewContext?.programmeId === programmeId;
   const effectiveTab: WorkspaceTab = isReviewingApproval ? 'APPROVALS' : tab;
+  const navigationExpanded = compactViewport ? compactOverlayOpen : !desktopCollapsed;
 
   const renderContent = () => {
     if (isReviewingApproval && reviewContext) {
@@ -80,6 +93,14 @@ export default function SiteDiaryWorkspace() {
     });
   };
 
+  const toggleNavigation = () => {
+    if (compactViewport) {
+      setCompactOverlayOpen((current) => !current);
+      return;
+    }
+    toggleDesktopCollapsed();
+  };
+
   return (
     <div
       className="ng-workspace relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row"
@@ -87,41 +108,42 @@ export default function SiteDiaryWorkspace() {
       data-workspace-review={isReviewingApproval ? 'true' : 'false'}
     >
       <nav
+        id="site-diary-desktop-navigation"
         aria-label="Navigasi Buku Harian Tapak"
-        className={`ng-adaptive-nav hidden shrink-0 flex-col border-r border-surface-border bg-surface-canvas md:flex ${desktopCollapsed ? 'is-collapsed' : ''} ${compactOverlayOpen ? 'is-overlay-open' : ''}`}
+        className={`ng-workspace-nav ng-workspace-nav--desktop ng-adaptive-nav hidden shrink-0 flex-col md:flex ${desktopCollapsed ? 'is-collapsed' : ''} ${compactOverlayOpen ? 'is-overlay-open' : ''}`}
       >
-        <div role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="flex-1 space-y-1 p-2">
+        <div id="site-diary-desktop-navigation-items" role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="ng-workspace-nav__list flex-1">
           {tabs.map((item) => {
-            const selected = effectiveTab === item.id;
+            const isSelected = effectiveTab === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
                 role="tab"
-                aria-selected={selected}
+                aria-selected={isSelected}
+                data-selected={isSelected ? 'true' : 'false'}
                 aria-controls="site-diary-workspace-panel"
                 onClick={() => navigateToTab(item.id)}
                 title={item.meaning}
-                className={`ng-adaptive-nav__item flex min-h-[48px] w-full items-center rounded-lg border-l-2 px-3 outline-none transition ${selected ? 'border-accent-selected bg-surface-raised text-accent-selected' : 'border-transparent text-tactical-text-muted hover:bg-surface-raised hover:text-tactical-text-primary'}`}
+                className="ng-workspace-nav__item ng-adaptive-nav__item"
               >
-                <span className="ng-adaptive-nav__icon flex w-7 shrink-0 justify-center"><Icon type={item.id} /></span>
-                <span className="ng-adaptive-nav__label ml-3 text-sm font-semibold">{item.label}</span>
+                <span className="ng-workspace-nav__icon ng-adaptive-nav__icon"><Icon type={item.id} /></span>
+                <span className="ng-workspace-nav__label ng-adaptive-nav__label">{item.label}</span>
               </button>
             );
           })}
         </div>
-        <div className="border-t border-surface-border p-2">
+        <div className="ng-adaptive-nav__controls">
           <button
             type="button"
-            onClick={() => {
-              if (window.matchMedia('(max-width: 1199px)').matches) setCompactOverlayOpen((current) => !current);
-              else toggleDesktopCollapsed();
-            }}
-            className="ng-adaptive-nav__toggle flex min-h-[44px] w-full items-center justify-center rounded-lg text-tactical-text-muted hover:bg-surface-raised hover:text-tactical-text-primary"
-            aria-label="Kembang atau kecilkan navigasi"
-            title="Kembang / kecil"
+            onClick={toggleNavigation}
+            className="ng-adaptive-nav__toggle"
+            aria-expanded={navigationExpanded}
+            aria-controls="site-diary-desktop-navigation-items"
+            aria-label={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'}
+            title={navigationExpanded ? 'Kecilkan navigasi' : 'Kembangkan navigasi'}
           >
-            <span aria-hidden="true">{desktopCollapsed || !compactOverlayOpen ? '›' : '‹'}</span>
+            <span aria-hidden="true">{navigationExpanded ? '‹' : '›'}</span>
           </button>
         </div>
       </nav>
@@ -142,43 +164,28 @@ export default function SiteDiaryWorkspace() {
         </div>
       </div>
 
-      <nav aria-label="Navigasi Buku Harian Tapak" className="mobile-entry-bottom-nav absolute bottom-0 left-0 right-0 z-40 border-t border-surface-border bg-surface-primary/95 pb-safe backdrop-blur-xl md:hidden">
-        <div role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="flex items-center justify-around px-1 py-2">
+      <nav aria-label="Navigasi Buku Harian Tapak" className="ng-workspace-nav ng-workspace-nav--mobile mobile-entry-bottom-nav absolute bottom-0 left-0 right-0 z-40 md:hidden">
+        <div role="tablist" aria-label="Ruang kerja Buku Harian Tapak" className="ng-workspace-nav__list">
           {tabs.map((item) => {
-            const selected = effectiveTab === item.id;
+            const isSelected = effectiveTab === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
                 role="tab"
-                aria-selected={selected}
+                aria-selected={isSelected}
+                data-selected={isSelected ? 'true' : 'false'}
                 aria-controls="site-diary-workspace-panel"
                 onClick={() => navigateToTab(item.id)}
-                className={`mobile-entry-nav-item flex min-h-[56px] flex-1 flex-col items-center justify-center rounded-lg border-t-2 transition ${selected ? 'border-accent-selected bg-surface-raised text-accent-selected' : 'border-transparent text-tactical-text-muted'}`}
+                className="ng-workspace-nav__item mobile-entry-nav-item"
               >
-                <span className="mb-1"><Icon type={item.id} /></span>
-                <span className="text-xs font-bold tracking-tight">{item.label}</span>
+                <span className="ng-workspace-nav__icon"><Icon type={item.id} /></span>
+                <span className="ng-workspace-nav__label">{item.label}</span>
               </button>
             );
           })}
         </div>
       </nav>
-
-      <style jsx global>{`
-        .ng-adaptive-nav { width: 224px; transition: width 160ms ease, box-shadow 160ms ease; z-index: 45; }
-        .ng-adaptive-nav.is-collapsed { width: 72px; }
-        .ng-adaptive-nav.is-collapsed .ng-adaptive-nav__label { display: none; }
-        .ng-adaptive-nav-backdrop { position: absolute; inset: 0; z-index: 44; background: rgb(0 0 0 / .24); }
-        @media (min-width: 768px) and (max-width: 1199px) {
-          .ng-adaptive-nav { width: 72px; }
-          .ng-adaptive-nav .ng-adaptive-nav__label { display: none; }
-          .ng-adaptive-nav.is-overlay-open { position: absolute; inset-block: 0; left: 0; width: 224px; box-shadow: 18px 0 40px rgb(0 0 0 / .35); }
-          .ng-adaptive-nav.is-overlay-open .ng-adaptive-nav__label { display: inline; }
-        }
-        @media (min-width: 1200px) {
-          .ng-adaptive-nav-backdrop { display: none !important; }
-        }
-      `}</style>
     </div>
   );
 }
