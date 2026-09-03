@@ -1,0 +1,27 @@
+name: F4.5 CATAT Corrections Gate
+
+on:
+  push:
+    branches:
+      - feature/F4.5-catat-corrections-1-6
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Unified verification contract
+        run: pnpm run verify
