@@ -44,6 +44,7 @@ describe('F4.5 AKTIVITI continuation parity', () => {
     expect(source).toContain('AbortController');
     expect(source).toContain('abortRef.current?.abort()');
     expect(source).toContain("const canonicalActualStart = activity?.actual_start_date?.trim() || ''");
-    expect(source).toContain('Bukan tarikh mula terancang MSP.');
+    expect(source).toContain('Bukan tarikh MSP.');
+    expect(source).not.toContain('Bukan tarikh mula terancang MSP.');
   });
 });
