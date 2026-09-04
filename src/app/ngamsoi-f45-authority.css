@@ -1242,6 +1242,10 @@ form[data-ui-authority='F45'] .ng-vo-dialog {
 }
 
 @media (min-width: 1200px) {
+  .ng-project-pulse--f45 {
+    min-width: 38rem !important;
+  }
+
   .ng-project-pulse--f45 [data-pulse='now'] {
     padding-right: 3.4rem !important;
   }
