@@ -116,6 +116,37 @@ Architecture is LOCKED (Subordinate to REM-007 and DB-014/DB-015 Specifications)
 
 ---
 
+# LOCKSET-001 — MANDATORY PRODUCT DECISION HANDSHAKE
+
+`docs/00_Governance/ACTIVE_LOCKSET.json` is the durable active register of accepted Product Owner decisions for the current product surface.
+
+`docs/00_Governance/AGENT_LOCKSET_PROTOCOL.md` defines the mandatory agent protocol.
+
+Before any recon, audit, implementation, remediation, test repair, or CI repair, every agent MUST:
+
+1. read this `AGENTS.md`;
+2. read `docs/00_Governance/AI_CONSTITUTION.md`;
+3. read `docs/00_Governance/PROJECT-CONSTITUTION.md`;
+4. read `docs/00_Governance/ACTIVE_LOCKSET.json`;
+5. run `pnpm run lockset:verify`;
+6. output a `LOCKSET COMPLIANCE ACK` containing branch, HEAD, LOCKSET_VERSION, LOCKSET_HASH, role, affected requirement IDs, protected requirement IDs, and no-change boundaries.
+
+If the ACK cannot be established, STOP. Work without the ACK is invalid evidence.
+
+Recon and audit are read-only unless a later explicit implementation instruction is issued.
+
+Implementation agents must produce a LOCKED REQUIREMENT IMPACT MATRIX before editing. If a requested implementation requires changing a LOCKED requirement or a no-change boundary, STOP and escalate before editing.
+
+Accepted requirements must never be silently deleted or weakened. A changed accepted requirement is handled only through explicit Product Owner / Chief Architect authority using SUPERSEDED -> replacement requirement lineage in the active lockset.
+
+CI must never be made green by weakening evidence. Forbidden green-by-bypass tactics include force-clicking required interactions, skipping/deleting locked assertions, relaxing locked geometry/overflow/identity/authority thresholds, hiding an interfering overlay instead of testing the intended runtime, arbitrary timeout inflation, added retries to mask deterministic failure, internal-state navigation that avoids a required user action, or replacing real-browser evidence with source-string checks.
+
+A faulty harness may be repaired only while preserving or strengthening the original evidence.
+
+`CI GREEN` is necessary but is not equivalent to `SEALED`. Where the active lockset requires physical acceptance, physical acceptance remains mandatory.
+
+---
+
 # CI-HARDEN-001 — MANDATORY ENGINEERING GATE
 
 The repository uses a mandatory preflight contract for implementation agents.
@@ -130,12 +161,13 @@ pnpm run verify
 
 The verification contract includes:
 
-1. frozen lockfile consistency;
-2. standard TypeScript validation;
-3. API-inclusive TypeScript validation;
-4. lint;
-5. full automated test suite;
-6. production build.
+1. active lockset validation;
+2. frozen lockfile consistency;
+3. standard TypeScript validation;
+4. API-inclusive TypeScript validation;
+5. lint;
+6. full automated test suite;
+7. production build.
 
 If `package.json` dependencies or devDependencies change, `pnpm-lock.yaml` must be regenerated/synchronised and committed in the same change. Never bypass this rule with `--no-frozen-lockfile` in CI.
 
