@@ -21,9 +21,7 @@ import "./ngamsoi-n05r5-acceptance.css";
 import "./ngamsoi-n05r5-desktop-acceptance.css";
 import "./ngamsoi-n09-records.css";
 import "./ngamsoi-n07-navigation.css";
-import "./ngamsoi-f45-harmony.css";
-import "./ngamsoi-f45-seal.css";
-// FINAL operational authority. Do not add another Site Diary visual layer after this file.
+// SINGLE F4.5 operational authority. Former F4.5 harmony/seal declarations are consolidated inside this file.
 import "./ngamsoi-f45-authority.css";
 
 const geistSans = Geist({
