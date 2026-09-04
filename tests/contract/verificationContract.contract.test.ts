@@ -13,7 +13,7 @@ const packageJson = JSON.parse(
 ) as PackageManifest;
 const ciWorkflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
 const requiredVerify =
-  'pnpm run typecheck && pnpm run typecheck:api && pnpm run lint && pnpm run test && pnpm run build';
+  'pnpm run lockset:verify && pnpm run typecheck && pnpm run typecheck:api && pnpm run lint && pnpm run test && pnpm run build';
 const dependencyMutationCommand =
   /(?:^|&&|\|\||;|\n)\s*(?:pnpm|npm|yarn)\s+(?:install|add|remove|update|fetch|prune|rebuild)\b/i;
 
