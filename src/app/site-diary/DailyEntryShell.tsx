@@ -334,31 +334,6 @@ export default function DailyEntryShell({ children, initialProgrammeId }: DailyE
             <div className="h-full overflow-y-auto px-4 py-6"><div className="mx-auto w-full max-w-3xl"><h1 className="text-xl font-bold">Pilih Projek</h1><p className="mt-1 text-sm text-tactical-text-secondary">Pilih satu projek aktif untuk meneruskan Buku Harian Tapak.</p><div className="mt-5 grid gap-3">{availableProgrammes.map((programme) => <button key={programme.id} type="button" onClick={() => selectProgramme(programme.id)} className="rounded-xl border border-surface-border bg-surface-secondary p-4 text-left hover:border-blue-500/60"><div className="text-xs font-semibold uppercase tracking-wide text-blue-400">{programme.code}</div><div className="mt-1 font-semibold">{programme.name}</div>{(programme.employerName || programme.contractorName) && <div className="mt-2 text-xs text-tactical-text-secondary">{[programme.employerName, programme.contractorName].filter(Boolean).join(' · ')}</div>}</button>)}</div></div></div>
           ) : children}
         </main>
-
-        <style jsx global>{`
-          .ng-project-pulse--f45 { display: grid; grid-template-columns: 1fr .9fr .72fr 1.35fr 1.05fr; align-items: stretch; }
-          .ng-project-pulse--f45 .ng-project-pulse__item { min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: .55rem .75rem; border-right: 1px solid var(--datum-graphite-700); }
-          .ng-project-pulse--f45 .ng-project-pulse__item:last-child { border-right: 0; }
-          .ng-project-pulse--f45 small { font-size: .61rem; letter-spacing: .08em; color: var(--datum-grey-500); white-space: nowrap; }
-          .ng-project-pulse--f45 strong { margin-top: .1rem; font-size: .9rem; line-height: 1.15; color: var(--datum-white); white-space: nowrap; }
-          .ng-project-pulse__sub, .ng-project-weather__sub { margin-top: .15rem; font-size: .58rem; color: var(--datum-grey-500); white-space: nowrap; }
-          @media (max-width: 767px) {
-            .ng-project-pulse--f45 { grid-template-columns: repeat(6, 1fr); }
-            .ng-project-pulse--f45 [data-pulse='programme'], .ng-project-pulse--f45 [data-pulse='remaining'], .ng-project-pulse--f45 [data-pulse='day'] { grid-column: span 2; }
-            .ng-project-pulse--f45 [data-pulse='now'] { grid-column: span 4; border-top: 1px solid var(--datum-graphite-700); }
-            .ng-project-pulse--f45 .ng-project-weather { grid-column: span 2; border-top: 1px solid var(--datum-graphite-700); }
-            .ng-project-pulse--f45 [data-pulse='day'] { border-right: 0; }
-            .ng-project-pulse--f45 strong { font-size: .8rem; }
-            .ng-project-pulse--f45 [data-pulse='now'] strong { font-size: .76rem; }
-            .ng-project-pulse__sub { display: none; }
-          }
-          @media (min-width: 768px) and (max-width: 1050px) {
-            .ng-project-pulse--f45 { grid-template-columns: .82fr .72fr .62fr 1.15fr .9fr; }
-            .ng-project-pulse--f45 .ng-project-pulse__item { padding-inline: .5rem; }
-            .ng-project-pulse--f45 strong { font-size: .78rem; }
-            .ng-project-pulse--f45 small { font-size: .55rem; }
-          }
-        `}</style>
       </div>
     </DailyEntryContext.Provider>
   );

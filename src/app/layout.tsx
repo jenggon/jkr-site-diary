@@ -23,6 +23,8 @@ import "./ngamsoi-n09-records.css";
 import "./ngamsoi-n07-navigation.css";
 import "./ngamsoi-f45-harmony.css";
 import "./ngamsoi-f45-seal.css";
+// FINAL operational authority. Do not add another Site Diary visual layer after this file.
+import "./ngamsoi-f45-authority.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

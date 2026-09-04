@@ -1,0 +1,197 @@
+/* F4.5 UI AUTHORITY CUTOVER
+ * FINAL runtime owner for the operational Site Diary shell.
+ * Older NGAMSOI styles remain loaded only as frozen historical/base presentation for untouched surfaces.
+ * CATAT/AKTIVITI state, Spine geometry, modal layering and project-pulse composition are owned here.
+ * DO NOT add another visual authority after this file. Modify this authority instead.
+ * REKOD internals, print, approval, Engine/domain semantics and NGAMSOI mark geometry remain out of scope.
+ */
+
+:root {
+  --ng-layer-content: 1;
+  --ng-layer-nav: 40;
+  --ng-layer-overlay: 80;
+  --ng-layer-dialog: 240;
+  --ng-layer-toast: 260;
+}
+
+/* ---------- OPERATIONAL DOM CUTOVER ----------
+ * Direct entry steps are DIV primitives. This deliberately prevents the retired N05/N05R
+ * `form > section` and structural `:has(...)` state engines from participating in runtime.
+ */
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'] {
+  --ng-spine-x: .56rem;
+  --ng-step-offset: 1.35rem;
+  position: relative !important;
+  isolation: auto !important;
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+}
+
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak']::before {
+  left: var(--ng-spine-x) !important;
+  width: 1px !important;
+  background: var(--ng-f45-rule-strong) !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step] {
+  position: relative !important;
+  z-index: auto !important;
+  margin: 0 0 .62rem var(--ng-step-offset) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* Retired state segments/words may never paint over the explicit F4.5 state model. */
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* One mathematical node axis for every operational step. */
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step]::before {
+  content: '' !important;
+  position: absolute !important;
+  z-index: 5 !important;
+  top: .92rem !important;
+  left: calc(var(--ng-spine-x) - var(--ng-step-offset) - .38rem) !important;
+  display: grid !important;
+  width: .76rem !important;
+  height: .76rem !important;
+  place-items: center !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--ng-grey-600, #5e6570) !important;
+  border-radius: 50% !important;
+  background: var(--ng-graphite-950, #090a0c) !important;
+  color: transparent !important;
+  box-shadow: 0 0 0 3px var(--ng-graphite-950, #090a0c) !important;
+  font-size: .5rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  pointer-events: none !important;
+}
+
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-spine-state='complete']::before {
+  content: '✓' !important;
+  border-color: var(--ng-f45-success, #3fb950) !important;
+  background: var(--ng-f45-success, #3fb950) !important;
+  color: #07120a !important;
+}
+
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-spine-state='current']::before {
+  content: '' !important;
+  border: 2px solid var(--ng-current, #ff7a1a) !important;
+  background: color-mix(in srgb, var(--ng-current, #ff7a1a) 16%, var(--ng-graphite-950, #090a0c)) !important;
+  color: transparent !important;
+  box-shadow:
+    0 0 0 3px var(--ng-graphite-950, #090a0c),
+    0 0 0 4px color-mix(in srgb, var(--ng-current, #ff7a1a) 18%, transparent) !important;
+}
+
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-spine-state='upcoming']::before {
+  content: '' !important;
+  border-color: var(--ng-grey-600, #5e6570) !important;
+  background: var(--ng-graphite-950, #090a0c) !important;
+  color: transparent !important;
+}
+
+/* ---------- LAYERING CONTRACT ----------
+ * Entry steps must never become independent stacking contexts. A fixed VO dialog therefore
+ * stays above sibling steps regardless of the source wrapper element used in future revisions.
+ */
+form[data-ui-authority='F45'] > .ng-entry-step {
+  isolation: auto !important;
+  transform: none !important;
+}
+
+form[data-ui-authority='F45'] .ng-vo-dialog-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: var(--ng-layer-dialog) !important;
+}
+
+form[data-ui-authority='F45'] .ng-vo-dialog {
+  position: relative !important;
+  z-index: calc(var(--ng-layer-dialog) + 1) !important;
+}
+
+.ng-post-save {
+  z-index: var(--ng-layer-toast) !important;
+}
+
+/* ---------- PROJECT PULSE ----------
+ * Four core operational facts own the strip. Forecast is a non-blocking micro-signal only
+ * when usable; loading/unavailable states never become a fifth dashboard cell.
+ */
+.ng-project-pulse--f45 {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.58fr) !important;
+  align-items: stretch !important;
+  overflow: visible !important;
+}
+
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] {
+  min-width: 0 !important;
+}
+
+.ng-project-pulse--f45 .ng-project-weather[data-weather-state='loading'],
+.ng-project-pulse--f45 .ng-project-weather[data-weather-state='unavailable'] {
+  display: none !important;
+}
+
+@media (min-width: 1200px) {
+  .ng-project-pulse--f45 [data-pulse='now'] {
+    padding-right: 3.4rem !important;
+  }
+
+  .ng-project-pulse--f45 .ng-project-weather[data-weather-state='rain'],
+  .ng-project-pulse--f45 .ng-project-weather[data-weather-state='dry'] {
+    position: absolute !important;
+    z-index: 2 !important;
+    top: 50% !important;
+    right: .36rem !important;
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 1.35rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: .18rem .3rem !important;
+    transform: translateY(-50%) !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+  }
+
+  .ng-project-pulse--f45 .ng-project-weather small,
+  .ng-project-pulse--f45 .ng-project-weather__sub {
+    display: none !important;
+  }
+
+  .ng-project-pulse--f45 .ng-project-weather strong {
+    margin: 0 !important;
+    font-size: .58rem !important;
+    font-weight: 700 !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .ng-project-pulse--f45 {
+    grid-template-columns: .78fr .72fr .72fr 1.58fr !important;
+  }
+
+  .ng-project-pulse--f45 .ng-project-weather {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .ng-project-pulse--f45:has(.ng-project-weather[data-weather-state='loading']) [data-pulse='now'],
+  .ng-project-pulse--f45:has(.ng-project-weather[data-weather-state='unavailable']) [data-pulse='now'] {
+    grid-column: span 6 !important;
+    border-right: 0 !important;
+  }
+}

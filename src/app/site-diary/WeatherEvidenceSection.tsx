@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { resolveRainIntervalSeed } from '@/lib/weather/rainIntervalSeed';
 import type { SiteDiaryRainInterval, SiteDiaryWeatherCondition, SiteDiaryWeatherSource } from '@/types/siteDiary';
 
 export interface WeatherEvidenceValue {
@@ -168,7 +169,13 @@ export default function WeatherEvidenceSection({
   };
 
   const addInterval = () => {
-    const next = normalizeIntervals([...value.intervals, { start: '15:00', end: '16:00' }]);
+    const seed = resolveRainIntervalSeed({
+      date,
+      existingIntervals: value.intervals,
+      suggestedIntervals: value.suggestedIntervals,
+    });
+    if (!seed) return;
+    const next = normalizeIntervals([...value.intervals, seed]);
     onChange({ ...value, condition: 'HUJAN', intervals: next, source: value.provider ? 'USER_CONFIRMED' : 'MANUAL' });
     setEditing(true);
   };

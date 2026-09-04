@@ -5,6 +5,7 @@ on:
     branches:
       - feature/F4.5-catat-corrections-1-6
       - feature/F4.5-final-visual-reconciliation
+      - feature/F4.5-ui-authority-cutover
   workflow_dispatch:
 
 jobs:
@@ -26,3 +27,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Unified verification contract
         run: pnpm run verify
+      - name: Install Chromium for F4.5 UI authority gate
+        if: github.ref_name == 'feature/F4.5-ui-authority-cutover'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Real-browser F4.5 UI authority gate
+        if: github.ref_name == 'feature/F4.5-ui-authority-cutover'
+        run: pnpm exec playwright test tests/e2e/f45-ui-authority.e2e.spec.ts --project=chromium

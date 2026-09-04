@@ -222,12 +222,12 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
   };
 
   return (
-    <form onSubmit={handleSubmit} className="ng-catat-flow w-full" aria-label="Borang Buku Harian Tapak" data-entry-mode="CATAT">
+    <form onSubmit={handleSubmit} className="ng-catat-flow w-full" aria-label="Borang Buku Harian Tapak" data-entry-mode="CATAT" data-ui-authority="F45">
       <div ref={sourceRef} className="ng-entry-step ng-entry-step--source" data-entry-step="source" data-spine-state={stateFor(0, currentStep)} data-catat-start>
         <OperationalSourceSelector selectedSource={selectedSource} onSelectSource={setSelectedSource} disabled={isSubmitting || Boolean(successId)} />
       </div>
 
-      <section className="ng-entry-step ng-entry-panel" data-entry-step="daily" data-spine-state={stateFor(1, currentStep)}>
+      <div className="ng-entry-step ng-entry-panel" data-entry-step="daily" data-spine-state={stateFor(1, currentStep)}>
         <div className="ng-entry-row ng-entry-row--status">
           <div>
             <div className="ng-entry-heading">HARIAN</div>
@@ -248,9 +248,9 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
             <small>Bukan tarikh MSP.</small>
           </div>
         )}
-      </section>
+      </div>
 
-      <section className="ng-entry-step ng-entry-panel" data-entry-step="site" data-spine-state={stateFor(2, currentStep)}>
+      <div className="ng-entry-step ng-entry-panel" data-entry-step="site" data-spine-state={stateFor(2, currentStep)}>
         <div className="ng-entry-heading">TAPAK</div>
         <div className="ng-entry-grid ng-entry-grid--site">
           <div className="ng-entry-field">
@@ -275,7 +275,7 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
             <div className="ng-entry-field"><label>Tamat</label><input type="time" value={workEndTime} onChange={(event) => setWorkEndTime(event.target.value)} disabled={isSubmitting || Boolean(successId)} /></div>
           </div>
         )}
-      </section>
+      </div>
 
       <div className="ng-entry-step" data-entry-step="weather" data-spine-state={stateFor(3, currentStep)}>
         <WeatherEvidenceSection date={activityDate} value={weather} onChange={setWeather} disabled={isSubmitting || Boolean(successId)} />
@@ -285,10 +285,10 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
         <SmartWorkforceEntry selectedSource={selectedSource} manpower={manpower} onChange={setManpower} disabled={isSubmitting || Boolean(successId)} />
       </div>
 
-      <section className="ng-entry-step ng-entry-panel" data-entry-step="notes" data-spine-state={stateFor(5, currentStep)}>
+      <div className="ng-entry-step ng-entry-panel" data-entry-step="notes" data-spine-state={stateFor(5, currentStep)}>
         <div className="ng-entry-heading">CATATAN</div>
         <textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting || Boolean(successId)} rows={3} placeholder="Catat kerja" />
-      </section>
+      </div>
 
       {error && <div role="alert" className="ng-entry-alert">{error}</div>}
 
