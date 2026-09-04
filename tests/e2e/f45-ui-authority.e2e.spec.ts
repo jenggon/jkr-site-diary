@@ -2,6 +2,13 @@ import { expect, Page, test } from '@playwright/test';
 
 const PREVIEW_URL = '/site-diary?preview=ngamsoi';
 
+async function openCatat(page: Page, nav: 'desktop' | 'mobile') {
+  const navigation = page.locator(`[data-workspace-nav='${nav}']`);
+  await expect(navigation).toBeVisible({ timeout: 20_000 });
+  await navigation.getByRole('tab', { name: 'Catat kerja', exact: true }).click();
+  await expect(page.locator("form[data-ui-authority='F45']")).toBeVisible({ timeout: 20_000 });
+}
+
 async function expectOneSpineAxis(page: Page) {
   const steps = page.locator("form[data-ui-authority='F45'] > .ng-entry-step[data-entry-step]");
   await expect(steps).toHaveCount(7);
@@ -24,9 +31,9 @@ test.describe('F4.5 operational UI authority browser gate', () => {
   test('half-window uses one Spine, sharp geometry, four core header facts and topmost VO dialog', async ({ page }) => {
     await page.setViewportSize({ width: 960, height: 900 });
     await page.goto(PREVIEW_URL);
+    await openCatat(page, 'desktop');
 
     const form = page.locator("form[data-ui-authority='F45']");
-    await expect(form).toBeVisible();
     await expectOneSpineAxis(page);
 
     const isolation = await form.evaluate((node) => getComputedStyle(node).isolation);
@@ -62,7 +69,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
   test('phone preserves the same Spine axis without horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(PREVIEW_URL);
-    await expect(page.locator("form[data-ui-authority='F45']")).toBeVisible();
+    await openCatat(page, 'mobile');
     await expectOneSpineAxis(page);
 
     const dimensions = await page.evaluate(() => ({
