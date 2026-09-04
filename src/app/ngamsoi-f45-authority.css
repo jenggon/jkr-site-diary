@@ -14,6 +14,32 @@
   --ng-layer-toast: 260;
 }
 
+/* ---------- SHARP-SLEEK GEOMETRY AUTHORITY ----------
+ * F45-GEO-001 / F45-CSS-001: the final authority owns operational radius directly.
+ * Do not rely on an earlier seal or generic shell selector to neutralise legacy radii.
+ * Semantically circular Spine nodes and profile identity remain deliberate exceptions.
+ */
+form[data-ui-authority='F45'] .ng-entry-panel,
+form[data-ui-authority='F45'] input,
+form[data-ui-authority='F45'] select,
+form[data-ui-authority='F45'] textarea,
+form[data-ui-authority='F45'] button,
+form[data-ui-authority='F45'] .ng-segmented,
+form[data-ui-authority='F45'] .ng-weather-toggle,
+form[data-ui-authority='F45'] .ng-trade-results,
+form[data-ui-authority='F45'] .ng-entry-alert,
+form[data-ui-authority='F45'] .ng-entry-empty,
+[data-workspace-nav='desktop'] button,
+[data-workspace-nav='mobile'] button,
+.ng-project-pulse--f45,
+.ng-project-pulse--f45 [data-pulse],
+.ng-project-pulse--f45 .ng-project-weather,
+.ng-post-save,
+.ng-post-save__actions,
+.ng-post-save__actions button {
+  border-radius: 0 !important;
+}
+
 /* ---------- OPERATIONAL DOM CUTOVER ----------
  * Direct entry steps are DIV primitives. This deliberately prevents the retired N05/N05R
  * `form > section` and structural `:has(...)` state engines from participating in runtime.

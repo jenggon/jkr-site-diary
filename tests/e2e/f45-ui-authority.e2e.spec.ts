@@ -35,7 +35,10 @@ async function expectCoreHeader(page: Page) {
 
   const forecast = page.locator('.ng-project-pulse--f45 .ng-project-weather');
   const forecastState = await forecast.getAttribute('data-weather-state');
-  if (forecastState === 'loading' || forecastState === 'unavailable') {
+  const viewportWidth = page.viewportSize()?.width ?? 0;
+  const mediumViewport = viewportWidth >= 768 && viewportWidth <= 1199;
+
+  if (mediumViewport || forecastState === 'loading' || forecastState === 'unavailable') {
     await expect(forecast).toBeHidden();
   } else {
     await expect(forecast).toBeVisible();
@@ -168,7 +171,11 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     );
     expect(new Set(completedNodeColors)).toEqual(new Set(['rgb(63, 185, 80)']));
 
-    await expect(page.locator('.ng-workforce__overall-icon')).toBeVisible();
+    const smartHardhat = page.locator(
+      '[data-testid="smart-workforce-entry"] .ng-workforce-smart__total .ng-workforce__overall-icon',
+    );
+    await expect(smartHardhat).toHaveCount(1);
+    await expect(smartHardhat).toBeVisible();
     await expect(page.locator('[data-testid="tre-trade-suggestions"]')).toBeVisible();
     await expect(page.locator('[data-testid="work-time-summary"]')).toContainText('08:00 → 17:00');
 
