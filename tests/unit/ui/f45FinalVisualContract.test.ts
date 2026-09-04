@@ -11,14 +11,20 @@ const workforce = source('src/app/site-diary/SmartWorkforceEntry.tsx');
 const weather = source('src/app/site-diary/WeatherEvidenceSection.tsx');
 const forecast = source('src/app/site-diary/ProjectWeatherPulse.tsx');
 const css = source('src/app/ngamsoi-f45-harmony.css');
+const sealCss = source('src/app/ngamsoi-f45-seal.css');
 const layout = source('src/app/layout.tsx');
 
 describe('F4.5 final NGAMSOI visual reconciliation', () => {
-  it('makes F4.5 the last presentation authority while keeping N07 behavior loaded', () => {
-    expect(layout.indexOf('ngamsoi-n07-navigation.css')).toBeGreaterThanOrEqual(0);
-    expect(layout.indexOf('ngamsoi-f45-harmony.css')).toBeGreaterThan(layout.indexOf('ngamsoi-n07-navigation.css'));
-    expect(css).toContain('F4.5 FINAL VISUAL AUTHORITY');
-    expect(css).toContain('--ng-f45-radius: .625rem');
+  it('loads the visual seal after F4.5 harmony and locks sharp-sleek operational geometry', () => {
+    const n07 = layout.indexOf('ngamsoi-n07-navigation.css');
+    const f45 = layout.indexOf('ngamsoi-f45-harmony.css');
+    const seal = layout.indexOf('ngamsoi-f45-seal.css');
+    expect(n07).toBeGreaterThanOrEqual(0);
+    expect(f45).toBeGreaterThan(n07);
+    expect(seal).toBeGreaterThan(f45);
+    expect(sealCss).toContain('F4.5 VISUAL SEAL AUTHORITY');
+    expect(sealCss).toContain('--ng-f45-radius: 0;');
+    expect(sealCss).toContain('--ng-f45-radius-small: 0;');
   });
 
   it('uses explicit semantic Spine states in the locked operational order', () => {
@@ -31,6 +37,10 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(css).toContain("[data-spine-state='complete']");
     expect(css).toContain("[data-spine-state='current']");
     expect(css).toContain("[data-spine-state='upcoming']");
+    expect(sealCss).toContain("padding-left: 0 !important");
+    expect(sealCss).toContain("var(--ng-spine-x) - var(--ng-step-offset) - .38rem");
+    expect(sealCss).toContain("[data-spine-state='complete']::before");
+    expect(sealCss).toContain("--ng-f45-success: #3fb950");
   });
 
   it('keeps normal working hours at 08:00 to 17:00 and surfaces a 24-hour product summary', () => {
@@ -44,10 +54,13 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(css).toContain('native picker only on Ubah');
   });
 
-  it('keeps post-save confirmation stable until the user chooses the next action', () => {
+  it('keeps post-save confirmation stable, visible and action-oriented until the user chooses', () => {
+    expect(postSave).toContain('Disimpan');
+    expect(postSave).toContain('Kena boh! Ngamsoi.');
     expect(postSave).toContain('Tunjuk Rekod');
     expect(postSave).toContain('Tambah Aktiviti');
-    expect(postSave).toContain('NgamsoiCompletionRitual');
+    expect(postSave).toContain('ng-post-save__action--primary');
+    expect(postSave).toContain('ng-post-save__action--secondary');
     expect(catat).not.toContain('softReset');
     expect(catat).not.toContain('window.setTimeout');
     expect(aktiviti).not.toContain('finishAndReturn');
@@ -66,10 +79,12 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(workspace).toContain('onAddActivity={startNewObservation}');
   });
 
-  it('keeps one PEKERJA authority with TRE suggestions and observed B/BB/A rows', () => {
+  it('keeps one PEKERJA authority with TRE suggestions, observed B/BB/A rows and the hardhat glyph', () => {
     expect(workforce).toContain('<div className="ng-entry-heading">PEKERJA</div>');
     expect(workforce).toContain('data-testid="tre-trade-suggestions"');
     expect(workforce).toContain("bumi_count: 0, non_bumi_count: 0, foreign_count: 0");
+    expect(workforce).toContain('className="ng-workforce__overall-icon"');
+    expect(workforce).not.toContain('◒');
     expect(css).toContain('.ng-workforce--smart .ng-workforce__header { display: none !important; }');
     expect(css).toContain('.ng-workforce--smart .ng-workforce__matrix-head strong { display: none !important; }');
   });
@@ -84,10 +99,11 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(forecast).not.toContain('title=');
   });
 
-  it('locks medium header to one line of core signals and preserves phone bottom navigation', () => {
-    expect(css).toContain('@media (min-width: 768px) and (max-width: 1199px)');
+  it('locks medium header to a lighter one-line core strip and preserves phone bottom navigation', () => {
+    expect(sealCss).toContain('@media (min-width: 768px) and (max-width: 1199px)');
+    expect(sealCss).toContain('grid-template-columns: .78fr .72fr .72fr 1.58fr');
+    expect(sealCss).toContain('min-height: 2.05rem !important');
     expect(css).toContain(".ng-project-pulse--f45 .ng-project-weather { display: none !important; }");
-    expect(css).toContain('flex-wrap: nowrap !important');
     expect(css).toContain('.ng-workspace-nav--desktop.is-overlay-open');
     expect(css).toContain('@media (max-width: 767px)');
     expect(css).toContain('.ng-workspace-nav--mobile');
@@ -96,8 +112,8 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(workspace).toContain('data-tooltip={navigationExpanded ? undefined : item.meaning}');
   });
 
-  it('keeps REKOD, print, approval and mark geometry out of the F4.5 presentation patch', () => {
-    expect(css).not.toMatch(/DiaryManagementList|DiaryDetail|DiaryHistoryTimeline|ngamsoi-mark-svg/);
+  it('keeps REKOD, print, approval and mark geometry outside the F4.5 visual seal', () => {
+    expect(sealCss).not.toMatch(/DiaryManagementList|DiaryDetail|DiaryHistoryTimeline|ngamsoi-mark-svg/);
     expect(catat).not.toMatch(/DailyEntryFeedback|\/print\//);
     expect(aktiviti).not.toMatch(/DailyEntryFeedback|\/print\//);
   });

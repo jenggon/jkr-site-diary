@@ -1,0 +1,288 @@
+/* F4.5 VISUAL SEAL AUTHORITY
+ * Loaded after ngamsoi-f45-harmony.css.
+ * Owns only final visual reconciliation for CATAT/AKTIVITI shell, header, spine,
+ * workforce presentation and post-save acknowledgement.
+ * REKOD internals, print, approval, Engine/domain semantics and NGAMSOI mark geometry are out of scope.
+ */
+
+:root {
+  --ng-f45-radius: 0;
+  --ng-f45-radius-small: 0;
+  --ng-f45-success: #3fb950;
+  --ng-f45-success-soft: color-mix(in srgb, var(--ng-f45-success) 16%, var(--ng-graphite-950, #090a0c));
+}
+
+/* ---------- SHARP-SLEEK GEOMETRY ---------- */
+.ngamsoi-shell [class*='rounded'],
+.ngamsoi-shell button,
+.ngamsoi-shell input,
+.ngamsoi-shell select,
+.ngamsoi-shell textarea,
+.ng-project-pulse--f45,
+.ng-workspace-nav__item,
+.ng-adaptive-nav__toggle,
+.ng-workspace-nav__item[data-tooltip]::after,
+.ng-entry-panel,
+form[aria-label='Borang Buku Harian Tapak'] .mobile-entry-spike-panel,
+form[aria-label='Borang Buku Harian Tapak'] .mobile-entry-selected-source,
+form[aria-label='Borang Buku Harian Tapak'] .ng-weather-evidence,
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce-smart,
+form[aria-label='Borang Buku Harian Tapak'] .ng-segmented,
+form[aria-label='Borang Buku Harian Tapak'] .ng-weather-toggle,
+form[aria-label='Borang Buku Harian Tapak'] .ng-trade-results,
+form[aria-label='Borang Buku Harian Tapak'] .ng-entry-alert,
+form[aria-label='Borang Buku Harian Tapak'] .ng-entry-empty,
+.ng-post-save,
+.ng-post-save__actions,
+.ng-post-save__actions button {
+  border-radius: 0 !important;
+}
+
+/* Deliberate circular exceptions: profile identity and Spine state nodes only. */
+.ng-profile-trigger {
+  border-radius: 999px !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step]::before {
+  border-radius: 50% !important;
+}
+
+/* ---------- SPINE: ONE MATHEMATICAL AXIS / EXPLICIT STATE AUTHORITY ---------- */
+form[aria-label='Borang Buku Harian Tapak'] {
+  --ng-spine-x: .56rem;
+  --ng-step-offset: 1.35rem;
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak']::before {
+  left: var(--ng-spine-x) !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step]::before {
+  left: calc(var(--ng-spine-x) - var(--ng-step-offset) - .38rem) !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step][data-spine-state='complete']::before {
+  content: '✓' !important;
+  border: 1px solid var(--ng-f45-success) !important;
+  background: var(--ng-f45-success) !important;
+  color: #07120a !important;
+  box-shadow: 0 0 0 3px var(--ng-graphite-950, #090a0c) !important;
+  font-size: .5rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step][data-spine-state='current']::before {
+  content: '' !important;
+  border: 2px solid var(--ng-current, #ff7a1a) !important;
+  background: color-mix(in srgb, var(--ng-current, #ff7a1a) 16%, var(--ng-graphite-950, #090a0c)) !important;
+  color: transparent !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step][data-spine-state='upcoming']::before {
+  content: '' !important;
+  border: 1px solid var(--ng-grey-600, #5e6570) !important;
+  background: var(--ng-graphite-950, #090a0c) !important;
+  color: transparent !important;
+}
+
+/* ---------- SECTION / CONTROL RHYTHM ---------- */
+.ng-entry-heading {
+  font-weight: 760 !important;
+  letter-spacing: .09em !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] .ng-entry-panel,
+form[aria-label='Borang Buku Harian Tapak'] .ng-weather-evidence,
+form[aria-label='Borang Buku Harian Tapak'] .ng-workforce-smart {
+  border-color: var(--ng-f45-rule) !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] .ng-segmented button,
+form[aria-label='Borang Buku Harian Tapak'] .ng-weather-toggle button,
+form[aria-label='Borang Buku Harian Tapak'] .ng-time-summary button,
+form[aria-label='Borang Buku Harian Tapak'] .ng-secondary-action,
+form[aria-label='Borang Buku Harian Tapak'] .ng-trade-suggestions button,
+form[aria-label='Borang Buku Harian Tapak'] .ng-trade-search button,
+form[aria-label='Borang Buku Harian Tapak'] .ng-rain-add,
+form[aria-label='Borang Buku Harian Tapak'] .mobile-entry-source-control {
+  min-height: 2.5rem !important;
+}
+
+form[aria-label='Borang Buku Harian Tapak'] .ng-save-action {
+  min-height: 2.75rem !important;
+}
+
+/* ---------- WORKFORCE GLYPH / TOTAL ---------- */
+.ng-workforce-smart__total {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: .34rem !important;
+  color: var(--ng-current, #ff7a1a) !important;
+}
+
+.ng-workforce-smart__total .ng-workforce__overall-icon {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  flex: 0 0 1.05rem !important;
+  stroke: currentColor !important;
+  stroke-width: 1.7 !important;
+}
+
+/* ---------- POST-SAVE: SUCCESS FIRST, BRAND SECOND ---------- */
+.ng-post-save {
+  position: fixed !important;
+  z-index: 90 !important;
+  right: .85rem !important;
+  bottom: .85rem !important;
+  width: min(23rem, calc(100vw - 1.7rem)) !important;
+  overflow: hidden !important;
+  border: 1px solid color-mix(in srgb, var(--ng-f45-success) 58%, var(--ng-f45-rule-strong)) !important;
+  background: color-mix(in srgb, var(--ng-graphite-900, #101216) 94%, black) !important;
+  box-shadow: 0 12px 34px rgb(0 0 0 / 38%) !important;
+}
+
+.ng-post-save__body {
+  padding: .72rem .82rem .68rem !important;
+}
+
+.ng-post-save__status {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: .56rem !important;
+}
+
+.ng-post-save__check {
+  margin-top: .02rem !important;
+  color: var(--ng-f45-success) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.ng-post-save__copy {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: .12rem !important;
+}
+
+.ng-post-save__title {
+  color: var(--ng-ivory-100, #f5f5f2) !important;
+  font-size: .78rem !important;
+  font-weight: 760 !important;
+  line-height: 1.15 !important;
+}
+
+.ng-post-save__brand {
+  color: var(--ng-f45-muted) !important;
+  font-size: .62rem !important;
+  font-weight: 620 !important;
+  line-height: 1.2 !important;
+}
+
+.ng-post-save__actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  border-top: 1px solid var(--ng-f45-rule) !important;
+}
+
+.ng-post-save__actions button {
+  min-height: 2.65rem !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ng-grey-300, #b7bbc1) !important;
+  font-size: .66rem !important;
+  font-weight: 700 !important;
+}
+
+.ng-post-save__actions button + button {
+  border-left: 1px solid var(--ng-f45-rule) !important;
+}
+
+.ng-post-save__actions .ng-post-save__action--primary {
+  color: var(--ng-f45-success) !important;
+  background: color-mix(in srgb, var(--ng-f45-success) 7%, transparent) !important;
+}
+
+.ng-post-save__actions .ng-post-save__action--secondary {
+  color: var(--ng-current, #ff7a1a) !important;
+}
+
+/* ---------- HEADER: LIGHTER, ONE-LINE OPERATIONAL STRIP ---------- */
+.ng-project-pulse--f45 {
+  border-radius: 0 !important;
+}
+
+.ng-project-pulse--f45 small {
+  font-weight: 650 !important;
+  letter-spacing: .06em !important;
+}
+
+.ng-project-pulse--f45 strong {
+  font-weight: 710 !important;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .ng-project-context {
+    gap: .08rem .65rem !important;
+    padding: .42rem .65rem !important;
+  }
+
+  .ng-project-pulse--f45 {
+    display: grid !important;
+    width: 100% !important;
+    grid-template-columns: .78fr .72fr .72fr 1.58fr !important;
+    overflow: hidden !important;
+  }
+
+  .ng-project-pulse--f45 .ng-project-pulse__item {
+    min-height: 2.05rem !important;
+    padding: .28rem .46rem !important;
+    gap: .22rem !important;
+  }
+
+  .ng-project-pulse--f45 [data-pulse='now'] {
+    justify-content: flex-end !important;
+  }
+
+  .ng-project-pulse--f45 small {
+    font-size: .42rem !important;
+  }
+
+  .ng-project-pulse--f45 strong {
+    font-size: .67rem !important;
+  }
+}
+
+/* ---------- PHONE SAFETY ---------- */
+@media (max-width: 767px) {
+  form[aria-label='Borang Buku Harian Tapak'] .ng-segmented button,
+  form[aria-label='Borang Buku Harian Tapak'] .ng-weather-toggle button,
+  form[aria-label='Borang Buku Harian Tapak'] .ng-time-summary button,
+  form[aria-label='Borang Buku Harian Tapak'] .ng-secondary-action,
+  form[aria-label='Borang Buku Harian Tapak'] .ng-trade-suggestions button,
+  form[aria-label='Borang Buku Harian Tapak'] .ng-trade-search button,
+  form[aria-label='Borang Buku Harian Tapak'] .ng-rain-add,
+  form[aria-label='Borang Buku Harian Tapak'] .mobile-entry-source-control,
+  form[aria-label='Borang Buku Harian Tapak'] .ng-save-action {
+    min-height: 2.75rem !important;
+  }
+
+  .ng-post-save {
+    right: .72rem !important;
+    bottom: calc(4.45rem + env(safe-area-inset-bottom)) !important;
+    left: .72rem !important;
+    width: auto !important;
+  }
+
+  .ng-post-save__actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+
+  .ng-post-save__actions button {
+    min-width: 0 !important;
+    padding-inline: .5rem !important;
+  }
+}

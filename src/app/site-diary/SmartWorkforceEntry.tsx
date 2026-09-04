@@ -24,6 +24,23 @@ function cleanTrade(value: string): string {
   return value.trim();
 }
 
+function WorkforceHardhatIcon() {
+  return (
+    <svg
+      className="ng-workforce__overall-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5 13v-1a7 7 0 0 1 14 0v1" />
+      <path d="M8.2 12V8.7M15.8 12V8.7" />
+      <path d="M3.5 13h17" />
+      <path d="M6.5 16h11" />
+    </svg>
+  );
+}
+
 export default function SmartWorkforceEntry({
   selectedSource,
   manpower,
@@ -106,7 +123,7 @@ export default function SmartWorkforceEntry({
           <div className="ng-entry-meta">{helper}</div>
         </div>
         <div className="ng-workforce-smart__total" aria-label={`${overallTotal} pekerja`}>
-          <span aria-hidden="true">◒</span>
+          <WorkforceHardhatIcon />
           <strong>{overallTotal}</strong>
         </div>
       </div>
