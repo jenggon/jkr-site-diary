@@ -54,13 +54,15 @@ describe('N07 NGAMSOI homecoming/navigation contract', () => {
     expect(workspaceSource).toContain('data-tooltip={navigationExpanded ? undefined : item.meaning}');
   });
 
-  it('loads N07 after accepted historical layers but before final F4.5 presentation authority', () => {
+  it('loads N07 after accepted historical layers but before the single consolidated F4.5 authority', () => {
     const n05r5Desktop = layoutSource.indexOf('ngamsoi-n05r5-desktop-acceptance.css');
     const n07 = layoutSource.indexOf('ngamsoi-n07-navigation.css');
-    const f45 = layoutSource.indexOf('ngamsoi-f45-harmony.css');
+    const f45 = layoutSource.indexOf('ngamsoi-f45-authority.css');
     expect(n05r5Desktop).toBeGreaterThanOrEqual(0);
     expect(n07).toBeGreaterThan(n05r5Desktop);
     expect(f45).toBeGreaterThan(n07);
+    expect(layoutSource).not.toContain('import "./ngamsoi-f45-harmony.css"');
+    expect(layoutSource).not.toContain('import "./ngamsoi-f45-seal.css"');
   });
 
   it('keeps N07 as the adaptive navigation/homecoming behavior contract only', () => {

@@ -10,21 +10,20 @@ const postSave = source('src/app/site-diary/PostSaveConfirmation.tsx');
 const workforce = source('src/app/site-diary/SmartWorkforceEntry.tsx');
 const weather = source('src/app/site-diary/WeatherEvidenceSection.tsx');
 const forecast = source('src/app/site-diary/ProjectWeatherPulse.tsx');
-const css = source('src/app/ngamsoi-f45-harmony.css');
-const sealCss = source('src/app/ngamsoi-f45-seal.css');
+const authority = source('src/app/ngamsoi-f45-authority.css');
 const layout = source('src/app/layout.tsx');
 
 describe('F4.5 final NGAMSOI visual reconciliation', () => {
-  it('loads the visual seal after F4.5 harmony and locks sharp-sleek operational geometry', () => {
+  it('loads one consolidated F4.5 authority after N07 and locks sharp-sleek operational geometry', () => {
     const n07 = layout.indexOf('ngamsoi-n07-navigation.css');
-    const f45 = layout.indexOf('ngamsoi-f45-harmony.css');
-    const seal = layout.indexOf('ngamsoi-f45-seal.css');
+    const f45 = layout.indexOf('ngamsoi-f45-authority.css');
     expect(n07).toBeGreaterThanOrEqual(0);
     expect(f45).toBeGreaterThan(n07);
-    expect(seal).toBeGreaterThan(f45);
-    expect(sealCss).toContain('F4.5 VISUAL SEAL AUTHORITY');
-    expect(sealCss).toContain('--ng-f45-radius: 0;');
-    expect(sealCss).toContain('--ng-f45-radius-small: 0;');
+    expect(layout).not.toContain('import "./ngamsoi-f45-harmony.css"');
+    expect(layout).not.toContain('import "./ngamsoi-f45-seal.css"');
+    expect(authority).toContain('F4.5 UI AUTHORITY — CONSOLIDATED RUNTIME OWNER');
+    expect(authority).toContain('--ng-f45-radius: 0;');
+    expect(authority).toContain('--ng-f45-radius-small: 0;');
   });
 
   it('uses explicit semantic Spine states in the locked operational order', () => {
@@ -34,13 +33,13 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
       }
       expect(file).toContain('data-spine-state={stateFor(');
     }
-    expect(css).toContain("[data-spine-state='complete']");
-    expect(css).toContain("[data-spine-state='current']");
-    expect(css).toContain("[data-spine-state='upcoming']");
-    expect(sealCss).toContain("padding-left: 0 !important");
-    expect(sealCss).toContain("var(--ng-spine-x) - var(--ng-step-offset) - .38rem");
-    expect(sealCss).toContain("[data-spine-state='complete']::before");
-    expect(sealCss).toContain("--ng-f45-success: #3fb950");
+    expect(authority).toContain("[data-spine-state='complete']");
+    expect(authority).toContain("[data-spine-state='current']");
+    expect(authority).toContain("[data-spine-state='upcoming']");
+    expect(authority).toContain('padding-left: 0 !important');
+    expect(authority).toContain('var(--ng-spine-x) - var(--ng-step-offset) - .38rem');
+    expect(authority).toContain("[data-spine-state='complete']::before");
+    expect(authority).toContain('--ng-f45-success: #3fb950');
   });
 
   it('keeps normal working hours at 08:00 to 17:00 and surfaces a 24-hour product summary', () => {
@@ -51,7 +50,7 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
       expect(file).toContain('{workStartTime} → {workEndTime}');
       expect(file).toContain("timeExpanded ? 'Tutup' : 'Ubah'");
     }
-    expect(css).toContain('native picker only on Ubah');
+    expect(authority).toContain('native picker only on Ubah');
   });
 
   it('keeps post-save confirmation stable, visible and action-oriented until the user chooses', () => {
@@ -85,8 +84,8 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(workforce).toContain("bumi_count: 0, non_bumi_count: 0, foreign_count: 0");
     expect(workforce).toContain('className="ng-workforce__overall-icon"');
     expect(workforce).not.toContain('◒');
-    expect(css).toContain('.ng-workforce--smart .ng-workforce__header { display: none !important; }');
-    expect(css).toContain('.ng-workforce--smart .ng-workforce__matrix-head strong { display: none !important; }');
+    expect(authority).toContain('.ng-workforce--smart .ng-workforce__header { display: none !important; }');
+    expect(authority).toContain('.ng-workforce--smart .ng-workforce__matrix-head strong { display: none !important; }');
   });
 
   it('keeps official weather binary and visually distinct from forecast', () => {
@@ -100,20 +99,20 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
   });
 
   it('locks medium header to a lighter one-line core strip and preserves phone bottom navigation', () => {
-    expect(sealCss).toContain('@media (min-width: 768px) and (max-width: 1199px)');
-    expect(sealCss).toContain('grid-template-columns: .78fr .72fr .72fr 1.58fr');
-    expect(sealCss).toContain('min-height: 2.05rem !important');
-    expect(css).toContain(".ng-project-pulse--f45 .ng-project-weather { display: none !important; }");
-    expect(css).toContain('.ng-workspace-nav--desktop.is-overlay-open');
-    expect(css).toContain('@media (max-width: 767px)');
-    expect(css).toContain('.ng-workspace-nav--mobile');
+    expect(authority).toContain('@media (min-width: 768px) and (max-width: 1199px)');
+    expect(authority).toContain('grid-template-columns: .78fr .72fr .72fr 1.58fr');
+    expect(authority).toContain('min-height: 2.05rem !important');
+    expect(authority).toContain(".ng-project-pulse--f45 .ng-project-weather {\n    display: none !important;");
+    expect(authority).toContain('.ng-workspace-nav--desktop.is-overlay-open');
+    expect(authority).toContain('@media (max-width: 767px)');
+    expect(authority).toContain('.ng-workspace-nav--mobile');
     expect(workspace).toContain('data-workspace-nav="desktop"');
     expect(workspace).toContain('data-workspace-nav="mobile"');
     expect(workspace).toContain('data-tooltip={navigationExpanded ? undefined : item.meaning}');
   });
 
-  it('keeps REKOD, print, approval and mark geometry outside the F4.5 visual seal', () => {
-    expect(sealCss).not.toMatch(/DiaryManagementList|DiaryDetail|DiaryHistoryTimeline|ngamsoi-mark-svg/);
+  it('keeps REKOD, print, approval and mark geometry outside the F4.5 operational authority', () => {
+    expect(authority).not.toMatch(/DiaryManagementList|DiaryDetail|DiaryHistoryTimeline|ngamsoi-mark-svg/);
     expect(catat).not.toMatch(/DailyEntryFeedback|\/print\//);
     expect(aktiviti).not.toMatch(/DailyEntryFeedback|\/print\//);
   });

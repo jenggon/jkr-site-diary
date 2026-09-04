@@ -13,8 +13,11 @@ const authority = source('src/app/ngamsoi-f45-authority.css');
 describe('F4.5 UI authority cutover', () => {
   it('makes one explicit final operational CSS authority and removes component-level project-pulse CSS authority', () => {
     const imports = [...layout.matchAll(/import "\.\/([^\"]+\.css)";/g)].map((match) => match[1]);
+    const f45Imports = imports.filter((name) => name.startsWith('ngamsoi-f45-'));
     expect(imports.at(-1)).toBe('ngamsoi-f45-authority.css');
-    expect(authority).toContain('F4.5 UI AUTHORITY CUTOVER');
+    expect(f45Imports).toEqual(['ngamsoi-f45-authority.css']);
+    expect(authority).toContain('F4.5 UI AUTHORITY — CONSOLIDATED RUNTIME OWNER');
+    expect(authority).not.toMatch(/@import[^;]*ngamsoi-f45-/i);
     expect(shell).not.toContain('<style jsx global>');
   });
 
@@ -41,7 +44,7 @@ describe('F4.5 UI authority cutover', () => {
 
   it('gives VO dialog and toast explicit layer authority independent of entry-step wrapper shape', () => {
     expect(authority).toContain('--ng-layer-dialog: 240;');
-    expect(authority).toContain(".ng-vo-dialog-backdrop");
+    expect(authority).toContain('.ng-vo-dialog-backdrop');
     expect(authority).toContain('position: fixed !important;');
     expect(authority).toContain('z-index: var(--ng-layer-dialog) !important;');
     expect(authority).toContain('--ng-layer-toast: 260;');
