@@ -5,6 +5,7 @@ const APP_URL = '/site-diary';
 const EXPECT_TIMEOUT = 20_000;
 const SPINE_STEPS = ['source', 'daily', 'site', 'weather', 'workforce', 'notes', 'save'] as const;
 const SPINE_STATES = new Set(['complete', 'current', 'upcoming']);
+const CORE_PULSES = ['programme', 'remaining', 'day', 'now'] as const;
 
 test.use({ timezoneId: 'Asia/Kuala_Lumpur' });
 
@@ -27,11 +28,61 @@ async function openCatat(page: Page, nav: 'desktop' | 'mobile'): Promise<Locator
 }
 
 async function expectCoreHeader(page: Page) {
-  for (const pulse of ['programme', 'remaining', 'day', 'now']) {
+  for (const pulse of CORE_PULSES) {
     await expect(page.locator(`.ng-project-pulse--f45 [data-pulse='${pulse}']`)).toBeVisible({
       timeout: EXPECT_TIMEOUT,
     });
   }
+
+  const coreFacts = page.locator(CORE_PULSES.map((pulse) =>
+    `.ng-project-pulse--f45 [data-pulse='${pulse}']`,
+  ).join(','));
+  await expect(coreFacts).toHaveCount(CORE_PULSES.length);
+
+  const readabilityViolations = await coreFacts.evaluateAll((nodes) => nodes.flatMap((node) => {
+    const item = node as HTMLElement;
+    const itemRect = item.getBoundingClientRect();
+    const visibleText = Array.from(item.querySelectorAll('small, strong')).filter((child) => {
+      const element = child as HTMLElement;
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    }) as HTMLElement[];
+
+    const outsideBounds = visibleText.some((child) => {
+      const rect = child.getBoundingClientRect();
+      return rect.left < itemRect.left - 1
+        || rect.right > itemRect.right + 1
+        || rect.top < itemRect.top - 1
+        || rect.bottom > itemRect.bottom + 1;
+    });
+    const ellipsized = visibleText.some((child) => {
+      const style = getComputedStyle(child);
+      const lineClamp = style.getPropertyValue('-webkit-line-clamp');
+      return style.textOverflow === 'ellipsis'
+        || (lineClamp !== '' && lineClamp !== 'none' && lineClamp !== '0');
+    });
+    const clipped = item.scrollWidth > item.clientWidth + 1 || item.scrollHeight > item.clientHeight + 1;
+    const emptyFact = visibleText.every((child) => (child.textContent?.trim().length ?? 0) === 0);
+
+    if (!outsideBounds && !ellipsized && !clipped && !emptyFact) return [];
+    return [{
+      pulse: item.getAttribute('data-pulse'),
+      text: item.textContent?.trim() ?? '',
+      outsideBounds,
+      ellipsized,
+      clipped,
+      emptyFact,
+      clientWidth: item.clientWidth,
+      scrollWidth: item.scrollWidth,
+      clientHeight: item.clientHeight,
+      scrollHeight: item.scrollHeight,
+    }];
+  }));
+  expect(
+    readabilityViolations,
+    `Core header facts are clipped, ellipsized or unreadable:\n${JSON.stringify(readabilityViolations, null, 2)}`,
+  ).toEqual([]);
 
   const forecast = page.locator('.ng-project-pulse--f45 .ng-project-weather');
   const forecastState = await forecast.getAttribute('data-weather-state');
@@ -94,6 +145,9 @@ async function expectSharpOperationalGeometry(page: Page) {
     "[data-workspace-nav='mobile'] button",
     ".ng-project-pulse--f45 [data-pulse]",
     ".ng-project-pulse--f45 .ng-project-weather",
+    '.ng-post-save',
+    '.ng-post-save__actions',
+    '.ng-post-save__actions button',
   ].join(',')).evaluateAll((nodes) => nodes.flatMap((node) => {
     const element = node as HTMLElement;
     const rect = element.getBoundingClientRect();
@@ -108,6 +162,27 @@ async function expectSharpOperationalGeometry(page: Page) {
     }];
   }));
   expect(offenders, `Rounded operational surfaces remain:\n${JSON.stringify(offenders, null, 2)}`).toEqual([]);
+}
+
+async function expectSharpPostSaveGeometry(page: Page) {
+  const toast = page.getByTestId('post-save-confirmation');
+  await expect(toast).toBeVisible({ timeout: EXPECT_TIMEOUT });
+  await expect(toast.locator('.ng-post-save__title')).toHaveText('Disimpan');
+  await expect(page.getByTestId('post-save-show-records')).toBeVisible();
+  await expect(page.getByTestId('post-save-add-activity')).toBeVisible();
+
+  const offenders = await page.locator(
+    '.ng-post-save, .ng-post-save__actions, .ng-post-save__actions button',
+  ).evaluateAll((nodes) => nodes.flatMap((node) => {
+    const element = node as HTMLElement;
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    const visible = rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    return visible && style.borderRadius !== '0px'
+      ? [{ tag: element.tagName, className: element.className, radius: style.borderRadius }]
+      : [];
+  }));
+  expect(offenders, `Post-save geometry is not sharp:\n${JSON.stringify(offenders, null, 2)}`).toEqual([]);
 }
 
 async function expectTopmostDialog(page: Page) {
@@ -215,7 +290,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     fixture.assertNoUnexpectedApiCalls();
   });
 
-  test('phone preserves bottom navigation, the same Spine axis and zero horizontal overflow', async ({ page }) => {
+  test('phone preserves bottom navigation, the same Spine axis, sharp save toast and zero horizontal overflow', async ({ page }) => {
     const fixture = await boot(page, 390, 844);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -228,6 +303,16 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await expectOneSpineAxis(page);
     await expectNoHorizontalOverflow(page);
     await expectSharpOperationalGeometry(page);
+
+    const form = page.locator("form[data-ui-authority='F45']");
+    await page.locator('.mobile-entry-task-row').first().click();
+    await form.locator('.ng-entry-grid--site .ng-entry-field input').fill('Aras 2 · Grid 4–8');
+    await form.locator('textarea').fill('Kerja konkrit diteruskan mengikut jadual.');
+    await form.getByRole('button', { name: 'Simpan', exact: true }).click();
+
+    await expectSharpPostSaveGeometry(page);
+    await expectSharpOperationalGeometry(page);
+    await expectNoHorizontalOverflow(page);
 
     fixture.assertNoUnexpectedApiCalls();
   });

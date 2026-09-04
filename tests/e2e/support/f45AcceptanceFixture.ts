@@ -3,6 +3,8 @@ import { expect, type Page } from '@playwright/test';
 const PROGRAMME_ID = '11111111-1111-4111-8111-111111111111';
 const REVISION_ID = '22222222-2222-4222-8222-222222222222';
 const TASK_ID = '33333333-3333-4333-8333-333333333333';
+const ACTIVITY_ID = '44444444-4444-4444-8444-444444444444';
+const SITE_DIARY_ID = '55555555-5555-4555-8555-555555555555';
 const USER_ID = '77777777-7777-4777-8777-777777777777';
 const VO_ID = '88888888-8888-4888-8888-888888888888';
 const ACCESS_TOKEN =
@@ -241,6 +243,55 @@ export async function installF45AcceptanceFixture(page: Page) {
           resolutionSource: 'MSP_RESOURCE',
         },
       }));
+      return;
+    }
+
+    if (method === 'POST' && path === '/api/activities') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      const valid = body.programmeId === PROGRAMME_ID
+        && body.revisionId === REVISION_ID
+        && body.sourceType === 'MSP'
+        && body.taskId === TASK_ID
+        && typeof body.activityName === 'string'
+        && body.activityName.length > 0;
+      if (!valid) {
+        unexpectedRequests.push(`${label} [unexpected create-activity payload]`);
+        await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'F45_E2E_ACTIVITY_PAYLOAD' }) });
+        return;
+      }
+      await route.fulfill(json({ data: { activityId: ACTIVITY_ID } }));
+      return;
+    }
+
+    if (method === 'POST' && path === `/api/activities/${ACTIVITY_ID}/start`) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      if (typeof body.actualStartDate !== 'string' || body.actualStartDate.length === 0) {
+        unexpectedRequests.push(`${label} [unexpected activity-start payload]`);
+        await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'F45_E2E_START_PAYLOAD' }) });
+        return;
+      }
+      await route.fulfill(json({ data: { activityId: ACTIVITY_ID, status: 'In Progress', actual_start_date: body.actualStartDate } }));
+      return;
+    }
+
+    if (method === 'POST' && path === '/api/site-diary') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      const printContext = body.print_context as Record<string, unknown> | undefined;
+      const valid = body.programme_id === PROGRAMME_ID
+        && body.revision_id === REVISION_ID
+        && body.activity_id === ACTIVITY_ID
+        && body.operation_intent === 'IN_PROGRESS_DIARY'
+        && typeof body.activity_date === 'string'
+        && typeof body.notes === 'string'
+        && body.notes.length > 0
+        && typeof printContext?.location === 'string'
+        && printContext.location.length > 0;
+      if (!valid) {
+        unexpectedRequests.push(`${label} [unexpected site-diary payload]`);
+        await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'F45_E2E_DIARY_PAYLOAD' }) });
+        return;
+      }
+      await route.fulfill(json({ data: { site_diary_id: SITE_DIARY_ID } }));
       return;
     }
 
