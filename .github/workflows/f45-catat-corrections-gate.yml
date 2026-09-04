@@ -32,4 +32,14 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Real-browser F4.5 UI authority gate
         if: github.ref_name == 'feature/F4.5-ui-authority-cutover'
-        run: pnpm exec playwright test tests/e2e/f45-ui-authority.e2e.spec.ts --project=chromium
+        run: pnpm exec playwright test tests/e2e/f45-ui-authority.e2e.spec.ts --project=chromium --retries=0
+      - name: Upload F4.5 browser failure evidence
+        if: failure() && github.ref_name == 'feature/F4.5-ui-authority-cutover'
+        uses: actions/upload-artifact@v4
+        with:
+          name: f45-browser-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

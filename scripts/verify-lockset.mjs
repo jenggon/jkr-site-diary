@@ -11,6 +11,16 @@ function fail(message) {
   process.exit(1);
 }
 
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalize(value[key])]),
+  );
+}
+
 if (!existsSync(locksetPath)) fail('ACTIVE_LOCKSET.json is missing');
 if (!existsSync(protocolPath)) fail('AGENT_LOCKSET_PROTOCOL.md is missing');
 
@@ -76,7 +86,8 @@ for (const fragment of requiredBoundaryFragments) {
   }
 }
 
-const hash = createHash('sha256').update(raw).digest('hex');
+const canonical = JSON.stringify(canonicalize(lockset));
+const hash = createHash('sha256').update(canonical).digest('hex');
 console.log(`LOCKSET_VERSION=${lockset.locksetVersion}`);
 console.log(`LOCKSET_HASH=${hash}`);
 console.log(`LOCKSET_LOCKED_REQUIREMENTS=${lockedIds.size}`);
