@@ -12,7 +12,9 @@ function resolveAnchor(step: HTMLElement, key: StepKey): HTMLElement {
       '.ng-entry-heading, .mobile-entry-spike-panel h3, .mobile-entry-selected-source h3, h3',
     ) ?? step;
   }
-  if (key === 'save') return step.querySelector<HTMLElement>('.ng-save-action') ?? step;
+  if (key === 'save') {
+    return step.querySelector<HTMLElement>('.ng-save-action, .ng-save-complete-marker, .ng-saved-receipt') ?? step;
+  }
   return step.querySelector<HTMLElement>('.ng-entry-heading') ?? step;
 }
 
