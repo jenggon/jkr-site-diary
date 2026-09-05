@@ -282,14 +282,8 @@ export default function OperationalSourceSelector({
 
       {(!currentSelection || isExpanded) && (
         <div className="mobile-entry-spike-panel">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-orange-400 md:hidden">
-                Sumber
-              </p>
-              <h3 className="text-sm font-bold text-zinc-100">Sumber Aktiviti</h3>
-            </div>
-            {currentSelection && (
+          {currentSelection && (
+            <div className="mb-3 flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsExpanded(false)}
@@ -297,8 +291,8 @@ export default function OperationalSourceSelector({
               >
                 Batal
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           <div
             role="tablist"
@@ -479,7 +473,7 @@ export default function OperationalSourceSelector({
                 type="button"
                 onClick={() => setShowVoModal(false)}
                 disabled={creatingVo}
-                className="ng-vo-dialog__close"
+                className="ng-dialog-close ng-vo-dialog__close"
                 aria-label="Tutup pendaftaran VO"
               >
                 ×
