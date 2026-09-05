@@ -17,11 +17,12 @@ export default function PostSaveConfirmation({
 }: PostSaveConfirmationProps) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const titleRef = useRef<HTMLElement | null>(null);
-  const closeRef = useRef<HTMLButtonElement | null>(null);
+  const receiptRef = useRef<HTMLElement | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!dismissed) titleRef.current?.focus({ preventScroll: true });
+    if (dismissed) receiptRef.current?.focus({ preventScroll: true });
+    else titleRef.current?.focus({ preventScroll: true });
   }, [dismissed]);
 
   const dismiss = () => setDismissed(true);
@@ -68,6 +69,43 @@ export default function PostSaveConfirmation({
     }
   };
 
+  if (dismissed) {
+    return (
+      <div
+        className="ng-entry-step ng-entry-step--save ng-entry-step--saved"
+        data-entry-step="save"
+        data-spine-state="complete"
+        data-save-complete="true"
+      >
+        <section
+          ref={receiptRef}
+          className="ng-saved-receipt"
+          data-testid="post-save-receipt"
+          data-saved-site-diary-id={savedSiteDiaryId}
+          aria-labelledby="ng-saved-receipt-title"
+          tabIndex={-1}
+        >
+          <div className="ng-saved-receipt__status">
+            <span className="ng-saved-receipt__node" aria-hidden="true">✓</span>
+            <div className="ng-saved-receipt__copy">
+              <span className="ng-saved-receipt__eyebrow">Catatan selesai</span>
+              <strong id="ng-saved-receipt-title">Disimpan</strong>
+              <span className="sr-only">{successText}</span>
+            </div>
+          </div>
+          <div className="ng-saved-receipt__actions" aria-label="Tindakan selepas simpan">
+            <button type="button" onClick={onShowRecords} data-testid="post-save-receipt-show-records">
+              Tunjuk Rekod
+            </button>
+            <button type="button" onClick={onAddActivity} data-testid="post-save-receipt-add-activity">
+              Tambah Aktiviti
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <Fragment>
       <div
@@ -76,79 +114,74 @@ export default function PostSaveConfirmation({
         data-spine-state="complete"
         data-save-complete="true"
       >
-        <button type="button" disabled className="ng-save-action" aria-label="Catatan telah disimpan">
-          Disimpan
-        </button>
+        <div className="ng-save-complete-marker" aria-hidden="true">Disimpan</div>
       </div>
 
-      {!dismissed && (
-        <div
-          className="ng-vo-dialog-backdrop ng-post-save-backdrop"
-          data-testid="post-save-backdrop"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) event.preventDefault();
-          }}
+      <div
+        className="ng-vo-dialog-backdrop ng-post-save-backdrop"
+        data-testid="post-save-backdrop"
+        onMouseDown={(event) => {
+          if (event.currentTarget === event.target) event.preventDefault();
+        }}
+      >
+        <aside
+          ref={dialogRef}
+          className="ng-vo-dialog ng-post-save ng-completion-seal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ng-post-save-title"
+          aria-describedby="ng-post-save-brand"
+          data-testid="post-save-confirmation"
+          data-saved-site-diary-id={savedSiteDiaryId}
+          onKeyDown={trapFocus}
         >
-          <aside
-            ref={dialogRef}
-            className="ng-vo-dialog ng-post-save ng-completion-seal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ng-post-save-title"
-            aria-describedby="ng-post-save-brand"
-            data-testid="post-save-confirmation"
-            data-saved-site-diary-id={savedSiteDiaryId}
-            onKeyDown={trapFocus}
+          <button
+            type="button"
+            className="ng-dialog-close ng-completion-seal__close"
+            aria-label="Tutup pengesahan simpan"
+            data-testid="post-save-close"
+            onClick={dismiss}
           >
+            ×
+          </button>
+
+          <div className="ng-completion-seal__hero">
+            <span className="ng-completion-seal__node" aria-hidden="true">✓</span>
+            <div className="ng-post-save__copy">
+              <span className="ng-vo-dialog__eyebrow">Catatan selesai</span>
+              <strong
+                ref={titleRef}
+                id="ng-post-save-title"
+                className="ng-post-save__title"
+                tabIndex={-1}
+              >
+                Disimpan
+              </strong>
+              <span id="ng-post-save-brand" className="ng-post-save__brand">Kena boh! Ngamsoi.</span>
+              <span className="sr-only">{successText}</span>
+            </div>
+          </div>
+
+          <div className="ng-post-save__actions" aria-label="Tindakan selepas simpan">
             <button
-              ref={closeRef}
               type="button"
-              className="ng-completion-seal__close"
-              aria-label="Tutup pengesahan simpan"
-              data-testid="post-save-close"
-              onClick={dismiss}
+              className="ng-post-save__action--primary"
+              onClick={onShowRecords}
+              data-testid="post-save-show-records"
             >
-              ×
+              Tunjuk Rekod
             </button>
-
-            <div className="ng-completion-seal__hero">
-              <span className="ng-completion-seal__node" aria-hidden="true">✓</span>
-              <div className="ng-post-save__copy">
-                <span className="ng-vo-dialog__eyebrow">Catatan selesai</span>
-                <strong
-                  ref={titleRef}
-                  id="ng-post-save-title"
-                  className="ng-post-save__title"
-                  tabIndex={-1}
-                >
-                  Disimpan
-                </strong>
-                <span id="ng-post-save-brand" className="ng-post-save__brand">Kena boh! Ngamsoi.</span>
-                <span className="sr-only">{successText}</span>
-              </div>
-            </div>
-
-            <div className="ng-post-save__actions" aria-label="Tindakan selepas simpan">
-              <button
-                type="button"
-                className="ng-post-save__action--primary"
-                onClick={onShowRecords}
-                data-testid="post-save-show-records"
-              >
-                Tunjuk Rekod
-              </button>
-              <button
-                type="button"
-                className="ng-post-save__action--secondary"
-                onClick={onAddActivity}
-                data-testid="post-save-add-activity"
-              >
-                Tambah Aktiviti
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
+            <button
+              type="button"
+              className="ng-post-save__action--secondary"
+              onClick={onAddActivity}
+              data-testid="post-save-add-activity"
+            >
+              Tambah Aktiviti
+            </button>
+          </div>
+        </aside>
+      </div>
     </Fragment>
   );
 }
