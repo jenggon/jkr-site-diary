@@ -68,6 +68,9 @@ describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentatio
     expect(shell).toContain('<ProjectWeatherPulse />');
     expect(forecast).toContain('<small>RAMALAN CUACA</small>');
     expect(forecast).toContain('data-pulse="forecast"');
+    for (const state of ['loading', 'unavailable', 'rain', 'dry']) {
+      expect(forecast).toContain(`data-weather-state="${state}"`);
+    }
     expect(shell).toContain('pulse.remainingDays');
     expect(shell).toContain('HARI · SIAP');
     expect(shell).toContain('formatDeviceDate(now)');
@@ -77,10 +80,9 @@ describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentatio
     expect(layout.indexOf('ngamsoi-f45-post-physical.css')).toBeGreaterThan(layout.indexOf('ngamsoi-n07-navigation.css'));
     expect(postPhysical).toContain('grid-template-columns: repeat(4, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain('grid-template-columns: repeat(2, minmax(0, 1fr)) !important;');
-    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='loading']");
-    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='unavailable']");
-    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='dry']");
-    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='rain']");
+    expect(postPhysical).toContain(".ng-project-pulse--f45 > .ng-project-weather[data-pulse='forecast']");
+    expect(postPhysical).toContain('background: transparent !important;');
+    expect(postPhysical).toContain('box-shadow: none !important;');
     expect(postPhysical).not.toMatch(/\.ng-project-weather[^\{]*\{[^\}]*display:\s*none\s*!important/s);
   });
 });
