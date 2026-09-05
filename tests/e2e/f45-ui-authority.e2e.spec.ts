@@ -42,6 +42,13 @@ async function expectFourFactDashboard(page: Page) {
   await expect(programme.locator('small')).toHaveText('PROGRAM KERJA');
   await expect(programme.locator('strong')).not.toContainText('PROGRAM KERJA');
   await expect(pulse.getByText('PROGRAM KERJA', { exact: true })).toHaveCount(1);
+  const programmePseudo = await programme.locator('small').evaluate((element) => ({
+    beforeContent: getComputedStyle(element as HTMLElement, '::before').content,
+    afterContent: getComputedStyle(element as HTMLElement, '::after').content,
+  }));
+  expect(['none', 'normal']).toContain(programmePseudo.beforeContent);
+  expect(['none', 'normal']).toContain(programmePseudo.afterContent);
+
   await expect(pulse.locator("[data-pulse='remaining'] small")).toHaveText('TINGGAL');
   await expect(pulse.locator("[data-pulse='remaining'] strong")).toContainText('HARI · SIAP');
   await expect(pulse.locator("[data-pulse='now'] small")).toHaveText('SEMASA');
@@ -125,8 +132,10 @@ async function expectFourFactDashboard(page: Page) {
     const programmeStrong = programmeItem.querySelector<HTMLElement>('strong')!;
     const remainingStrong = root.querySelector<HTMLElement>("[data-pulse='remaining'] strong")!;
     const forecastItem = root.querySelector<HTMLElement>("[data-pulse='forecast']")!;
+    const projectStrip = document.querySelector<HTMLElement>('.datum-project-strip')!;
     const programmeStyle = getComputedStyle(programmeItem);
     const forecastStyle = getComputedStyle(forecastItem);
+    const projectStripStyle = getComputedStyle(projectStrip);
     return {
       programmeColor: getComputedStyle(programmeStrong).color,
       remainingColor: getComputedStyle(remainingStrong).color,
@@ -138,6 +147,9 @@ async function expectFourFactDashboard(page: Page) {
       forecastBorderBottomWidth: forecastStyle.borderBottomWidth,
       pulseBeforeContent: getComputedStyle(root, '::before').content,
       pulseAfterContent: getComputedStyle(root, '::after').content,
+      projectStripBackgroundImage: projectStripStyle.backgroundImage,
+      projectStripBeforeContent: getComputedStyle(projectStrip, '::before').content,
+      projectStripAfterContent: getComputedStyle(projectStrip, '::after').content,
     };
   });
   expect(recurrencePresentation.programmeColor).toBe(recurrencePresentation.remainingColor);
@@ -149,6 +161,9 @@ async function expectFourFactDashboard(page: Page) {
   expect(recurrencePresentation.forecastBorderBottomWidth).toBe('0px');
   expect(['none', 'normal']).toContain(recurrencePresentation.pulseBeforeContent);
   expect(['none', 'normal']).toContain(recurrencePresentation.pulseAfterContent);
+  expect(recurrencePresentation.projectStripBackgroundImage).toBe('none');
+  expect(['none', 'normal']).toContain(recurrencePresentation.projectStripBeforeContent);
+  expect(['none', 'normal']).toContain(recurrencePresentation.projectStripAfterContent);
 }
 
 async function expectOneSpineAxis(page: Page) {
@@ -403,6 +418,12 @@ test.describe('F4.5 operational UI authority browser gate', () => {
 
     await page.locator('.mobile-entry-task-row').first().click();
     await expect(form.getByText('SUMBER', { exact: true })).toHaveCount(1);
+    const selectedSourcePseudo = await page.locator('.mobile-entry-selected-source').evaluate((element) => ({
+      beforeContent: getComputedStyle(element as HTMLElement, '::before').content,
+      afterContent: getComputedStyle(element as HTMLElement, '::after').content,
+    }));
+    expect(['none', 'normal']).toContain(selectedSourcePseudo.beforeContent);
+    expect(['none', 'normal']).toContain(selectedSourcePseudo.afterContent);
     await expect(page.locator("[data-spine-state='complete']")).toHaveCount(2);
 
     const completedNodeColors = await page.locator("[data-spine-state='complete']").evaluateAll((nodes) =>
