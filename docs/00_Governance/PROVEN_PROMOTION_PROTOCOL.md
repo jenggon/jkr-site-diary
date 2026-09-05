@@ -10,25 +10,58 @@ This protocol exists to keep accepted product requirements durable while reducin
 
 The authoritative branch is not a debugger. Experimental correction loops belong in an isolated proving branch. Only a proven exact commit SHA may be promoted to the authoritative candidate branch.
 
-## Recon support activity
+## Agentic support model
 
-Recon is a support activity between `LOCK` and `ISOLATE`; it is not a separate authority stage.
+Agentic assistance is a support capability around `LOCK → ISOLATE → PROVE`; it is not an additional authority stage and does not change the canonical doctrine.
 
-The Chief Architect may use Codex, Antigravity, or both for repo reconnaissance at their discretion. Recon is read-only unless later explicit implementation authority is issued.
+The Chief Architect owns architecture, implementation, remediation and outcome. Codex and Antigravity form an interchangeable **agentic engineering pool** that the Chief Architect may use singly or together according to task risk, repo complexity, available quota and expected value.
+
+Default operating rule:
+
+- use one agent first when agentic help is warranted;
+- Codex and Antigravity are interchangeable for reconnaissance, implementation pre-flight review and red-run forensics;
+- use a second agent only when risk, uncertainty or first-agent findings justify the extra cost;
+- do not require a ceremonial post-green agent audit when encoded evidence and task risk do not justify one;
+- agent findings are evidence and engineering input, never automatic implementation authority;
+- final technical adjudication remains with the Chief Architect.
+
+### Agentic checkpoint A — recon before implementation
+
+For non-trivial work, reconnaissance should happen after requirements are locked and before or at the start of isolation. Its purpose is to shift discovery left so CI is not used to discover known repo terrain.
 
 A useful recon dossier should identify, as applicable:
 
 1. exact baseline branch, HEAD, lockset version/hash/count;
-2. architecture and ownership map;
+2. architecture, state and ownership map;
 3. locked-requirement impact matrix candidates;
 4. protected boundaries and forbidden areas;
 5. current root causes;
-6. test and CI tripwires;
-7. legacy CSS/state/ownership conflicts;
-8. implementation options;
-9. runtime-only unknowns.
+6. unit, integration, browser and CI tripwires;
+7. legacy CSS/state/ownership conflicts and specificity hazards;
+8. implementation options and trade-offs;
+9. responsive/runtime-only unknowns.
 
-Recon findings are evidence and engineering input, not implementation instructions. Architecture and implementation adjudication remain with the Chief Architect.
+### Agentic checkpoint B — pre-flight review before first PROVE
+
+After the Chief Architect implements the isolated candidate, an available agent may review the exact diff before first CI when the task is multi-file, responsive, stateful, legacy-heavy or otherwise likely to hide cross-cutting defects.
+
+The review should actively hunt for:
+
+- stale selectors or historical authority leaking into the new implementation;
+- tests that are genuinely superseded versus tests that still protect a locked requirement;
+- CSS specificity/ordering conflicts;
+- mobile/half/wide contradictions;
+- state lifecycle and persistence mistakes;
+- protected-boundary drift;
+- likely clean-Ubuntu/build/browser failures.
+
+The objective is to reduce proving-ground correction passes. The target is **implement informed, then prove**, not **implement, then use CI as the primary debugger**.
+
+### Agentic checkpoint C — forensic help after RED
+
+If PROVE or REPROVE is red, the Chief Architect may use any available agent to investigate the failure. The agent's objective is diagnosis, not "make CI green".
+
+The Chief Architect remains responsible for classification and repair.
 
 ## Stage 1 — LOCK
 
@@ -68,7 +101,9 @@ At minimum where applicable:
 - dedicated real-browser/runtime gate;
 - zero retries where required by the active lockset or workflow.
 
-A red proving run is acceptable only as evidence that the proving ground rejected an unproven candidate. It must be triaged, not bypassed.
+For UI/runtime-sensitive work, **PROVE should mirror the material runtime/browser evidence expected during REPROVE**. A static-only proving pass is insufficient when the authoritative gate will later judge real browser geometry, responsive behaviour or interaction semantics.
+
+A red proving run is acceptable only as evidence that the proving ground rejected an unproven candidate. It must be triaged, not bypassed. The engineering target remains to minimize proving passes through front-loaded repo intelligence and pre-flight review.
 
 ### Mandatory red classification
 
@@ -142,8 +177,8 @@ Typical seal evidence includes:
 ## Roles
 
 - **Product Owner:** requirement and physical acceptance authority.
-- **Chief Architect / HQ:** architecture, implementation adjudication, implementation ownership, promotion and final seal reconciliation.
-- **Codex / Antigravity:** recon or independent audit resources at Chief Architect discretion; not implementation authority unless explicitly delegated.
+- **Chief Architect / HQ:** architecture, implementation, technical adjudication, remediation ownership, promotion and final seal reconciliation.
+- **Codex / Antigravity:** interchangeable agentic engineering helpers used at Chief Architect discretion for recon, pre-flight review, forensics or risk-based independent challenge; not implementation authority unless explicitly delegated.
 - **GitHub Actions / CI:** executable mechanical judge of encoded contracts.
 
 ## Compliance rule
