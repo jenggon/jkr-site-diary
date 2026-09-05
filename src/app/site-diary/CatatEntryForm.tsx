@@ -224,6 +224,7 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
   return (
     <form onSubmit={handleSubmit} className="ng-catat-flow w-full" aria-label="Borang Buku Harian Tapak" data-entry-mode="CATAT" data-ui-authority="F45">
       <div ref={sourceRef} className="ng-entry-step ng-entry-step--source" data-entry-step="source" data-spine-state={stateFor(0, currentStep)} data-catat-start>
+        <div className="ng-entry-heading ng-source-section-heading">SUMBER</div>
         <OperationalSourceSelector selectedSource={selectedSource} onSelectSource={setSelectedSource} disabled={isSubmitting || Boolean(successId)} />
       </div>
 
@@ -240,12 +241,11 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
             })}
           </div>
         </div>
-        {dailyStatus === 'MULA_DAN_SIAP' && <div className="ng-entry-note ng-entry-note--valid" data-testid="same-day-start-complete">Mula + Siap</div>}
         {knownStartRequired && (
           <div className="ng-entry-field ng-entry-field--compact">
             <label>Mula sebenar</label>
             <input type="date" value={knownStartDate} max={activityDate} onChange={(event) => setKnownStartDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} />
-            <small>Bukan tarikh MSP.</small>
+            <small>Tarikh sebenar kerja mula di tapak.</small>
           </div>
         )}
       </div>
@@ -258,9 +258,9 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
             <input value={location} onChange={(event) => setLocation(event.target.value)} disabled={isSubmitting || Boolean(successId)} placeholder="cth: Aras 2 · Grid 4–8" />
           </div>
           <div className="ng-entry-field">
-            <label>Skop</label>
+            <label>PELAKSANA</label>
             <select value={contractorScope} onChange={(event) => setContractorScope(event.target.value as 'CONTRACTOR' | 'NSC')} disabled={isSubmitting || Boolean(successId)}>
-              <option value="CONTRACTOR">Utama</option>
+              <option value="CONTRACTOR">Kontraktor Utama</option>
               <option value="NSC">NSC</option>
             </select>
           </div>
