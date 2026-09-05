@@ -39,12 +39,13 @@ describe('F4.5 AKTIVITI continuation parity', () => {
     expect(source).toContain("/api/activities/${encodeURIComponent(selectedActivityId)}/start");
   });
 
-  it('retains async invalidation protection and canonical actual-start authority', () => {
+  it('retains async invalidation protection and canonical actual-start authority with user-context copy', () => {
     expect(source).toContain('generationRef');
     expect(source).toContain('AbortController');
     expect(source).toContain('abortRef.current?.abort()');
     expect(source).toContain("const canonicalActualStart = activity?.actual_start_date?.trim() || ''");
-    expect(source).toContain('Bukan tarikh MSP.');
+    expect(source).toContain('Tarikh sebenar kerja mula di tapak.');
+    expect(source).not.toContain('Bukan tarikh MSP.');
     expect(source).not.toContain('Bukan tarikh mula terancang MSP.');
   });
 });
