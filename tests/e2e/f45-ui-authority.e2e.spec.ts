@@ -85,19 +85,32 @@ async function expectCoreHeader(page: Page) {
   ).toEqual([]);
 
   const forecast = page.locator('.ng-project-pulse--f45 .ng-project-weather');
-  const forecastState = await forecast.getAttribute('data-weather-state');
-  const viewportWidth = page.viewportSize()?.width ?? 0;
-  const mediumViewport = viewportWidth >= 768 && viewportWidth <= 1199;
+  await expect(forecast).toBeVisible({ timeout: EXPECT_TIMEOUT });
+  await expect(forecast).toHaveAttribute('data-weather-state', /^(loading|unavailable|rain|dry)$/);
 
-  if (mediumViewport || forecastState === 'loading' || forecastState === 'unavailable') {
-    await expect(forecast).toBeHidden();
+  const geometry = await page.locator('.ng-project-pulse--f45').evaluate((pulse) => {
+    const core = ['programme', 'remaining', 'day', 'now'].map((key) =>
+      pulse.querySelector<HTMLElement>(`[data-pulse="${key}"]`)!.getBoundingClientRect(),
+    );
+    const weather = pulse.querySelector<HTMLElement>('.ng-project-weather')!.getBoundingClientRect();
+    return {
+      coreRight: Math.max(...core.map((rect) => rect.right)),
+      coreBottom: Math.max(...core.map((rect) => rect.bottom)),
+      weather: { left: weather.left, top: weather.top },
+    };
+  });
+
+  const viewportWidth = page.viewportSize()?.width ?? 0;
+  if (viewportWidth >= 1200) {
+    expect(geometry.weather.left).toBeGreaterThanOrEqual(geometry.coreRight - 1);
   } else {
-    await expect(forecast).toBeVisible();
+    expect(geometry.weather.top).toBeGreaterThanOrEqual(geometry.coreBottom - 1);
   }
 }
 
 async function expectOneSpineAxis(page: Page) {
   const form = page.locator("form[data-ui-authority='F45']");
+  await expect(form).toHaveAttribute('data-spine-geometry', 'measured', { timeout: EXPECT_TIMEOUT });
   const steps = form.locator(':scope > .ng-entry-step[data-entry-step]');
   await expect(steps).toHaveCount(7);
 
@@ -118,6 +131,43 @@ async function expectOneSpineAxis(page: Page) {
   }));
   expect(xs.every(Number.isFinite)).toBe(true);
   expect(Math.max(...xs) - Math.min(...xs)).toBeLessThanOrEqual(1);
+
+  const semantic = await form.evaluate((formNode) => {
+    const formElement = formNode as HTMLElement;
+    const stepNodes = Array.from(formElement.querySelectorAll<HTMLElement>(':scope > .ng-entry-step[data-entry-step]'));
+    const anchorFor = (step: HTMLElement) => {
+      const key = step.dataset.entryStep ?? '';
+      if (key === 'source') {
+        return step.querySelector<HTMLElement>('.ng-entry-heading, .mobile-entry-spike-panel h3, .mobile-entry-selected-source h3, h3') ?? step;
+      }
+      if (key === 'save') return step.querySelector<HTMLElement>('.ng-save-action') ?? step;
+      return step.querySelector<HTMLElement>('.ng-entry-heading') ?? step;
+    };
+
+    const centres = stepNodes.map((step) => {
+      const anchor = anchorFor(step);
+      const stepRect = step.getBoundingClientRect();
+      const anchorRect = anchor.getBoundingClientRect();
+      const pseudo = getComputedStyle(step, '::before');
+      return {
+        key: step.dataset.entryStep ?? '',
+        nodeCentre: stepRect.top + Number.parseFloat(pseudo.top) + (Number.parseFloat(pseudo.height) / 2),
+        anchorCentre: anchorRect.top + (anchorRect.height / 2),
+      };
+    });
+
+    const formRect = formElement.getBoundingClientRect();
+    const rail = getComputedStyle(formElement, '::before');
+    const railTop = formRect.top + Number.parseFloat(rail.top);
+    const railEnd = railTop + Number.parseFloat(rail.height);
+    return { centres, railTop, railEnd };
+  });
+
+  for (const item of semantic.centres) {
+    expect(Math.abs(item.nodeCentre - item.anchorCentre), `${item.key} node is not aligned to its semantic anchor`).toBeLessThanOrEqual(1);
+  }
+  expect(Math.abs(semantic.railTop - semantic.centres[0]!.nodeCentre)).toBeLessThanOrEqual(1);
+  expect(Math.abs(semantic.railEnd - semantic.centres.at(-1)!.nodeCentre)).toBeLessThanOrEqual(1);
 
   const shadows = await steps.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).boxShadow));
   expect(shadows.every((shadow) => shadow === 'none')).toBe(true);
@@ -165,9 +215,11 @@ async function expectSharpOperationalGeometry(page: Page) {
 }
 
 async function expectSharpPostSaveGeometry(page: Page) {
-  const toast = page.getByTestId('post-save-confirmation');
-  await expect(toast).toBeVisible({ timeout: EXPECT_TIMEOUT });
-  await expect(toast.locator('.ng-post-save__title')).toHaveText('Disimpan');
+  const dialog = page.getByRole('dialog', { name: 'Disimpan' });
+  await expect(dialog).toBeVisible({ timeout: EXPECT_TIMEOUT });
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+  await expect(dialog.locator('.ng-post-save__title')).toHaveText('Disimpan');
+  await expect(page.getByTestId('post-save-backdrop')).toBeVisible();
   await expect(page.getByTestId('post-save-show-records')).toBeVisible();
   await expect(page.getByTestId('post-save-add-activity')).toBeVisible();
 
@@ -183,6 +235,22 @@ async function expectSharpPostSaveGeometry(page: Page) {
       : [];
   }));
   expect(offenders, `Post-save geometry is not sharp:\n${JSON.stringify(offenders, null, 2)}`).toEqual([]);
+
+  const box = await dialog.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 1);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 1);
+
+  const ownsCentre = await page.evaluate(({ x, y }) => {
+    const top = document.elementFromPoint(x, y);
+    const modal = document.querySelector('.ng-post-save');
+    return Boolean(top && modal && modal.contains(top));
+  }, { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 });
+  expect(ownsCentre).toBe(true);
 }
 
 async function expectTopmostDialog(page: Page) {
@@ -217,7 +285,7 @@ async function expectTopmostDialog(page: Page) {
 }
 
 test.describe('F4.5 operational UI authority browser gate', () => {
-  test('wide desktop preserves labelled navigation, locked states and sharp geometry', async ({ page }) => {
+  test('wide desktop preserves labelled navigation, locked states and Tactical Pulse geometry', async ({ page }) => {
     const fixture = await boot(page, 1280, 720);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -261,7 +329,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     fixture.assertNoUnexpectedApiCalls();
   });
 
-  test('half-window uses compact overlay navigation, one Spine and topmost VO dialog', async ({ page }) => {
+  test('half-window keeps four core facts dominant, weather secondary, one Spine and topmost VO dialog', async ({ page }) => {
     const fixture = await boot(page, 960, 900);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -290,7 +358,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     fixture.assertNoUnexpectedApiCalls();
   });
 
-  test('phone preserves bottom navigation, the same Spine axis, sharp save toast and zero horizontal overflow', async ({ page }) => {
+  test('phone keeps weather below core pulse, semantic Spine through SIMPAN and focused no-scroll completion', async ({ page }) => {
     const fixture = await boot(page, 390, 844);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -308,9 +376,28 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await page.locator('.mobile-entry-task-row').first().click();
     await form.locator('.ng-entry-grid--site .ng-entry-field input').fill('Aras 2 · Grid 4–8');
     await form.locator('textarea').fill('Kerja konkrit diteruskan mengikut jadual.');
-    await form.getByRole('button', { name: 'Simpan', exact: true }).click();
 
+    const beforeSaveScroll = await page.evaluate(() => ({
+      windowY: window.scrollY,
+      workspaceY: document.querySelector<HTMLElement>('.ng-workspace-content')?.scrollTop ?? 0,
+    }));
+
+    await form.getByRole('button', { name: 'Simpan', exact: true }).click();
     await expectSharpPostSaveGeometry(page);
+
+    const afterSaveScroll = await page.evaluate(() => ({
+      windowY: window.scrollY,
+      workspaceY: document.querySelector<HTMLElement>('.ng-workspace-content')?.scrollTop ?? 0,
+    }));
+    expect(Math.abs(afterSaveScroll.windowY - beforeSaveScroll.windowY)).toBeLessThanOrEqual(1);
+    expect(Math.abs(afterSaveScroll.workspaceY - beforeSaveScroll.workspaceY)).toBeLessThanOrEqual(1);
+
+    const saveStep = form.locator(':scope > .ng-entry-step[data-entry-step="save"]');
+    await expect(saveStep).toHaveCount(1);
+    await expect(saveStep).toHaveAttribute('data-spine-state', 'complete');
+    await expect(saveStep.getByRole('button', { name: 'Catatan telah disimpan', exact: true })).toBeDisabled();
+
+    await expectOneSpineAxis(page);
     await expectSharpOperationalGeometry(page);
     await expectNoHorizontalOverflow(page);
 
