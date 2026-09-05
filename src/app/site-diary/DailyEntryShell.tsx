@@ -313,10 +313,9 @@ export default function DailyEntryShell({ children, initialProgrammeId }: DailyE
             </div>
             <h2 className="ng-project-title" title={programmeName || ''}>{programmeName || 'Nama Projek'}</h2>
 
-            <div className="ng-project-pulse ng-project-pulse--f45" aria-label="Ringkasan projek semasa">
+            <div className="ng-project-pulse ng-project-pulse--f45" aria-label="Ringkasan projek semasa" data-dashboard-facts="4">
               <span className="ng-project-pulse__item" data-pulse="programme" title="Program Kerja semasa"><small>PROGRAM KERJA</small><strong>{revisionLabel}</strong></span>
-              <span className="ng-project-pulse__item" data-pulse="remaining" title={`Siap semasa ${finishDate ?? '—'}`}><small>TINGGAL</small><strong>{pulse.remainingDays}</strong><span className="ng-project-pulse__sub">SIAP {formatFinish(finishDate)}</span></span>
-              <span className="ng-project-pulse__item" data-pulse="day"><small>HARI KE</small><strong>{pulse.dayNumber}</strong></span>
+              <span className="ng-project-pulse__item" data-pulse="remaining" title={`Siap semasa ${finishDate ?? '—'}`}><small>TINGGAL</small><strong>{pulse.remainingDays} HARI · SIAP {formatFinish(finishDate)}</strong></span>
               <span className="ng-project-pulse__item" data-pulse="now" title="Tarikh dan masa peranti semasa"><small>SEMASA</small><strong>{dayLabel} {formatDeviceDate(now)} · {formatClock(now)}</strong></span>
               <ProjectWeatherPulse />
             </div>
