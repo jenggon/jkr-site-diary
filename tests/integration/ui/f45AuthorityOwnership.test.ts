@@ -13,7 +13,7 @@ describe('F4.5 visual authority ownership', () => {
     expect(imports).toEqual(['ngamsoi-f45-post-physical.css']);
   });
 
-  it('keeps the post-physical entrypoint bounded to one consolidated F4.5 baseline', () => {
+  it('keeps the post-physical entrypoint bounded to one consolidated F4.5 baseline and current R2 authority', () => {
     const authority = readFileSync(resolve(process.cwd(), 'src/app/ngamsoi-f45-authority.css'), 'utf8');
     const postPhysical = readFileSync(resolve(process.cwd(), 'src/app/ngamsoi-f45-post-physical.css'), 'utf8');
 
@@ -22,6 +22,8 @@ describe('F4.5 visual authority ownership', () => {
     expect(postPhysical).toContain('@import "./ngamsoi-f45-authority.css";');
     expect(postPhysical.match(/@import[^;]*ngamsoi-f45-/gi)?.length).toBe(1);
     expect(postPhysical).toContain('F4.5 POST-PHYSICAL REMEDIATION OWNER');
-    expect(postPhysical).toContain('SAVE-002 / SPINE-002 / DASH-001 / WX-004 only');
+    expect(postPhysical).toContain('SPINE-002 / SAVE-003 / HDR-003 / DASH-002 / WX-005 /');
+    expect(postPhysical).toContain('COPY-001 / EXEC-001 presentation only.');
+    expect(postPhysical).toContain('do not add another F4.5 override generation after this entrypoint');
   });
 });
