@@ -37,9 +37,9 @@ export default function F45SpineGeometryObserver() {
         const formRect = form.getBoundingClientRect();
         const centres: number[] = [];
 
-        steps.forEach((step, index) => {
+        STEP_KEYS.forEach((key, index) => {
+          const step = steps[index];
           if (!step) return;
-          const key = STEP_KEYS[index];
           const anchor = resolveAnchor(step, key);
           const stepRect = step.getBoundingClientRect();
           const anchorRect = anchor.getBoundingClientRect();
@@ -52,9 +52,10 @@ export default function F45SpineGeometryObserver() {
         });
 
         if (centres.length !== STEP_KEYS.length) return;
-
         const railTop = centres[0];
-        const railEnd = centres[centres.length - 1];
+        const railEnd = centres.at(-1);
+        if (railTop == null || railEnd == null) return;
+
         form.style.setProperty('--ng-spine-rail-top', `${railTop}px`);
         form.style.setProperty('--ng-spine-rail-height', `${Math.max(0, railEnd - railTop)}px`);
         form.dataset.spineGeometry = 'measured';
