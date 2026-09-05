@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDailyEntryContext } from './DailyEntryShell';
+import F45SpineGeometryObserver from './F45SpineGeometryObserver';
 import WorkforceEntry, { COMMON_TRADES_CATALOG, ManpowerRow } from './WorkforceEntry';
 import type { SelectedOperationalSource } from './OperationalSourceSelector';
 
@@ -117,6 +118,7 @@ export default function SmartWorkforceEntry({
 
   return (
     <section className="ng-entry-panel ng-workforce-smart" aria-label="Pekerja tapak" data-testid="smart-workforce-entry">
+      <F45SpineGeometryObserver />
       <div className="ng-entry-row ng-workforce-smart__head">
         <div>
           <div className="ng-entry-heading">PEKERJA</div>
