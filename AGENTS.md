@@ -176,3 +176,23 @@ Implementation work must use a feature/fix/chore branch and a Pull Request into 
 `develop` is the always-green forward-development baseline. `main` receives only accepted green release states.
 
 This CI governance rule does not authorise architecture, business-rule, Site Diary output, or domain-semantics changes.
+
+---
+
+# PROVEN-PROMOTION-001 — MANDATORY DEVELOPMENT DOCTRINE
+
+`docs/00_Governance/PROVEN_PROMOTION_PROTOCOL.md` is the mandatory lifecycle for AI-assisted implementation and remediation work.
+
+The canonical sequence is:
+
+> **LOCK → ISOLATE → PROVE → FREEZE SHA → PROMOTE EXACT SHA → REPROVE → PHYSICAL ACCEPT → SEAL**
+
+Recon may be performed between LOCK and ISOLATE using Codex, Antigravity, or both at Chief Architect discretion. Recon is evidence/advice, not implementation authority.
+
+The authoritative candidate branch MUST NOT be used as the normal debugging surface. Corrections belong in an isolated proving branch. Once proven, the exact tested SHA is frozen and promoted; the authoritative branch must then reprove that exact candidate.
+
+Every implementation/remediation agent MUST read `docs/00_Governance/PROVEN_PROMOTION_PROTOCOL.md` before editing and MUST report the current doctrine stage in its completion report.
+
+A red proving run must be classified as `PRODUCT_DEFECT`, `SUPERSEDED_TEST`, `HARNESS_DEFECT`, or `ENVIRONMENT_DEFECT` before repair. No-green-by-bypass rules remain absolute.
+
+Physical Product Owner acceptance remains mandatory wherever required by the active lockset. Only the Chief Architect may reconcile the required evidence and declare `SEALED`.
