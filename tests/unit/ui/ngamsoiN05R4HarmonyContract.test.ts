@@ -53,26 +53,30 @@ describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentatio
     expect(harmony).toContain('.ng-workforce__overall-icon');
   });
 
-  it('keeps four core project facts while the post-physical F4.5 authority makes forecast a stable secondary signal', () => {
+  it('keeps exactly four R2 project facts with forecast as the fourth fact in the shared frame', () => {
     const shell = read('src/app/site-diary/DailyEntryShell.tsx');
+    const forecast = read('src/app/site-diary/ProjectWeatherPulse.tsx');
     const layout = read('src/app/layout.tsx');
     const postPhysical = read('src/app/ngamsoi-f45-post-physical.css');
 
     expect(shell).toContain('ng-project-pulse');
+    expect(shell).toContain('data-dashboard-facts="4"');
     expect(shell).toContain('<small>PROGRAM KERJA</small>');
     expect(shell).toContain('<small>TINGGAL</small>');
-    expect(shell).toContain('<small>HARI KE</small>');
+    expect(shell).not.toContain('<small>HARI KE</small>');
     expect(shell).toContain('<small>SEMASA</small>');
     expect(shell).toContain('<ProjectWeatherPulse />');
+    expect(forecast).toContain('<small>RAMALAN CUACA</small>');
+    expect(forecast).toContain('data-pulse="forecast"');
     expect(shell).toContain('pulse.remainingDays');
-    expect(shell).toContain('pulse.dayNumber');
+    expect(shell).toContain('HARI · SIAP');
     expect(shell).toContain('formatDeviceDate(now)');
     expect(shell).toContain('formatClock(now)');
     expect(shell).not.toContain('<style jsx global>');
 
     expect(layout.indexOf('ngamsoi-f45-post-physical.css')).toBeGreaterThan(layout.indexOf('ngamsoi-n07-navigation.css'));
-    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.62fr) minmax(9rem, .82fr) !important;");
-    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(12rem, 1.58fr) !important;");
+    expect(postPhysical).toContain('grid-template-columns: repeat(4, minmax(0, 1fr)) !important;');
+    expect(postPhysical).toContain('grid-template-columns: repeat(2, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain(".ng-project-weather[data-weather-state='loading']");
     expect(postPhysical).toContain(".ng-project-weather[data-weather-state='unavailable']");
     expect(postPhysical).toContain(".ng-project-weather[data-weather-state='dry']");
