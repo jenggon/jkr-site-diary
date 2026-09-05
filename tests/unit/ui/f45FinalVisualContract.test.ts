@@ -7,6 +7,7 @@ const source = (path: string) =>
 const shell = source('src/app/site-diary/DailyEntryShell.tsx');
 const catat = source('src/app/site-diary/CatatEntryForm.tsx');
 const aktiviti = source('src/app/site-diary/AktivitiEntryForm.tsx');
+const sourceSelector = source('src/app/site-diary/OperationalSourceSelector.tsx');
 const workspace = source('src/app/site-diary/SiteDiaryWorkspace.tsx');
 const postSave = source('src/app/site-diary/PostSaveConfirmation.tsx');
 const workforce = source('src/app/site-diary/SmartWorkforceEntry.tsx');
@@ -42,7 +43,7 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(authority).toContain("[data-spine-state='current']");
     expect(authority).toContain("[data-spine-state='upcoming']");
     expect(spineObserver).toContain("const STEP_KEYS = ['source', 'daily', 'site', 'weather', 'workforce', 'notes', 'save'] as const;");
-    expect(spineObserver).toContain("if (key === 'save') return step.querySelector<HTMLElement>('.ng-save-action') ?? step;");
+    expect(spineObserver).toContain("'.ng-save-action, .ng-save-complete-marker, .ng-saved-receipt'");
     expect(spineObserver).toContain("form.style.setProperty('--ng-spine-rail-top'");
     expect(spineObserver).toContain("form.style.setProperty('--ng-spine-rail-height'");
     expect(postPhysical).toContain("[data-spine-geometry='measured']::before");
@@ -62,26 +63,44 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(authority).toContain('native picker only on Ubah');
   });
 
-  it('uses field-language copy without changing Actual Start, executor persistence or same-day lifecycle semantics', () => {
+  it('uses concise field-language copy and discoverable same-day semantics without changing lifecycle or executor persistence', () => {
     for (const file of [catat, aktiviti]) {
       expect(file).toContain('<label>PELAKSANA</label>');
       expect(file).toContain('<option value="CONTRACTOR">Kontraktor Utama</option>');
       expect(file).toContain('<option value="NSC">NSC</option>');
       expect(file).toContain('contractor_scope: contractorScope');
-      expect(file).toContain('Tarikh sebenar kerja mula di tapak.');
       expect(file).not.toContain('Bukan tarikh MSP.');
       expect(file).not.toContain('>Mula + Siap<');
       expect(file).toContain("'MULA_DAN_SIAP'");
     }
+    expect(catat).toContain('Tarikh kerja mula di tapak.');
+    expect(catat).not.toContain('Tarikh sebenar kerja mula di tapak.');
+    expect(catat).toContain('Boleh pilih MULA + SIAP jika kerja mula dan siap hari ini.');
+    expect(catat).toContain('className="ng-daily-status__hint"');
   });
 
-  it('promotes post-save confirmation to a dismissible Completion Seal without changing identity authority', () => {
+  it('keeps one visible SUMBER hierarchy while preserving MSP and VO/APK source identity', () => {
+    expect(catat).toContain('ng-source-section-heading">SUMBER');
+    expect(sourceSelector).not.toContain('Sumber Aktiviti');
+    expect(sourceSelector).not.toContain('>Sumber<');
+    expect(sourceSelector).toContain('MSP');
+    expect(sourceSelector).toContain('VO / APK');
+    expect(postPhysical).toContain('ONE OUTER SUMBER HIERARCHY');
+    expect(postPhysical).toContain('h3::after');
+    expect(postPhysical).toContain('content: none !important;');
+  });
+
+  it('promotes post-save confirmation to a Completion Seal and a deterministic saved receipt without changing identity authority', () => {
     expect(postSave).toContain('role="dialog"');
     expect(postSave).toContain('aria-modal="true"');
     expect(postSave).toContain('ng-vo-dialog ng-post-save ng-completion-seal');
     expect(postSave).toContain('ng-completion-seal__node');
     expect(postSave).toContain('data-testid="post-save-close"');
     expect(postSave).toContain('Tutup pengesahan simpan');
+    expect(postSave).toContain('data-testid="post-save-receipt"');
+    expect(postSave).toContain('data-testid="post-save-receipt-show-records"');
+    expect(postSave).toContain('data-testid="post-save-receipt-add-activity"');
+    expect(postSave).toContain('ng-dialog-close ng-completion-seal__close');
     expect(postSave).toContain('Disimpan');
     expect(postSave).toContain('Kena boh! Ngamsoi.');
     expect(postSave).toContain('Tunjuk Rekod');
@@ -119,7 +138,7 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(authority).toContain('.ng-workforce--smart .ng-workforce__matrix-head strong { display: none !important; }');
   });
 
-  it('keeps official weather binary while removing redundant manual copy and preserving forecast separation', () => {
+  it('keeps official weather binary while removing redundant manual copy and preserving deterministic forecast separation', () => {
     expect(weather).toContain('ELOK');
     expect(weather).toContain('HUJAN');
     expect(weather).not.toContain('MENDUNG');
@@ -133,24 +152,29 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(forecast).toContain('data-weather-state="unavailable"');
     expect(forecast).toContain('data-weather-state="rain"');
     expect(forecast).toContain('data-weather-state="dry"');
+    expect(forecast).toContain('Ramalan belum tersedia');
+    expect(forecast).not.toContain('Tiada data');
     expect(forecast).not.toContain('rainProbability ?? 0');
     expect(forecast).not.toContain('title=');
   });
 
-  it('locks the exact four-fact dashboard and responsive 4-column / 2-by-2 composition', () => {
+  it('locks the exact four-fact dashboard with no duplicate programme label and completion-only green', () => {
     expect(shell).toContain('data-dashboard-facts="4"');
     expect(shell).toContain('data-pulse="programme"');
     expect(shell).toContain('data-pulse="remaining"');
     expect(shell).toContain('data-pulse="now"');
     expect(shell).not.toContain('data-pulse="day"');
     expect(shell).not.toContain('<small>HARI KE</small>');
+    expect(shell.match(/<small>PROGRAM KERJA<\/small>/g)?.length).toBe(1);
     expect(shell).toContain('{pulse.remainingDays} HARI · SIAP {formatFinish(finishDate)}');
-    expect(postPhysical).toContain('HDR-003 / DASH-002 / WX-005');
+    expect(postPhysical).toContain('WX-006 / VIS-001');
     expect(postPhysical).toContain('grid-template-columns: repeat(4, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain('@media (min-width: 768px) and (max-width: 1199px)');
     expect(postPhysical).toContain('@media (max-width: 767px)');
     expect(postPhysical).toContain('grid-template-columns: repeat(2, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain(".ng-project-weather[data-pulse='forecast']");
+    expect(postPhysical).toContain('.ng-project-pulse--f45::before');
+    expect(postPhysical).toContain('border-bottom: 0 !important;');
     expect(postPhysical).not.toContain("grid-column: 1 / -1 !important;");
     expect(workspace).toContain('data-workspace-nav="desktop"');
     expect(workspace).toContain('data-workspace-nav="mobile"');
