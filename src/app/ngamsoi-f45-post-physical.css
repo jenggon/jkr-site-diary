@@ -52,9 +52,11 @@ form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-selected-so
   box-shadow: none !important;
 }
 
-/* Retire the legacy internal generated SUMBER title even if old markup reappears. */
+/* Retire all legacy generated inner SUMBER chrome. */
 form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-spike-panel > div:first-child h3::before,
-form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-spike-panel > div:first-child h3::after {
+form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-spike-panel > div:first-child h3::after,
+form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-selected-source::before,
+form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-selected-source::after {
   content: none !important;
   display: none !important;
 }
@@ -107,6 +109,7 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   max-width: 31rem !important;
   max-height: min(34rem, calc(100dvh - 2rem)) !important;
   overflow: auto !important;
+  scrollbar-gutter: auto !important;
   padding: 1.2rem 1rem 0 !important;
   border: 1px solid color-mix(in srgb, var(--ng-f45-success, #3fb950) 52%, var(--ng-f45-rule)) !important;
   border-radius: 0 !important;
@@ -348,6 +351,18 @@ form[data-ui-authority='F45'][data-save-state='saved'] button:disabled {
 }
 
 /* ---------- HDR-003 / DASH-002 / WX-005 / WX-006 / VIS-001 ---------- */
+
+/* Neutralise legacy project-strip success styling: project context is not a completion state. */
+.datum-project-strip {
+  background: var(--ng-graphite-925, #0c0e11) !important;
+}
+
+.datum-project-strip::before,
+.datum-project-strip::after {
+  content: none !important;
+  display: none !important;
+}
+
 .ng-project-pulse--f45 {
   position: relative !important;
   display: grid !important;
@@ -370,7 +385,9 @@ form[data-ui-authority='F45'][data-save-state='saved'] button:disabled {
 .ng-project-pulse--f45::before,
 .ng-project-pulse--f45::after,
 .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse]::before,
-.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse]::after {
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse]::after,
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] small::before,
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] small::after {
   content: none !important;
   display: none !important;
 }
