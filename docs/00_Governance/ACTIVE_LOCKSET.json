@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "locksetVersion": "2026.09.04.2",
+  "locksetVersion": "2026.09.05.1",
   "status": "ACTIVE",
   "authority": {
     "productOwner": "Product Owner",
@@ -181,7 +181,8 @@
     {
       "id": "F45-SPINE-001",
       "title": "Single explicit operational Spine",
-      "state": "LOCKED",
+      "state": "SUPERSEDED",
+      "supersededBy": "F45-SPINE-002",
       "statement": "Operational order is SUMBER to HARIAN to TAPAK to CUACA to PEKERJA to CATATAN to SIMPAN on exactly one visual axis. States are complete/current/upcoming driven by explicit data-spine-state. Legacy structural selectors must not own state or render a second rail. Completed nodes use one CI-like green success treatment.",
       "enforcement": [
         { "type": "browser", "path": "tests/e2e/f45-ui-authority.e2e.spec.ts" },
@@ -220,7 +221,8 @@
     {
       "id": "F45-SAVE-001",
       "title": "Post-save confirmation",
-      "state": "LOCKED",
+      "state": "SUPERSEDED",
+      "supersededBy": "F45-SAVE-002",
       "statement": "Save success must not cause timer-driven reset or aggressive scroll. Confirmation persists long enough to act, uses Disimpan as success hero, Kena boh! Ngamsoi. as secondary brand copy, and keeps Tunjuk Rekod and Tambah Aktiviti actions.",
       "enforcement": [
         { "type": "test", "path": "tests/unit/ui/f45FinalVisualContract.test.ts" }
@@ -282,7 +284,47 @@
       "title": "Legacy automatic post-save reset",
       "state": "SUPERSEDED",
       "statement": "An earlier accepted F4.5 contract used automatic soft reset, retained diary-date/weather context, scrolled back to CATAT start and removed post-save actions. This is superseded by the later persistent confirmation contract with explicit Tunjuk Rekod and Tambah Aktiviti actions and no aggressive reset/scroll.",
-      "supersededBy": "F45-SAVE-001"
+      "supersededBy": "F45-SAVE-002"
+    },
+    {
+      "id": "F45-SAVE-002",
+      "title": "Completion overlay",
+      "state": "LOCKED",
+      "statement": "Successful Save presents a focused completion overlay/dialog in the accepted VO/APK modal visual family: focused hierarchy, backdrop, topmost presentation and sharp-sleek geometry. It is a completion checkpoint, not a low-priority toast. Disimpan is the success hero; Kena boh! Ngamsoi. remains secondary brand copy. Tunjuk Rekod and Tambah Aktiviti remain required actions. There is no timer-driven disappearance/reset, no aggressive page movement and specifically no automatic scroll-to-top after Save. The overlay comes to the user's current viewport and persists until meaningful user interaction/dismissal. Canonical site_diary_id/siteDiaryId authority and save/domain/database/auth semantics remain unchanged.",
+      "enforcement": [
+        { "type": "source", "path": "docs/10_Development/F4.5-POST-PHYSICAL-ACCEPTANCE-LOCKS.md" },
+        { "type": "manual", "note": "Pending remediation and Product Owner physical acceptance of completion overlay, actions, persistence and viewport stability at wide, half and phone." }
+      ]
+    },
+    {
+      "id": "F45-SPINE-002",
+      "title": "End-to-end Spine geometry",
+      "state": "LOCKED",
+      "statement": "Operational order remains exactly SUMBER -> HARIAN -> TAPAK -> CUACA -> PEKERJA -> CATATAN -> SIMPAN on exactly one visual axis. SIMPAN is the official final Spine checkpoint; the rail visibly and intentionally reaches it and SIMPAN must not appear outside or disconnected from the operational journey. Phone SUMBER aligns to its actual SUMBER section anchor without overshooting above it; phone SIMPAN aligns to the final Save section. The rail terminates intentionally at the final SIMPAN node without premature stop or visual tail/overshoot below it. Node placement derives from section geometry/semantic wrappers, not fragile arbitrary offsets fitting one viewport. States remain complete/current/upcoming driven by explicit data-spine-state; legacy structural selectors must not own state or render a second rail. Completed nodes retain one CI-like green success treatment.",
+      "enforcement": [
+        { "type": "source", "path": "docs/10_Development/F4.5-POST-PHYSICAL-ACCEPTANCE-LOCKS.md" },
+        { "type": "manual", "note": "Pending remediation and Product Owner physical acceptance of one axis, section-derived node alignment and intentional SIMPAN termination at required viewports." }
+      ]
+    },
+    {
+      "id": "F45-DASH-001",
+      "title": "Tactical Pulse Bar",
+      "state": "LOCKED",
+      "statement": "The flat/equal-cell table-like mini-dashboard failed physical acceptance. Its locked replacement is OPTION 1 - TACTICAL PULSE BAR. PROGRAM KERJA, TINGGAL, HARI KE and SEMASA remain the four first-class core facts, readable at wide, half and phone without clipping or ellipsis. Project identity remains clearly above/with the pulse system. Operational facts form a connected tactical pulse system, not a generic flat table. Preserve sharp-sleek geometry and disciplined NGAMSOI visual grammar: orange tactical accent/micro-rule/restrained motif, strong scan hierarchy and premium operational feel. Motif supports meaning/readability and never becomes decoration noise. F45-HDR-001, F45-HDR-002, F45-GEO-001, F45-CSS-001 and F45-RESP-001 remain protected.",
+      "enforcement": [
+        { "type": "source", "path": "docs/10_Development/F4.5-POST-PHYSICAL-ACCEPTANCE-LOCKS.md" },
+        { "type": "manual", "note": "Pending remediation and Product Owner physical acceptance of Tactical Pulse Bar hierarchy, identity, visual grammar and all four readable facts at wide, half and phone." }
+      ]
+    },
+    {
+      "id": "F45-WX-004",
+      "title": "Tactical weather presentation",
+      "state": "LOCKED",
+      "statement": "This supplements and must not weaken F45-WX-001/002/003. Weather on this surface is operational FORECAST only and never writes or mutates official CATAT/Page-1 weather; provider/domain authority remains unchanged. WIDE >=1200: usable forecast is a compact secondary weather pulse at the end of the Tactical Pulse Bar. HALF 768-1199: four core facts remain dominant and weather moves to a compact secondary strip rather than crowding them. PHONE: four core facts remain dominant and weather is a compact secondary strip BELOW the core pulse, never competing with SEMASA or causing horizontal overflow. Usable dry forecast shows a concise dry/weather signal and temperature when available. Usable rain forecast shows a concise rain signal/probability and next rain window when available. Loading/unavailable remains visually secondary, never becomes a first-class metric and must not change or break core pulse geometry.",
+      "enforcement": [
+        { "type": "source", "path": "docs/10_Development/F4.5-POST-PHYSICAL-ACCEPTANCE-LOCKS.md" },
+        { "type": "manual", "note": "Pending remediation and Product Owner physical acceptance of wide/half/phone forecast placement and dry/rain/loading/unavailable states while preserving official weather authority." }
+      ]
     },
     {
       "id": "F45-HDR-000",

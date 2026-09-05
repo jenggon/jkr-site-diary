@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const source = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+const source = (path: string) =>
+  readFileSync(join(process.cwd(), path), 'utf8').replace(/\r\n/g, '\n');
 const catat = source('src/app/site-diary/CatatEntryForm.tsx');
 const aktiviti = source('src/app/site-diary/AktivitiEntryForm.tsx');
 const workspace = source('src/app/site-diary/SiteDiaryWorkspace.tsx');
