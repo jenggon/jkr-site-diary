@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { RainInterval, SiteWeatherSnapshot } from '@/lib/weather/siteWeather';
 
 type ApiBody = { data?: SiteWeatherSnapshot };
+type WeatherState = 'loading' | 'ready' | 'unavailable';
 
 function hourNumber(value: string): number {
   return value === '24:00' ? 24 : Number(value.slice(0, 2));
@@ -27,13 +28,13 @@ function probabilityForWindow(snapshot: SiteWeatherSnapshot, window: RainInterva
 export default function ProjectWeatherPulse() {
   const { session } = useAuth();
   const [snapshot, setSnapshot] = useState<SiteWeatherSnapshot | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
+  const [state, setState] = useState<WeatherState>('loading');
 
   useEffect(() => {
     const accessToken = session?.access_token;
     if (!accessToken) {
       setSnapshot(null);
-      setUnavailable(true);
+      setState('unavailable');
       return;
     }
 
@@ -41,6 +42,7 @@ export default function ProjectWeatherPulse() {
     let timer: number | null = null;
 
     const load = async () => {
+      if (active && !snapshot) setState('loading');
       try {
         const response = await fetch('/api/weather/site?mode=forecast', {
           cache: 'no-store',
@@ -48,11 +50,14 @@ export default function ProjectWeatherPulse() {
         });
         if (!response.ok) throw new Error('weather');
         const body = await response.json() as ApiBody;
-        if (!active || !body.data || Array.isArray(body.data)) return;
+        if (!active || !body.data || Array.isArray(body.data)) throw new Error('weather');
         setSnapshot(body.data);
-        setUnavailable(false);
+        setState('ready');
       } catch {
-        if (active) setUnavailable(true);
+        if (active) {
+          setSnapshot(null);
+          setState('unavailable');
+        }
       } finally {
         if (active) timer = window.setTimeout(load, 30 * 60 * 1000);
       }
@@ -63,6 +68,8 @@ export default function ProjectWeatherPulse() {
       active = false;
       if (timer !== null) window.clearTimeout(timer);
     };
+    // Snapshot must not restart the polling lifecycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.access_token]);
 
   const rainProbability = useMemo(
@@ -70,28 +77,56 @@ export default function ProjectWeatherPulse() {
     [snapshot],
   );
 
-  if (!snapshot) {
-    const label = unavailable ? 'Ramalan tidak tersedia' : 'Memuat ramalan';
+  if (state === 'loading') {
     return (
-      <span className="ng-project-pulse__item ng-project-weather" data-weather-state={unavailable ? 'unavailable' : 'loading'} aria-label={label}>
+      <span className="ng-project-pulse__item ng-project-weather" data-weather-state="loading" aria-label="Ramalan cuaca sedang dimuatkan">
         <small>RAMALAN</small>
-        <strong>{unavailable ? 'TIADA' : 'MUAT'}</strong>
+        <strong>Memuat</strong>
+      </span>
+    );
+  }
+
+  if (state === 'unavailable' || !snapshot) {
+    return (
+      <span className="ng-project-pulse__item ng-project-weather" data-weather-state="unavailable" aria-label="Ramalan cuaca tidak tersedia">
+        <small>RAMALAN</small>
+        <strong>Tiada data</strong>
       </span>
     );
   }
 
   const temperature = snapshot.current?.temperatureC ?? null;
   const rainWindow = snapshot.nextRainWindow;
-  const dryLabel = temperature === null ? '☀ KERING' : `☀ ${Math.round(temperature)}°`;
   const updatedAt = new Date(snapshot.fetchedAt).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
-  const display = rainWindow ? `☔ ${rainProbability ?? 0}%` : dryLabel;
-  const detail = rainWindow ? `${rainWindow.start.replace(':00', '')}–${rainWindow.end.replace(':00', '')}` : 'Tiada hujan dekat';
 
+  if (rainWindow) {
+    const probabilityText = rainProbability === null ? '' : ` · ${rainProbability}%`;
+    const detail = `${rainWindow.start.replace(':00', '')}–${rainWindow.end.replace(':00', '')}`;
+    const probabilityLabel = rainProbability === null ? '' : ` ${rainProbability}%`;
+    return (
+      <span
+        className="ng-project-pulse__item ng-project-weather"
+        data-weather-state="rain"
+        aria-label={`Ramalan hujan${probabilityLabel}, ${detail}. Visual Crossing, dikemas kini ${updatedAt}.`}
+      >
+        <small>RAMALAN</small>
+        <strong>HUJAN{probabilityText}</strong>
+        <span className="ng-project-weather__sub">{detail}</span>
+      </span>
+    );
+  }
+
+  const temperatureText = temperature === null ? '' : ` · ${Math.round(temperature)}°`;
+  const temperatureLabel = temperature === null ? '' : `, ${Math.round(temperature)} darjah Celsius`;
   return (
-    <span className="ng-project-pulse__item ng-project-weather" data-weather-state={rainWindow ? 'rain' : 'dry'} aria-label={`Ramalan cuaca ${display}, ${detail}. Visual Crossing, dikemas kini ${updatedAt}.`}>
+    <span
+      className="ng-project-pulse__item ng-project-weather"
+      data-weather-state="dry"
+      aria-label={`Ramalan kering${temperatureLabel}. Tiada hujan dekat. Visual Crossing, dikemas kini ${updatedAt}.`}
+    >
       <small>RAMALAN</small>
-      <strong>{display}</strong>
-      {rainWindow && <span className="ng-project-weather__sub">{detail}</span>}
+      <strong>KERING{temperatureText}</strong>
+      <span className="ng-project-weather__sub">Tiada hujan dekat</span>
     </span>
   );
 }
