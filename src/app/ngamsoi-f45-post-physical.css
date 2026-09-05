@@ -224,6 +224,10 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
 .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] {
   position: relative !important;
   display: flex !important;
+  box-sizing: border-box !important;
+  grid-column: auto !important;
+  grid-row: auto !important;
+  width: auto !important;
   min-width: 0 !important;
   min-height: 2.85rem !important;
   flex-direction: column !important;
@@ -289,6 +293,21 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   box-shadow: none !important;
 }
 
+/* Outrank and neutralise the superseded Round-1 weather placement rules. */
+.ng-project-pulse--f45 > .ng-project-weather[data-pulse='forecast'][data-weather-state] {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  display: flex !important;
+  grid-column: auto !important;
+  grid-row: auto !important;
+  width: auto !important;
+  transform: none !important;
+}
+
 .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='loading'] strong,
 .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='unavailable'] strong {
   color: var(--ng-f45-muted) !important;
@@ -321,9 +340,17 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   }
 
   .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] {
+    grid-column: auto !important;
+    grid-row: auto !important;
     min-height: 3rem !important;
     padding: .4rem .5rem !important;
     border-left: 0 !important;
+  }
+
+  .ng-project-pulse--f45:has(.ng-project-weather[data-weather-state='loading']) > [data-pulse='now'],
+  .ng-project-pulse--f45:has(.ng-project-weather[data-weather-state='unavailable']) > [data-pulse='now'] {
+    grid-column: auto !important;
+    grid-row: auto !important;
   }
 
   .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse]:nth-child(even) {
