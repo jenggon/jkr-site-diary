@@ -222,7 +222,14 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
   };
 
   return (
-    <form onSubmit={handleSubmit} className="ng-catat-flow w-full" aria-label="Borang Buku Harian Tapak" data-entry-mode="CATAT" data-ui-authority="F45">
+    <form
+      onSubmit={handleSubmit}
+      className="ng-catat-flow w-full"
+      aria-label="Borang Buku Harian Tapak"
+      data-entry-mode="CATAT"
+      data-ui-authority="F45"
+      data-save-state={successId ? 'saved' : 'editing'}
+    >
       <div ref={sourceRef} className="ng-entry-step ng-entry-step--source" data-entry-step="source" data-spine-state={stateFor(0, currentStep)} data-catat-start>
         <div className="ng-entry-heading ng-source-section-heading">SUMBER</div>
         <OperationalSourceSelector selectedSource={selectedSource} onSelectSource={setSelectedSource} disabled={isSubmitting || Boolean(successId)} />
@@ -234,18 +241,21 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
             <div className="ng-entry-heading">HARIAN</div>
             <input type="date" value={activityDate} onChange={(event) => setActivityDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} aria-label="Tarikh catatan" className="ng-entry-date" />
           </div>
-          <div className="ng-segmented" aria-label="Status kerja hari ini">
-            {(['MULA', 'LAKSANA', 'SIAP'] as const).map((button) => {
-              const active = dailyButtonState(dailyStatus, button);
-              return <button key={button} type="button" onClick={() => setDailyStatus((current) => nextStatus(current, button))} disabled={isSubmitting || Boolean(successId)} aria-pressed={active}>{button}</button>;
-            })}
+          <div className="ng-daily-status">
+            <div className="ng-segmented" aria-label="Status kerja hari ini">
+              {(['MULA', 'LAKSANA', 'SIAP'] as const).map((button) => {
+                const active = dailyButtonState(dailyStatus, button);
+                return <button key={button} type="button" onClick={() => setDailyStatus((current) => nextStatus(current, button))} disabled={isSubmitting || Boolean(successId)} aria-pressed={active}>{button}</button>;
+              })}
+            </div>
+            <small className="ng-daily-status__hint">Boleh pilih MULA + SIAP jika kerja mula dan siap hari ini.</small>
           </div>
         </div>
         {knownStartRequired && (
           <div className="ng-entry-field ng-entry-field--compact">
             <label>Mula sebenar</label>
             <input type="date" value={knownStartDate} max={activityDate} onChange={(event) => setKnownStartDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} />
-            <small>Tarikh sebenar kerja mula di tapak.</small>
+            <small>Tarikh kerja mula di tapak.</small>
           </div>
         )}
       </div>
