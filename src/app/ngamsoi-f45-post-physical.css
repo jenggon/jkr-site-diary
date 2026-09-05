@@ -1,0 +1,358 @@
+@import "./ngamsoi-f45-authority.css";
+
+/* ========================================================================== 
+ * F4.5 POST-PHYSICAL REMEDIATION OWNER
+ * Bounded authority: SAVE-002 / SPINE-002 / DASH-001 / WX-004 only.
+ * The imported consolidated authority remains the baseline for unrelated
+ * locked concerns. The rules below deliberately neutralise only superseded
+ * declarations for these four concerns; this file is the sole F4.5 layout
+ * entrypoint after physical-acceptance remediation.
+ * ========================================================================== */
+
+/* ---------- SPINE-002: SEMANTIC ANCHORS / ONE AXIS ---------- */
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'][data-spine-geometry='measured']::before {
+  top: var(--ng-spine-rail-top) !important;
+  bottom: auto !important;
+  left: var(--ng-spine-x, .56rem) !important;
+  width: 1px !important;
+  height: var(--ng-spine-rail-height) !important;
+  background: var(--ng-f45-rule-strong) !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'][data-spine-geometry='measured'] > .ng-entry-step[data-entry-step]::before {
+  top: calc(var(--ng-spine-node-y) - .38rem) !important;
+  left: calc(var(--ng-spine-x, .56rem) - var(--ng-step-offset, 1.35rem) - .38rem) !important;
+}
+
+form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'][data-spine-geometry='measured'] > .ng-entry-step[data-entry-step='save']::before {
+  top: calc(var(--ng-spine-node-y) - .38rem) !important;
+}
+
+/* ---------- SAVE-002: FOCUSED COMPLETION CHECKPOINT ---------- */
+form[data-ui-authority='F45'] > .ng-post-save-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: var(--ng-layer-toast, 260) !important;
+  display: grid !important;
+  place-items: center !important;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left)) !important;
+  background: rgb(0 0 0 / 66%) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dialog {
+  position: relative !important;
+  inset: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: calc(var(--ng-layer-toast, 260) + 1) !important;
+  width: min(30rem, calc(100vw - 2rem)) !important;
+  max-width: 30rem !important;
+  max-height: min(32rem, calc(100dvh - 2rem)) !important;
+  overflow: auto !important;
+  border-radius: 0 !important;
+  border-color: color-mix(in srgb, var(--ng-f45-success, #3fb950) 42%, var(--ng-f45-rule)) !important;
+  box-shadow: 0 26px 70px rgb(0 0 0 / 58%) !important;
+}
+
+.ng-post-save__header {
+  align-items: center !important;
+  gap: 1rem !important;
+}
+
+.ng-post-save__copy {
+  display: grid !important;
+  gap: .24rem !important;
+}
+
+.ng-post-save__title {
+  display: block !important;
+  color: var(--ng-ivory-100, #f5f5f2) !important;
+  font-size: clamp(1.2rem, 3vw, 1.55rem) !important;
+  font-weight: 840 !important;
+  line-height: 1.05 !important;
+  letter-spacing: -.015em !important;
+  outline: none !important;
+}
+
+.ng-post-save__brand {
+  display: block !important;
+  color: var(--ng-f45-muted) !important;
+  font-size: .72rem !important;
+  font-weight: 660 !important;
+}
+
+.ng-post-save__check {
+  display: grid !important;
+  width: 2.15rem !important;
+  height: 2.15rem !important;
+  flex: 0 0 auto !important;
+  place-items: center !important;
+  border: 1px solid var(--ng-f45-success, #3fb950) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--ng-f45-success, #3fb950) 12%, transparent) !important;
+  color: var(--ng-f45-success, #3fb950) !important;
+  font-weight: 900 !important;
+}
+
+.ng-post-save__actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  border-top: 1px solid var(--ng-f45-rule) !important;
+  border-radius: 0 !important;
+}
+
+.ng-post-save__actions button {
+  min-height: 3rem !important;
+  padding: .55rem .72rem !important;
+  border-radius: 0 !important;
+}
+
+.ng-post-save__action--primary {
+  color: var(--ng-ivory-100, #f5f5f2) !important;
+  background: color-mix(in srgb, var(--ng-f45-success, #3fb950) 9%, transparent) !important;
+}
+
+.ng-post-save__action--secondary {
+  color: var(--ng-current, #ff7a1a) !important;
+}
+
+.ng-entry-step--saved .ng-save-action {
+  border-color: color-mix(in srgb, var(--ng-f45-success, #3fb950) 58%, var(--ng-f45-rule)) !important;
+  background: color-mix(in srgb, var(--ng-f45-success, #3fb950) 9%, var(--ng-graphite-950, #090a0c)) !important;
+  color: color-mix(in srgb, var(--ng-f45-success, #3fb950) 88%, white) !important;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-f45-success, #3fb950) 32%, transparent) !important;
+}
+
+/* ---------- DASH-001 / WX-004: TACTICAL PULSE ---------- */
+.ng-project-pulse--f45 {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.62fr) minmax(9rem, .82fr) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid var(--ng-f45-rule) !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ng-current, #ff7a1a) 7%, transparent), transparent 32%),
+    var(--ng-graphite-950, #090a0c) !important;
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--ng-current, #ff7a1a) 70%, transparent) !important;
+}
+
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] {
+  position: relative !important;
+  display: flex !important;
+  min-width: 0 !important;
+  min-height: 2.75rem !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: .1rem !important;
+  padding: .42rem .58rem !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-right: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse]:not([data-pulse='programme'])::after {
+  content: '' !important;
+  position: absolute !important;
+  inset-block: .5rem !important;
+  left: 0 !important;
+  width: 1px !important;
+  background: color-mix(in srgb, var(--ng-f45-rule-strong) 78%, transparent) !important;
+  pointer-events: none !important;
+}
+
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] small,
+.ng-project-pulse--f45 > .ng-project-weather small {
+  display: block !important;
+  color: color-mix(in srgb, var(--ng-current, #ff7a1a) 76%, var(--ng-grey-300, #b7bbc1)) !important;
+  font-size: .47rem !important;
+  font-weight: 790 !important;
+  line-height: 1.1 !important;
+  letter-spacing: .12em !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+}
+
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] strong,
+.ng-project-pulse--f45 > .ng-project-weather strong {
+  display: block !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  color: var(--ng-ivory-100, #f5f5f2) !important;
+  font-size: .7rem !important;
+  font-weight: 790 !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+}
+
+.ng-project-pulse--f45 .ng-project-pulse__sub,
+.ng-project-pulse--f45 .ng-project-weather__sub {
+  display: block !important;
+  color: var(--ng-f45-muted) !important;
+  font-size: .49rem !important;
+  line-height: 1.15 !important;
+  white-space: normal !important;
+}
+
+.ng-project-pulse--f45 > .ng-project-weather[data-weather-state='loading'],
+.ng-project-pulse--f45 > .ng-project-weather[data-weather-state='unavailable'],
+.ng-project-pulse--f45 > .ng-project-weather[data-weather-state='dry'],
+.ng-project-pulse--f45 > .ng-project-weather[data-weather-state='rain'] {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  display: flex !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 2.75rem !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: .1rem !important;
+  padding: .42rem .62rem !important;
+  transform: none !important;
+  border: 0 !important;
+  border-left: 1px solid color-mix(in srgb, var(--ng-current, #ff7a1a) 38%, var(--ng-f45-rule)) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--ng-current, #ff7a1a) 4%, var(--ng-graphite-950, #090a0c)) !important;
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ng-current, #ff7a1a) 58%, transparent) !important;
+  pointer-events: none !important;
+}
+
+.ng-project-pulse--f45 > .ng-project-weather[data-weather-state='loading'] strong,
+.ng-project-pulse--f45 > .ng-project-weather[data-weather-state='unavailable'] strong {
+  color: var(--ng-f45-muted) !important;
+  font-weight: 680 !important;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .ng-project-pulse--f45 {
+    grid-template-columns: .78fr .72fr .72fr minmax(12rem, 1.58fr) !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='loading'],
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='unavailable'],
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='dry'],
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='rain'] {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 2.1rem !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: .48rem !important;
+    padding: .3rem .52rem !important;
+    border-top: 1px solid var(--ng-f45-rule) !important;
+    border-left: 0 !important;
+    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ng-current, #ff7a1a) 58%, transparent) !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-weather .ng-project-weather__sub {
+    margin-left: auto !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .ng-project-title {
+    display: block !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+    -webkit-box-orient: initial !important;
+    -webkit-line-clamp: unset !important;
+  }
+
+  .ng-project-pulse--f45 {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse='programme'],
+  .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse='remaining'],
+  .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse='day'] {
+    grid-column: span 2 !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse='now'] {
+    grid-column: 1 / -1 !important;
+    min-height: 2.4rem !important;
+    border-top: 1px solid var(--ng-f45-rule) !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse='now']::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] {
+    min-height: 2.35rem !important;
+    padding: .34rem .42rem !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='loading'],
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='unavailable'],
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='dry'],
+  .ng-project-pulse--f45 > .ng-project-weather[data-weather-state='rain'] {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 2.1rem !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: .42rem !important;
+    padding: .3rem .44rem !important;
+    border-top: 1px solid var(--ng-f45-rule) !important;
+    border-left: 0 !important;
+    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--ng-current, #ff7a1a) 58%, transparent) !important;
+  }
+
+  .ng-project-pulse--f45 > .ng-project-weather .ng-project-weather__sub {
+    margin-left: auto !important;
+  }
+
+  form[data-ui-authority='F45'] > .ng-post-save-backdrop {
+    align-items: center !important;
+    padding:
+      max(.75rem, env(safe-area-inset-top))
+      max(.65rem, env(safe-area-inset-right))
+      max(4.25rem, calc(3.6rem + env(safe-area-inset-bottom)))
+      max(.65rem, env(safe-area-inset-left)) !important;
+  }
+
+  form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dialog {
+    width: min(100%, 30rem) !important;
+    max-height: calc(100dvh - 5.5rem) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ng-post-save,
+  .ng-post-save-backdrop {
+    transition: none !important;
+    animation: none !important;
+  }
+}
