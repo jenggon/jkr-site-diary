@@ -109,7 +109,7 @@ export default function WeatherEvidenceSection({
 
     const accessToken = session?.access_token;
     if (!accessToken) {
-      setProviderError('Auto tiada · Sahkan manual');
+      setProviderError('Cadangan cuaca tidak tersedia · Sahkan keadaan tapak');
       onChange({ ...EMPTY_WEATHER_EVIDENCE, source: 'MANUAL' });
       return () => { active = false; };
     }
@@ -140,7 +140,7 @@ export default function WeatherEvidenceSection({
       })
       .catch(() => {
         if (!active) return;
-        setProviderError('Auto tiada · Sahkan manual');
+        setProviderError('Cadangan cuaca tidak tersedia · Sahkan keadaan tapak');
         onChange({ ...EMPTY_WEATHER_EVIDENCE, source: 'MANUAL' });
       })
       .finally(() => { if (active) setLoading(false); });
@@ -186,7 +186,9 @@ export default function WeatherEvidenceSection({
         <div>
           <div className="ng-entry-heading">CUACA</div>
           <div className="ng-weather-evidence__value">{condition}</div>
-          <div className="ng-entry-meta">{historical ? 'Bukti jam' : 'Manual'}</div>
+          {historical && (
+            <div className="ng-entry-meta">{needsConfirmation ? 'Cadangan cuaca' : 'Disahkan'}</div>
+          )}
         </div>
         <div className="ng-weather-toggle">
           <button type="button" onClick={() => setManualCondition('ELOK')} disabled={disabled} aria-pressed={condition === 'ELOK'}>ELOK</button>
@@ -194,7 +196,7 @@ export default function WeatherEvidenceSection({
         </div>
       </div>
 
-      {loading && <div className="ng-entry-meta" role="status">Muat cuaca…</div>}
+      {loading && <div className="ng-entry-meta" role="status">Muat cadangan cuaca…</div>}
       {providerError && <div className="ng-weather-evidence__warning" role="status">{providerError}</div>}
 
       {value.provider && (
@@ -232,9 +234,9 @@ export default function WeatherEvidenceSection({
         </div>
       )}
 
-      {!needsConfirmation && (
+      {!needsConfirmation && condition === 'HUJAN' && (
         <div className="ng-entry-meta ng-weather-evidence__final" data-testid="weather-final-state">
-          {value.source === 'USER_CONFIRMED' ? 'Disahkan' : 'Manual'} · {intervalsText(displayIntervals)}
+          {value.source === 'USER_CONFIRMED' ? 'Disahkan · ' : ''}{intervalsText(displayIntervals)}
         </div>
       )}
     </section>
