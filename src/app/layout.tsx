@@ -21,8 +21,8 @@ import "./ngamsoi-n05r5-acceptance.css";
 import "./ngamsoi-n05r5-desktop-acceptance.css";
 import "./ngamsoi-n09-records.css";
 import "./ngamsoi-n07-navigation.css";
-// SINGLE F4.5 operational authority. Former F4.5 harmony/seal declarations are consolidated inside this file.
-import "./ngamsoi-f45-authority.css";
+// SINGLE F4.5 layout entrypoint. It imports the consolidated baseline and owns the bounded post-physical remediation.
+import "./ngamsoi-f45-post-physical.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
