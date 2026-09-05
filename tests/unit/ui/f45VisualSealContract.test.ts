@@ -8,6 +8,7 @@ const postPhysical = source('src/app/ngamsoi-f45-post-physical.css');
 const smartWorkforce = source('src/app/site-diary/SmartWorkforceEntry.tsx');
 const observer = source('src/app/site-diary/F45SpineGeometryObserver.tsx');
 const postSave = source('src/app/site-diary/PostSaveConfirmation.tsx');
+const shell = source('src/app/site-diary/DailyEntryShell.tsx');
 
 describe('F4.5 physical visual seal contract', () => {
   it('forces sharp operational surfaces while preserving only semantic circular exceptions', () => {
@@ -19,7 +20,9 @@ describe('F4.5 physical visual seal contract', () => {
     expect(authority).toContain('border-radius: 999px !important;');
     expect(authority).toContain("form[aria-label='Borang Buku Harian Tapak'] > .ng-entry-step[data-entry-step]::before");
     expect(authority).toContain('border-radius: 50% !important;');
-    expect(postPhysical).toContain('.ng-post-save__check');
+    expect(postPhysical).toContain('.ng-completion-seal__node');
+    expect(postPhysical).toContain('border-radius: 50% !important;');
+    expect(postPhysical).toContain('.ng-completion-seal__close');
     expect(postPhysical).toContain('border-radius: 0 !important;');
   });
 
@@ -42,25 +45,31 @@ describe('F4.5 physical visual seal contract', () => {
     expect(smartWorkforce).not.toContain('◒');
   });
 
-  it('keeps completion focused, persistent, sharp and action-oriented', () => {
+  it('keeps Completion Seal persistent until explicit action or dismiss and preserves final SIMPAN state', () => {
     expect(postSave.indexOf('Tunjuk Rekod')).toBeLessThan(postSave.indexOf('Tambah Aktiviti'));
     expect(postSave).toContain('ng-post-save__action--primary');
     expect(postSave).toContain('ng-post-save__action--secondary');
-    expect(postSave).toContain('ng-vo-dialog ng-post-save');
+    expect(postSave).toContain('ng-vo-dialog ng-post-save ng-completion-seal');
     expect(postSave).toContain('role="dialog"');
     expect(postSave).toContain('aria-modal="true"');
     expect(postSave).toContain('data-spine-state="complete"');
-    expect(postSave).toContain('<strong');
+    expect(postSave).toContain('data-testid="post-save-close"');
+    expect(postSave).toContain('setDismissed(true)');
     expect(postPhysical).toContain('--ng-layer-toast');
-    expect(postPhysical).toContain('form[data-ui-authority=\'F45\'] > .ng-post-save-backdrop');
+    expect(postPhysical).toContain("form[data-ui-authority='F45'] > .ng-post-save-backdrop");
+    expect(postPhysical).toContain('@keyframes ng-completion-seal-resolve');
   });
 
-  it('locks Tactical Pulse responsive density and secondary weather placement', () => {
-    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.62fr) minmax(9rem, .82fr) !important;");
+  it('locks exact four-fact responsive density with forecast sharing the same frame', () => {
+    expect(shell).toContain('data-dashboard-facts="4"');
+    expect(shell).not.toContain('data-pulse="day"');
+    expect(postPhysical).toContain('grid-template-columns: repeat(4, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain('@media (min-width: 768px) and (max-width: 1199px)');
     expect(postPhysical).toContain('@media (max-width: 767px)');
-    expect(postPhysical).toContain('grid-template-columns: repeat(6, minmax(0, 1fr)) !important;');
-    expect(postPhysical).toContain("grid-column: 1 / -1 !important;");
+    expect(postPhysical).toContain('grid-template-columns: repeat(2, minmax(0, 1fr)) !important;');
+    expect(postPhysical).toContain(".ng-project-weather[data-pulse='forecast']");
+    expect(postPhysical).toContain('background: transparent !important;');
+    expect(postPhysical).not.toContain("grid-column: 1 / -1 !important;");
     expect(postPhysical).not.toMatch(/\.ng-project-weather[^\{]*\{[^\}]*display:\s*none\s*!important/s);
   });
 
