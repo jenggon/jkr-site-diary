@@ -86,9 +86,9 @@ export default function ProjectWeatherPulse() {
 
   if (state === 'unavailable' || !snapshot) {
     return (
-      <span className="ng-project-pulse__item ng-project-weather" data-pulse="forecast" data-weather-state="unavailable" aria-label="Ramalan cuaca tidak tersedia">
+      <span className="ng-project-pulse__item ng-project-weather" data-pulse="forecast" data-weather-state="unavailable" aria-label="Ramalan cuaca belum tersedia">
         <small>RAMALAN CUACA</small>
-        <strong>Tiada data</strong>
+        <strong>Ramalan belum tersedia</strong>
       </span>
     );
   }
