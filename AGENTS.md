@@ -122,14 +122,17 @@ Architecture is LOCKED (Subordinate to REM-007 and DB-014/DB-015 Specifications)
 
 `docs/00_Governance/AGENT_LOCKSET_PROTOCOL.md` defines the mandatory agent protocol.
 
+If `ACTIVE_LOCKSET.json` contains `activeProgramme.roadmap`, that roadmap is mandatory preflight authority for the active programme. Every agent MUST read it after the active lockset and before recon, audit, implementation, remediation, test repair, CI repair, promotion or acceptance work. The roadmap may narrow execution order and integration gates but never overrides the Constitution, ADRs, Business Rules or locked requirements.
+
 Before any recon, audit, implementation, remediation, test repair, or CI repair, every agent MUST:
 
 1. read this `AGENTS.md`;
 2. read `docs/00_Governance/AI_CONSTITUTION.md`;
 3. read `docs/00_Governance/PROJECT-CONSTITUTION.md`;
 4. read `docs/00_Governance/ACTIVE_LOCKSET.json`;
-5. run `pnpm run lockset:verify`;
-6. output a `LOCKSET COMPLIANCE ACK` containing branch, HEAD, LOCKSET_VERSION, LOCKSET_HASH, role, affected requirement IDs, protected requirement IDs, and no-change boundaries.
+5. read `activeProgramme.roadmap` when present;
+6. run `pnpm run lockset:verify`;
+7. output a `LOCKSET COMPLIANCE ACK` containing branch, HEAD, LOCKSET_VERSION, LOCKSET_HASH, role, affected requirement IDs, protected requirement IDs, no-change boundaries, and active programme/stage when present.
 
 If the ACK cannot be established, STOP. Work without the ACK is invalid evidence.
 
