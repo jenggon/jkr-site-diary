@@ -3,25 +3,30 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { resolveRainIntervalSeed } from '@/lib/weather/rainIntervalSeed';
 
-const source = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+const source = (path: string) => readFileSync(join(process.cwd(), path), 'utf8').replace(/\r\n/g, '\n');
 const layout = source('src/app/layout.tsx');
 const shell = source('src/app/site-diary/DailyEntryShell.tsx');
 const catat = source('src/app/site-diary/CatatEntryForm.tsx');
 const aktiviti = source('src/app/site-diary/AktivitiEntryForm.tsx');
 const authority = source('src/app/ngamsoi-f45-authority.css');
+const postPhysical = source('src/app/ngamsoi-f45-post-physical.css');
+const observer = source('src/app/site-diary/F45SpineGeometryObserver.tsx');
+const postSave = source('src/app/site-diary/PostSaveConfirmation.tsx');
 
 describe('F4.5 UI authority cutover', () => {
-  it('makes one explicit final operational CSS authority and removes component-level project-pulse CSS authority', () => {
+  it('keeps one explicit F4.5 layout entrypoint and a bounded post-physical remediation owner', () => {
     const imports = [...layout.matchAll(/import "\.\/([^\"]+\.css)";/g)].flatMap((match) => match[1] ? [match[1]] : []);
     const f45Imports = imports.filter((name) => name.startsWith('ngamsoi-f45-'));
-    expect(imports.at(-1)).toBe('ngamsoi-f45-authority.css');
-    expect(f45Imports).toEqual(['ngamsoi-f45-authority.css']);
+    expect(imports.at(-1)).toBe('ngamsoi-f45-post-physical.css');
+    expect(f45Imports).toEqual(['ngamsoi-f45-post-physical.css']);
+    expect(postPhysical).toContain('@import "./ngamsoi-f45-authority.css";');
+    expect(postPhysical.match(/@import/g)?.length).toBe(1);
     expect(authority).toContain('F4.5 UI AUTHORITY — CONSOLIDATED RUNTIME OWNER');
     expect(authority).not.toMatch(/@import[^;]*ngamsoi-f45-/i);
     expect(shell).not.toContain('<style jsx global>');
   });
 
-  it('cuts CATAT and AKTIVITI away from retired direct-section Spine selectors', () => {
+  it('keeps CATAT and AKTIVITI on the locked direct-step DOM contract', () => {
     for (const file of [catat, aktiviti]) {
       expect(file).toContain('data-ui-authority="F45"');
       expect(file).not.toMatch(/<section className="ng-entry-step/);
@@ -32,28 +37,37 @@ describe('F4.5 UI authority cutover', () => {
     expect(authority).toContain('isolation: auto !important;');
   });
 
-  it('owns a single mathematical Spine axis and explicit CI-green completion state', () => {
-    expect(authority).toContain('--ng-spine-x: .56rem;');
-    expect(authority).toContain('--ng-step-offset: 1.35rem;');
-    expect(authority).toContain('left: calc(var(--ng-spine-x) - var(--ng-step-offset) - .38rem) !important;');
+  it('upgrades the Spine from fixed Y offsets to measured semantic anchors without changing state authority', () => {
+    expect(observer).toContain("const STEP_KEYS = ['source', 'daily', 'site', 'weather', 'workforce', 'notes', 'save'] as const;");
+    expect(observer).toContain("form.style.setProperty('--ng-spine-rail-top'");
+    expect(observer).toContain("form.style.setProperty('--ng-spine-rail-height'");
+    expect(observer).toContain("step.style.setProperty('--ng-spine-node-y'");
+    expect(postPhysical).toContain("[data-spine-geometry='measured']::before");
+    expect(postPhysical).toContain('top: var(--ng-spine-rail-top) !important;');
+    expect(postPhysical).toContain('height: var(--ng-spine-rail-height) !important;');
+    expect(postPhysical).toContain('top: calc(var(--ng-spine-node-y) - .38rem) !important;');
     expect(authority).toContain("[data-spine-state='complete']::before");
     expect(authority).toContain("var(--ng-f45-success, #3fb950)");
-    expect(authority).toContain('> .ng-entry-step[data-entry-step]::after');
-    expect(authority).toContain('content: none !important;');
   });
 
-  it('gives VO dialog and toast explicit layer authority independent of entry-step wrapper shape', () => {
-    expect(authority).toContain('--ng-layer-dialog: 240;');
-    expect(authority).toContain(".ng-vo-dialog-backdrop");
-    expect(authority).toContain('position: fixed !important;');
-    expect(authority).toContain('z-index: var(--ng-layer-dialog) !important;');
-    expect(authority).toContain('--ng-layer-toast: 260;');
+  it('uses the accepted VO/APK family for a focused persistent completion dialog', () => {
+    expect(postSave).toContain('ng-vo-dialog-backdrop ng-post-save-backdrop');
+    expect(postSave).toContain('ng-vo-dialog ng-post-save');
+    expect(postSave).toContain('role="dialog"');
+    expect(postSave).toContain('aria-modal="true"');
+    expect(postSave).toContain('data-spine-state="complete"');
+    expect(postPhysical).toContain('z-index: var(--ng-layer-toast, 260) !important;');
+    expect(postPhysical).toContain('border-radius: 0 !important;');
   });
 
-  it('keeps the project strip to four core facts and demotes forecast loading/unavailable states', () => {
-    expect(authority).toContain('grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.58fr) !important;');
-    expect(authority).toContain(".ng-project-weather[data-weather-state='loading']");
-    expect(authority).toContain(".ng-project-weather[data-weather-state='unavailable']");
+  it('turns the project strip into a connected Tactical Pulse and keeps forecast visible but secondary', () => {
+    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.62fr) minmax(9rem, .82fr) !important;");
+    expect(postPhysical).toContain('box-shadow: inset 0 2px 0 color-mix');
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='loading']");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='unavailable']");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='dry']");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='rain']");
+    expect(postPhysical).not.toMatch(/\.ng-project-weather[^\{]*\{[^\}]*display:\s*none\s*!important/s);
   });
 
   it('seeds same-day rain from the Kuala Lumpur tap hour, then skips occupied buckets', () => {
