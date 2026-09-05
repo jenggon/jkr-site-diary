@@ -11,8 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1. Checkout repository
+      - name: 1. Checkout exact frozen F4.5 R2 candidate
         uses: actions/checkout@v4
+        with:
+          ref: 1fb541ffc8e361dd447432c2844a043c6dc570e8
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -31,7 +33,24 @@ jobs:
       - name: 2. Unified verification contract
         run: pnpm run verify
 
-      - name: 3. Upload Artifact
+      - name: 3. Install Chromium for exact-head F4.5 proving gate
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 4. Exact-head F4.5 browser proving gate
+        run: pnpm exec playwright test tests/e2e/f45-ui-authority.e2e.spec.ts --project=chromium --retries=0
+
+      - name: 5. Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: f45-isolated-browser-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: 6. Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-artifact
