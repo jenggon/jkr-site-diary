@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const source = (path: string) =>
   readFileSync(join(process.cwd(), path), 'utf8').replace(/\r\n/g, '\n');
+const shell = source('src/app/site-diary/DailyEntryShell.tsx');
 const catat = source('src/app/site-diary/CatatEntryForm.tsx');
 const aktiviti = source('src/app/site-diary/AktivitiEntryForm.tsx');
 const workspace = source('src/app/site-diary/SiteDiaryWorkspace.tsx');
@@ -35,6 +36,8 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
       }
       expect(file).toContain('data-spine-state={stateFor(');
     }
+    expect(catat).toContain('<div className="ng-entry-heading ng-source-section-heading">SUMBER</div>');
+    expect(aktiviti).toContain('<div className="ng-entry-heading">SUMBER</div>');
     expect(authority).toContain("[data-spine-state='complete']");
     expect(authority).toContain("[data-spine-state='current']");
     expect(authority).toContain("[data-spine-state='upcoming']");
@@ -59,10 +62,26 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(authority).toContain('native picker only on Ubah');
   });
 
-  it('promotes post-save confirmation to a focused persistent completion checkpoint without changing identity authority', () => {
+  it('uses field-language copy without changing Actual Start, executor persistence or same-day lifecycle semantics', () => {
+    for (const file of [catat, aktiviti]) {
+      expect(file).toContain('<label>PELAKSANA</label>');
+      expect(file).toContain('<option value="CONTRACTOR">Kontraktor Utama</option>');
+      expect(file).toContain('<option value="NSC">NSC</option>');
+      expect(file).toContain('contractor_scope: contractorScope');
+      expect(file).toContain('Tarikh sebenar kerja mula di tapak.');
+      expect(file).not.toContain('Bukan tarikh MSP.');
+      expect(file).not.toContain('>Mula + Siap<');
+      expect(file).toContain("'MULA_DAN_SIAP'");
+    }
+  });
+
+  it('promotes post-save confirmation to a dismissible Completion Seal without changing identity authority', () => {
     expect(postSave).toContain('role="dialog"');
     expect(postSave).toContain('aria-modal="true"');
-    expect(postSave).toContain('ng-vo-dialog ng-post-save');
+    expect(postSave).toContain('ng-vo-dialog ng-post-save ng-completion-seal');
+    expect(postSave).toContain('ng-completion-seal__node');
+    expect(postSave).toContain('data-testid="post-save-close"');
+    expect(postSave).toContain('Tutup pengesahan simpan');
     expect(postSave).toContain('Disimpan');
     expect(postSave).toContain('Kena boh! Ngamsoi.');
     expect(postSave).toContain('Tunjuk Rekod');
@@ -70,6 +89,7 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(postSave).toContain('data-entry-step="save"');
     expect(postSave).toContain('data-spine-state="complete"');
     expect(postSave).toContain('focus({ preventScroll: true })');
+    expect(postSave).toContain("if (event.key === 'Escape')");
     expect(catat).not.toContain('softReset');
     expect(catat).not.toContain('window.setTimeout');
     expect(aktiviti).not.toContain('finishAndReturn');
@@ -99,13 +119,16 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(authority).toContain('.ng-workforce--smart .ng-workforce__matrix-head strong { display: none !important; }');
   });
 
-  it('keeps official weather binary and visually distinct from stable operational forecast states', () => {
+  it('keeps official weather binary while removing redundant manual copy and preserving forecast separation', () => {
     expect(weather).toContain('ELOK');
     expect(weather).toContain('HUJAN');
     expect(weather).not.toContain('MENDUNG');
     expect(weather).not.toContain('RIBUT');
-    expect(weather).toContain("value.source === 'USER_CONFIRMED' ? 'Disahkan' : 'Manual'");
-    expect(forecast).toContain('<small>RAMALAN</small>');
+    expect(weather).toContain('Cadangan cuaca');
+    expect(weather).toContain('Disahkan');
+    expect(weather).not.toContain("'Manual'");
+    expect(forecast).toContain('<small>RAMALAN CUACA</small>');
+    expect(forecast).toContain('data-pulse="forecast"');
     expect(forecast).toContain('data-weather-state="loading"');
     expect(forecast).toContain('data-weather-state="unavailable"');
     expect(forecast).toContain('data-weather-state="rain"');
@@ -114,15 +137,21 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(forecast).not.toContain('title=');
   });
 
-  it('uses Tactical Pulse responsive composition and keeps forecast secondary at every breakpoint', () => {
-    expect(postPhysical).toContain('F4.5 POST-PHYSICAL REMEDIATION OWNER');
-    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.62fr) minmax(9rem, .82fr) !important;");
+  it('locks the exact four-fact dashboard and responsive 4-column / 2-by-2 composition', () => {
+    expect(shell).toContain('data-dashboard-facts="4"');
+    expect(shell).toContain('data-pulse="programme"');
+    expect(shell).toContain('data-pulse="remaining"');
+    expect(shell).toContain('data-pulse="now"');
+    expect(shell).not.toContain('data-pulse="day"');
+    expect(shell).not.toContain('<small>HARI KE</small>');
+    expect(shell).toContain('{pulse.remainingDays} HARI · SIAP {formatFinish(finishDate)}');
+    expect(postPhysical).toContain('HDR-003 / DASH-002 / WX-005');
+    expect(postPhysical).toContain('grid-template-columns: repeat(4, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain('@media (min-width: 768px) and (max-width: 1199px)');
-    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(12rem, 1.58fr) !important;");
     expect(postPhysical).toContain('@media (max-width: 767px)');
-    expect(postPhysical).toContain('grid-template-columns: repeat(6, minmax(0, 1fr)) !important;');
-    expect(postPhysical).toContain("grid-column: 1 / -1 !important;");
-    expect(postPhysical).not.toMatch(/\.ng-project-weather[^\{]*\{[^\}]*display:\s*none\s*!important/s);
+    expect(postPhysical).toContain('grid-template-columns: repeat(2, minmax(0, 1fr)) !important;');
+    expect(postPhysical).toContain(".ng-project-weather[data-pulse='forecast']");
+    expect(postPhysical).not.toContain("grid-column: 1 / -1 !important;");
     expect(workspace).toContain('data-workspace-nav="desktop"');
     expect(workspace).toContain('data-workspace-nav="mobile"');
     expect(workspace).toContain('data-tooltip={navigationExpanded ? undefined : item.meaning}');
