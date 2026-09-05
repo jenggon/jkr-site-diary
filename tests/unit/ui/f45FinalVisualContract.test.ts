@@ -9,25 +9,26 @@ const aktiviti = source('src/app/site-diary/AktivitiEntryForm.tsx');
 const workspace = source('src/app/site-diary/SiteDiaryWorkspace.tsx');
 const postSave = source('src/app/site-diary/PostSaveConfirmation.tsx');
 const workforce = source('src/app/site-diary/SmartWorkforceEntry.tsx');
+const spineObserver = source('src/app/site-diary/F45SpineGeometryObserver.tsx');
 const weather = source('src/app/site-diary/WeatherEvidenceSection.tsx');
 const forecast = source('src/app/site-diary/ProjectWeatherPulse.tsx');
 const authority = source('src/app/ngamsoi-f45-authority.css');
+const postPhysical = source('src/app/ngamsoi-f45-post-physical.css');
 const layout = source('src/app/layout.tsx');
 
 describe('F4.5 final NGAMSOI visual reconciliation', () => {
-  it('loads one consolidated F4.5 authority after N07 and locks sharp-sleek operational geometry', () => {
-    const n07 = layout.indexOf('ngamsoi-n07-navigation.css');
-    const f45 = layout.indexOf('ngamsoi-f45-authority.css');
-    expect(n07).toBeGreaterThanOrEqual(0);
-    expect(f45).toBeGreaterThan(n07);
-    expect(layout).not.toContain('import "./ngamsoi-f45-harmony.css"');
-    expect(layout).not.toContain('import "./ngamsoi-f45-seal.css"');
+  it('loads one F4.5 layout entrypoint after N07 and keeps the consolidated authority as its baseline', () => {
+    const imports = [...layout.matchAll(/import "\.\/([^\"]+\.css)";/g)].flatMap((match) => match[1] ? [match[1]] : []);
+    const f45Imports = imports.filter((name) => name.startsWith('ngamsoi-f45-'));
+    expect(imports.at(-1)).toBe('ngamsoi-f45-post-physical.css');
+    expect(f45Imports).toEqual(['ngamsoi-f45-post-physical.css']);
+    expect(postPhysical).toContain('@import "./ngamsoi-f45-authority.css";');
     expect(authority).toContain('F4.5 UI AUTHORITY — CONSOLIDATED RUNTIME OWNER');
     expect(authority).toContain('--ng-f45-radius: 0;');
     expect(authority).toContain('--ng-f45-radius-small: 0;');
   });
 
-  it('uses explicit semantic Spine states in the locked operational order', () => {
+  it('uses explicit semantic Spine states in the locked operational order and measured semantic anchors', () => {
     for (const file of [catat, aktiviti]) {
       for (const step of ['source', 'daily', 'site', 'weather', 'workforce', 'notes', 'save']) {
         expect(file).toContain(`data-entry-step=\"${step}\"`);
@@ -37,9 +38,13 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(authority).toContain("[data-spine-state='complete']");
     expect(authority).toContain("[data-spine-state='current']");
     expect(authority).toContain("[data-spine-state='upcoming']");
-    expect(authority).toContain('padding-left: 0 !important');
-    expect(authority).toContain('var(--ng-spine-x) - var(--ng-step-offset) - .38rem');
-    expect(authority).toContain("[data-spine-state='complete']::before");
+    expect(spineObserver).toContain("const STEP_KEYS = ['source', 'daily', 'site', 'weather', 'workforce', 'notes', 'save'] as const;");
+    expect(spineObserver).toContain("if (key === 'save') return step.querySelector<HTMLElement>('.ng-save-action') ?? step;");
+    expect(spineObserver).toContain("form.style.setProperty('--ng-spine-rail-top'");
+    expect(spineObserver).toContain("form.style.setProperty('--ng-spine-rail-height'");
+    expect(postPhysical).toContain("[data-spine-geometry='measured']::before");
+    expect(postPhysical).toContain('top: calc(var(--ng-spine-node-y) - .38rem) !important;');
+    expect(postPhysical).toContain('height: var(--ng-spine-rail-height) !important;');
     expect(authority).toContain('--ng-f45-success: #3fb950');
   });
 
@@ -54,13 +59,17 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(authority).toContain('native picker only on Ubah');
   });
 
-  it('keeps post-save confirmation stable, visible and action-oriented until the user chooses', () => {
+  it('promotes post-save confirmation to a focused persistent completion checkpoint without changing identity authority', () => {
+    expect(postSave).toContain('role="dialog"');
+    expect(postSave).toContain('aria-modal="true"');
+    expect(postSave).toContain('ng-vo-dialog ng-post-save');
     expect(postSave).toContain('Disimpan');
     expect(postSave).toContain('Kena boh! Ngamsoi.');
     expect(postSave).toContain('Tunjuk Rekod');
     expect(postSave).toContain('Tambah Aktiviti');
-    expect(postSave).toContain('ng-post-save__action--primary');
-    expect(postSave).toContain('ng-post-save__action--secondary');
+    expect(postSave).toContain('data-entry-step="save"');
+    expect(postSave).toContain('data-spine-state="complete"');
+    expect(postSave).toContain('focus({ preventScroll: true })');
     expect(catat).not.toContain('softReset');
     expect(catat).not.toContain('window.setTimeout');
     expect(aktiviti).not.toContain('finishAndReturn');
@@ -84,36 +93,43 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(workforce).toContain('data-testid="tre-trade-suggestions"');
     expect(workforce).toContain("bumi_count: 0, non_bumi_count: 0, foreign_count: 0");
     expect(workforce).toContain('className="ng-workforce__overall-icon"');
+    expect(workforce).toContain('<F45SpineGeometryObserver />');
     expect(workforce).not.toContain('◒');
     expect(authority).toContain('.ng-workforce--smart .ng-workforce__header { display: none !important; }');
     expect(authority).toContain('.ng-workforce--smart .ng-workforce__matrix-head strong { display: none !important; }');
   });
 
-  it('keeps official weather binary and visually distinct from forecast', () => {
+  it('keeps official weather binary and visually distinct from stable operational forecast states', () => {
     expect(weather).toContain('ELOK');
     expect(weather).toContain('HUJAN');
     expect(weather).not.toContain('MENDUNG');
     expect(weather).not.toContain('RIBUT');
     expect(weather).toContain("value.source === 'USER_CONFIRMED' ? 'Disahkan' : 'Manual'");
     expect(forecast).toContain('<small>RAMALAN</small>');
+    expect(forecast).toContain('data-weather-state="loading"');
+    expect(forecast).toContain('data-weather-state="unavailable"');
+    expect(forecast).toContain('data-weather-state="rain"');
+    expect(forecast).toContain('data-weather-state="dry"');
+    expect(forecast).not.toContain('rainProbability ?? 0');
     expect(forecast).not.toContain('title=');
   });
 
-  it('locks medium header to a lighter one-line core strip and preserves phone bottom navigation', () => {
-    expect(authority).toContain('@media (min-width: 768px) and (max-width: 1199px)');
-    expect(authority).toContain('grid-template-columns: .78fr .72fr .72fr 1.58fr');
-    expect(authority).toContain('min-height: 2.05rem !important');
-    expect(authority).toContain(".ng-project-pulse--f45 .ng-project-weather {\n    display: none !important;");
-    expect(authority).toContain('.ng-workspace-nav--desktop.is-overlay-open');
-    expect(authority).toContain('@media (max-width: 767px)');
-    expect(authority).toContain('.ng-workspace-nav--mobile');
+  it('uses Tactical Pulse responsive composition and keeps forecast secondary at every breakpoint', () => {
+    expect(postPhysical).toContain('F4.5 POST-PHYSICAL REMEDIATION OWNER');
+    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.62fr) minmax(9rem, .82fr) !important;");
+    expect(postPhysical).toContain('@media (min-width: 768px) and (max-width: 1199px)');
+    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(12rem, 1.58fr) !important;");
+    expect(postPhysical).toContain('@media (max-width: 767px)');
+    expect(postPhysical).toContain('grid-template-columns: repeat(6, minmax(0, 1fr)) !important;');
+    expect(postPhysical).toContain("grid-column: 1 / -1 !important;");
+    expect(postPhysical).not.toMatch(/\.ng-project-weather[^\{]*\{[^\}]*display:\s*none\s*!important/s);
     expect(workspace).toContain('data-workspace-nav="desktop"');
     expect(workspace).toContain('data-workspace-nav="mobile"');
     expect(workspace).toContain('data-tooltip={navigationExpanded ? undefined : item.meaning}');
   });
 
-  it('keeps REKOD, print, approval and mark geometry outside the F4.5 operational authority', () => {
-    expect(authority).not.toMatch(/DiaryManagementList|DiaryDetail|DiaryHistoryTimeline|ngamsoi-mark-svg/);
+  it('keeps REKOD, print, approval and mark geometry outside the bounded post-physical authority', () => {
+    expect(postPhysical).not.toMatch(/DiaryManagementList|DiaryDetail|DiaryHistoryTimeline|ngamsoi-mark-svg|print_context|approvalRepository|supabase|migration/);
     expect(catat).not.toMatch(/DailyEntryFeedback|\/print\//);
     expect(aktiviti).not.toMatch(/DailyEntryFeedback|\/print\//);
   });
