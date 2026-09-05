@@ -46,7 +46,7 @@ const superseded = [];
 
 for (const requirement of lockset.requirements) {
   if (!requirement || typeof requirement !== 'object') fail('every requirement must be an object');
-  if (typeof requirement.id !== 'string' || !/^F45-[A-Z]+-[0-9]{3}$/.test(requirement.id)) fail(`invalid requirement id: ${requirement.id}`);
+  if (typeof requirement.id !== 'string' || !/^(?:F45|NGUI)-[A-Z]+-[0-9]{3}$/.test(requirement.id)) fail(`invalid requirement id: ${requirement.id}`);
   if (ids.has(requirement.id)) fail(`duplicate requirement id: ${requirement.id}`);
   ids.add(requirement.id);
 
