@@ -8,6 +8,7 @@ const layout = source('src/app/layout.tsx');
 const shell = source('src/app/site-diary/DailyEntryShell.tsx');
 const catat = source('src/app/site-diary/CatatEntryForm.tsx');
 const aktiviti = source('src/app/site-diary/AktivitiEntryForm.tsx');
+const sourceSelector = source('src/app/site-diary/OperationalSourceSelector.tsx');
 const authority = source('src/app/ngamsoi-f45-authority.css');
 const postPhysical = source('src/app/ngamsoi-f45-post-physical.css');
 const observer = source('src/app/site-diary/F45SpineGeometryObserver.tsx');
@@ -38,8 +39,9 @@ describe('F4.5 UI authority cutover', () => {
     expect(authority).toContain('isolation: auto !important;');
   });
 
-  it('upgrades the Spine from fixed Y offsets to measured semantic anchors without changing state authority', () => {
+  it('upgrades the Spine from fixed Y offsets to measured semantic anchors across editing and saved receipt states', () => {
     expect(observer).toContain("const STEP_KEYS = ['source', 'daily', 'site', 'weather', 'workforce', 'notes', 'save'] as const;");
+    expect(observer).toContain("'.ng-save-action, .ng-save-complete-marker, .ng-saved-receipt'");
     expect(observer).toContain("form.style.setProperty('--ng-spine-rail-top'");
     expect(observer).toContain("form.style.setProperty('--ng-spine-rail-height'");
     expect(observer).toContain("step.style.setProperty('--ng-spine-node-y'");
@@ -51,7 +53,7 @@ describe('F4.5 UI authority cutover', () => {
     expect(authority).toContain("var(--ng-f45-success, #3fb950)");
   });
 
-  it('uses a dismissible Completion Seal while keeping the completed SIMPAN checkpoint', () => {
+  it('uses a dismissible Completion Seal then exposes an explicit saved receipt with both next actions', () => {
     expect(postSave).toContain('ng-vo-dialog-backdrop ng-post-save-backdrop');
     expect(postSave).toContain('ng-vo-dialog ng-post-save ng-completion-seal');
     expect(postSave).toContain('role="dialog"');
@@ -60,38 +62,75 @@ describe('F4.5 UI authority cutover', () => {
     expect(postSave).toContain('data-testid="post-save-close"');
     expect(postSave).toContain('ng-completion-seal__node');
     expect(postSave).toContain('setDismissed(true)');
+    expect(postSave).toContain('data-testid="post-save-receipt"');
+    expect(postSave).toContain('data-testid="post-save-receipt-show-records"');
+    expect(postSave).toContain('data-testid="post-save-receipt-add-activity"');
+    expect(postSave).toContain('ng-dialog-close ng-completion-seal__close');
     expect(postPhysical).toContain('z-index: var(--ng-layer-toast, 260) !important;');
     expect(postPhysical).toContain('.ng-completion-seal__node');
+    expect(postPhysical).toContain('.ng-saved-receipt');
     expect(postPhysical).toContain('border-radius: 50% !important;');
   });
 
-  it('locks exactly four dashboard facts with forecast as the fourth peer fact', () => {
+  it('locks one SUMBER hierarchy and one shared sharp dialog close geometry family', () => {
+    expect(catat).toContain('ng-source-section-heading">SUMBER');
+    expect(sourceSelector).not.toContain('Sumber Aktiviti');
+    expect(sourceSelector).not.toContain('>Sumber<');
+    expect(sourceSelector).toContain('ng-dialog-close ng-vo-dialog__close');
+    expect(postSave).toContain('ng-dialog-close ng-completion-seal__close');
+    expect(postPhysical).toContain('.ng-dialog-close {');
+    expect(postPhysical).toContain('width: 2rem !important;');
+    expect(postPhysical).toContain('height: 2rem !important;');
+    expect(postPhysical).toContain('padding: 0 !important;');
+    expect(postPhysical).toContain('border-radius: 0 !important;');
+  });
+
+  it('locks exactly four dashboard facts, one PROGRAM KERJA label and completion-only green presentation', () => {
     expect(shell).toContain('data-dashboard-facts="4"');
     expect(shell).toContain('data-pulse="programme"');
     expect(shell).toContain('data-pulse="remaining"');
     expect(shell).toContain('data-pulse="now"');
     expect(shell).not.toContain('data-pulse="day"');
+    expect(shell.match(/<small>PROGRAM KERJA<\/small>/g)?.length).toBe(1);
     expect(forecast).toContain('data-pulse="forecast"');
     expect(forecast).toContain('<small>RAMALAN CUACA</small>');
     expect(postPhysical).toContain('grid-template-columns: repeat(4, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain('grid-template-columns: repeat(2, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain(".ng-project-weather[data-pulse='forecast']");
+    expect(postPhysical).toContain('.ng-project-pulse--f45::before');
+    expect(postPhysical).toContain('content: none !important;');
+    expect(postPhysical).toContain('border-bottom: 0 !important;');
+    expect(postPhysical).toContain("[data-pulse='programme'] strong");
     expect(postPhysical).not.toContain("grid-column: 1 / -1 !important;");
     expect(postPhysical).not.toMatch(/\.ng-project-weather[^\{]*\{[^\}]*display:\s*none\s*!important/s);
   });
 
-  it('keeps user-facing executor and Actual Start copy deterministic without changing stored scope values', () => {
+  it('keeps user-facing executor and Actual Start copy deterministic and makes same-day MULA + SIAP discoverable', () => {
     for (const file of [catat, aktiviti]) {
       expect(file).toContain('<label>PELAKSANA</label>');
       expect(file).toContain('<option value="CONTRACTOR">Kontraktor Utama</option>');
       expect(file).toContain('<option value="NSC">NSC</option>');
       expect(file).toContain('contractor_scope: contractorScope');
-      expect(file).toContain('Tarikh sebenar kerja mula di tapak.');
       expect(file).not.toContain('Bukan tarikh MSP.');
       expect(file).not.toContain('>Mula + Siap<');
     }
+    expect(catat).toContain('Tarikh kerja mula di tapak.');
+    expect(catat).not.toContain('Tarikh sebenar kerja mula di tapak.');
+    expect(catat).toContain('Boleh pilih MULA + SIAP jika kerja mula dan siap hari ini.');
     expect(catat).toContain('ng-entry-heading ng-source-section-heading">SUMBER');
-    expect(postPhysical).toContain('COPY-001: SUMBER USES THE SHARED SUB-HEADER GRAMMAR');
+    expect(postPhysical).toContain('COPY-002: HARIAN GUIDANCE / FIELD-FIT');
+  });
+
+  it('keeps forecast states geometrically stable and reports unavailable service deterministically', () => {
+    expect(forecast).toContain('data-weather-state="loading"');
+    expect(forecast).toContain('data-weather-state="unavailable"');
+    expect(forecast).toContain('data-weather-state="rain"');
+    expect(forecast).toContain('data-weather-state="dry"');
+    expect(forecast).toContain('Ramalan belum tersedia');
+    expect(forecast).not.toContain('Tiada data');
+    expect(forecast).not.toContain('rainProbability ?? 0');
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='loading'] strong");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='unavailable'] strong");
   });
 
   it('seeds same-day rain from the Kuala Lumpur tap hour, then skips occupied buckets', () => {
