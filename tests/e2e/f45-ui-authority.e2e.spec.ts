@@ -36,7 +36,12 @@ async function expectFourFactDashboard(page: Page) {
   }
   await expect(pulse.locator('[data-pulse]')).toHaveCount(4);
   await expect(pulse.locator("[data-pulse='day']")).toHaveCount(0);
-  await expect(pulse.locator("[data-pulse='programme'] small")).toHaveText('PROGRAM KERJA');
+
+  const programme = pulse.locator("[data-pulse='programme']");
+  await expect(programme.locator('small')).toHaveCount(1);
+  await expect(programme.locator('small')).toHaveText('PROGRAM KERJA');
+  await expect(programme.locator('strong')).not.toContainText('PROGRAM KERJA');
+  await expect(pulse.getByText('PROGRAM KERJA', { exact: true })).toHaveCount(1);
   await expect(pulse.locator("[data-pulse='remaining'] small")).toHaveText('TINGGAL');
   await expect(pulse.locator("[data-pulse='remaining'] strong")).toContainText('HARI · SIAP');
   await expect(pulse.locator("[data-pulse='now'] small")).toHaveText('SEMASA');
@@ -90,6 +95,9 @@ async function expectFourFactDashboard(page: Page) {
 
   const forecast = pulse.locator("[data-pulse='forecast']");
   await expect(forecast).toHaveAttribute('data-weather-state', /^(loading|unavailable|rain|dry)$/);
+  if (await forecast.getAttribute('data-weather-state') === 'unavailable') {
+    await expect(forecast.locator('strong')).toHaveText('Ramalan belum tersedia');
+  }
 
   const rects = await facts.evaluateAll((nodes) => nodes.map((node) => {
     const rect = node.getBoundingClientRect();
@@ -111,12 +119,36 @@ async function expectFourFactDashboard(page: Page) {
     expect(rects[3]!.left).toBeGreaterThanOrEqual(rects[2]!.right - 1);
   }
 
-  const forecastPresentation = await forecast.evaluate((node) => {
-    const style = getComputedStyle(node as HTMLElement);
-    return { boxShadow: style.boxShadow, backgroundColor: style.backgroundColor };
+  const recurrencePresentation = await pulse.evaluate((pulseNode) => {
+    const root = pulseNode as HTMLElement;
+    const programmeItem = root.querySelector<HTMLElement>("[data-pulse='programme']")!;
+    const programmeStrong = programmeItem.querySelector<HTMLElement>('strong')!;
+    const remainingStrong = root.querySelector<HTMLElement>("[data-pulse='remaining'] strong")!;
+    const forecastItem = root.querySelector<HTMLElement>("[data-pulse='forecast']")!;
+    const programmeStyle = getComputedStyle(programmeItem);
+    const forecastStyle = getComputedStyle(forecastItem);
+    return {
+      programmeColor: getComputedStyle(programmeStrong).color,
+      remainingColor: getComputedStyle(remainingStrong).color,
+      programmeBoxShadow: programmeStyle.boxShadow,
+      programmeBackgroundImage: programmeStyle.backgroundImage,
+      programmeBorderBottomWidth: programmeStyle.borderBottomWidth,
+      forecastBoxShadow: forecastStyle.boxShadow,
+      forecastBackgroundImage: forecastStyle.backgroundImage,
+      forecastBorderBottomWidth: forecastStyle.borderBottomWidth,
+      pulseBeforeContent: getComputedStyle(root, '::before').content,
+      pulseAfterContent: getComputedStyle(root, '::after').content,
+    };
   });
-  expect(forecastPresentation.boxShadow).toBe('none');
-  expect(forecastPresentation.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(recurrencePresentation.programmeColor).toBe(recurrencePresentation.remainingColor);
+  expect(recurrencePresentation.programmeBoxShadow).toBe('none');
+  expect(recurrencePresentation.programmeBackgroundImage).toBe('none');
+  expect(recurrencePresentation.programmeBorderBottomWidth).toBe('0px');
+  expect(recurrencePresentation.forecastBoxShadow).toBe('none');
+  expect(recurrencePresentation.forecastBackgroundImage).toBe('none');
+  expect(recurrencePresentation.forecastBorderBottomWidth).toBe('0px');
+  expect(['none', 'normal']).toContain(recurrencePresentation.pulseBeforeContent);
+  expect(['none', 'normal']).toContain(recurrencePresentation.pulseAfterContent);
 }
 
 async function expectOneSpineAxis(page: Page) {
@@ -151,7 +183,9 @@ async function expectOneSpineAxis(page: Page) {
       if (key === 'source') {
         return step.querySelector<HTMLElement>('.ng-entry-heading, .mobile-entry-spike-panel h3, .mobile-entry-selected-source h3, h3') ?? step;
       }
-      if (key === 'save') return step.querySelector<HTMLElement>('.ng-save-action') ?? step;
+      if (key === 'save') {
+        return step.querySelector<HTMLElement>('.ng-save-action, .ng-save-complete-marker, .ng-saved-receipt') ?? step;
+      }
       return step.querySelector<HTMLElement>('.ng-entry-heading') ?? step;
     };
 
@@ -208,6 +242,8 @@ async function expectSharpOperationalGeometry(page: Page) {
     '.ng-post-save',
     '.ng-post-save__actions',
     '.ng-post-save__actions button',
+    '.ng-saved-receipt',
+    '.ng-saved-receipt__actions button',
   ].join(',')).evaluateAll((nodes) => nodes.flatMap((node) => {
     const element = node as HTMLElement;
     const rect = element.getBoundingClientRect();
@@ -224,6 +260,28 @@ async function expectSharpOperationalGeometry(page: Page) {
   expect(offenders, `Rounded operational surfaces remain:\n${JSON.stringify(offenders, null, 2)}`).toEqual([]);
 }
 
+async function expectSquareCloseControl(close: Locator) {
+  await expect(close).toBeVisible();
+  const geometry = await close.evaluate((element) => {
+    const node = element as HTMLElement;
+    const rect = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    return {
+      width: rect.width,
+      height: rect.height,
+      paddingLeft: Number.parseFloat(style.paddingLeft),
+      paddingRight: Number.parseFloat(style.paddingRight),
+      paddingTop: Number.parseFloat(style.paddingTop),
+      paddingBottom: Number.parseFloat(style.paddingBottom),
+      radius: style.borderRadius,
+    };
+  });
+  expect(Math.abs(geometry.width - geometry.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(geometry.paddingLeft - geometry.paddingRight)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(geometry.paddingTop - geometry.paddingBottom)).toBeLessThanOrEqual(0.5);
+  expect(geometry.radius).toBe('0px');
+}
+
 async function expectCompletionSeal(page: Page) {
   const dialog = page.getByRole('dialog', { name: 'Disimpan' });
   await expect(dialog).toBeVisible({ timeout: EXPECT_TIMEOUT });
@@ -232,7 +290,8 @@ async function expectCompletionSeal(page: Page) {
   await expect(page.getByTestId('post-save-backdrop')).toBeVisible();
   await expect(page.getByTestId('post-save-show-records')).toBeVisible();
   await expect(page.getByTestId('post-save-add-activity')).toBeVisible();
-  await expect(page.getByTestId('post-save-close')).toBeVisible();
+  const close = page.getByTestId('post-save-close');
+  await expectSquareCloseControl(close);
 
   const node = dialog.locator('.ng-completion-seal__node');
   await expect(node).toBeVisible();
@@ -244,6 +303,14 @@ async function expectCompletionSeal(page: Page) {
   expect(Math.abs(nodeGeometry.width - nodeGeometry.height)).toBeLessThanOrEqual(1);
   expect(nodeGeometry.radius).toBe('50%');
   expect(nodeGeometry.background).toBe('rgb(63, 185, 80)');
+
+  const closeInset = await dialog.evaluate((dialogNode) => {
+    const modalRect = (dialogNode as HTMLElement).getBoundingClientRect();
+    const closeNode = dialogNode.querySelector<HTMLElement>('.ng-completion-seal__close')!;
+    const closeRect = closeNode.getBoundingClientRect();
+    return { top: closeRect.top - modalRect.top, right: modalRect.right - closeRect.right };
+  });
+  expect(Math.abs(closeInset.top - closeInset.right)).toBeLessThanOrEqual(1);
 
   const offenders = await page.locator(
     '.ng-post-save, .ng-post-save__actions, .ng-post-save__actions button, .ng-completion-seal__close',
@@ -278,6 +345,9 @@ async function expectCompletionSeal(page: Page) {
 async function expectTopmostDialog(page: Page) {
   const dialog = page.getByRole('dialog', { name: 'VO / APK Baharu' });
   await expect(dialog).toBeVisible();
+  const close = dialog.getByRole('button', { name: 'Tutup pendaftaran VO', exact: true });
+  await expectSquareCloseControl(close);
+
   const box = await dialog.boundingBox();
   expect(box).not.toBeNull();
 
@@ -307,7 +377,7 @@ async function expectTopmostDialog(page: Page) {
 }
 
 test.describe('F4.5 operational UI authority browser gate', () => {
-  test('wide desktop preserves labelled navigation, locked states and exact four-fact Tactical Pulse', async ({ page }) => {
+  test('wide desktop preserves navigation, single SUMBER hierarchy, recurrence controls and exact four-fact Tactical Pulse', async ({ page }) => {
     const fixture = await boot(page, 1280, 720);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -324,11 +394,15 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     await openCatat(page, 'desktop');
+    const form = page.locator("form[data-ui-authority='F45']");
+    await expect(form.getByText('SUMBER', { exact: true })).toHaveCount(1);
+    await expect(page.getByText('Boleh pilih MULA + SIAP jika kerja mula dan siap hari ini.', { exact: true })).toBeVisible();
     await expectFourFactDashboard(page);
     await expectOneSpineAxis(page);
     await expectNoHorizontalOverflow(page);
 
     await page.locator('.mobile-entry-task-row').first().click();
+    await expect(form.getByText('SUMBER', { exact: true })).toHaveCount(1);
     await expect(page.locator("[data-spine-state='complete']")).toHaveCount(2);
 
     const completedNodeColors = await page.locator("[data-spine-state='complete']").evaluateAll((nodes) =>
@@ -353,7 +427,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     fixture.assertNoUnexpectedApiCalls();
   });
 
-  test('half-window keeps the same four facts on one row, one Spine and topmost VO dialog', async ({ page }) => {
+  test('half-window keeps the same four facts on one row, one Spine and balanced topmost VO dialog', async ({ page }) => {
     const fixture = await boot(page, 960, 900);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -382,7 +456,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     fixture.assertNoUnexpectedApiCalls();
   });
 
-  test('phone uses two-by-two dashboard, semantic Spine through SIMPAN and dismissible no-scroll Completion Seal', async ({ page }) => {
+  test('phone uses two-by-two dashboard, semantic Spine through SIMPAN and deterministic Completion Seal dismissal receipt', async ({ page }) => {
     const fixture = await boot(page, 390, 844);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -419,13 +493,31 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     const saveStep = form.locator(':scope > .ng-entry-step[data-entry-step="save"]');
     await expect(saveStep).toHaveCount(1);
     await expect(saveStep).toHaveAttribute('data-spine-state', 'complete');
-    await expect(saveStep.getByRole('button', { name: 'Catatan telah disimpan', exact: true })).toBeDisabled();
+    await expect(saveStep.locator('.ng-save-complete-marker')).toHaveText('Disimpan');
 
     await page.getByTestId('post-save-close').click();
     await expect(page.getByTestId('post-save-confirmation')).toHaveCount(0);
     await expect(page.getByTestId('post-save-backdrop')).toHaveCount(0);
     await expect(saveStep).toHaveAttribute('data-spine-state', 'complete');
-    await expect(saveStep.getByRole('button', { name: 'Catatan telah disimpan', exact: true })).toBeDisabled();
+
+    const receipt = page.getByTestId('post-save-receipt');
+    await expect(receipt).toBeVisible();
+    await expect(receipt).toContainText('Disimpan');
+    await expect(page.getByTestId('post-save-receipt-show-records')).toBeVisible();
+    await expect(page.getByTestId('post-save-receipt-show-records')).toBeEnabled();
+    await expect(page.getByTestId('post-save-receipt-add-activity')).toBeVisible();
+    await expect(page.getByTestId('post-save-receipt-add-activity')).toBeEnabled();
+
+    const disabledCursorOffenders = await form.locator(':disabled').evaluateAll((nodes) => nodes.flatMap((node) => {
+      const element = node as HTMLElement;
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const visible = rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      return visible && ['not-allowed', 'no-drop'].includes(style.cursor)
+        ? [{ tag: element.tagName, cursor: style.cursor, text: element.textContent?.trim().slice(0, 40) ?? '' }]
+        : [];
+    }));
+    expect(disabledCursorOffenders, `Saved receipt left misleading disabled cursors:\n${JSON.stringify(disabledCursorOffenders, null, 2)}`).toEqual([]);
 
     const afterDismissScroll = await page.evaluate(() => ({
       windowY: window.scrollY,
@@ -437,6 +529,11 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await expectOneSpineAxis(page);
     await expectSharpOperationalGeometry(page);
     await expectNoHorizontalOverflow(page);
+
+    await page.getByTestId('post-save-receipt-add-activity').click();
+    await expect(page.getByTestId('post-save-receipt')).toHaveCount(0);
+    await expect(form).toHaveAttribute('data-save-state', 'editing');
+    await expect(form.locator(':scope > .ng-entry-step[data-entry-step="source"]')).toHaveAttribute('data-spine-state', 'current');
 
     fixture.assertNoUnexpectedApiCalls();
   });
