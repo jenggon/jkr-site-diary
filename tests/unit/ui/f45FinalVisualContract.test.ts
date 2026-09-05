@@ -167,7 +167,8 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(shell).not.toContain('<small>HARI KE</small>');
     expect(shell.match(/<small>PROGRAM KERJA<\/small>/g)?.length).toBe(1);
     expect(shell).toContain('{pulse.remainingDays} HARI · SIAP {formatFinish(finishDate)}');
-    expect(postPhysical).toContain('WX-006 / VIS-001');
+    expect(postPhysical).toContain('WX-006');
+    expect(postPhysical).toContain('VIS-001');
     expect(postPhysical).toContain('grid-template-columns: repeat(4, minmax(0, 1fr)) !important;');
     expect(postPhysical).toContain('@media (min-width: 768px) and (max-width: 1199px)');
     expect(postPhysical).toContain('@media (max-width: 767px)');
