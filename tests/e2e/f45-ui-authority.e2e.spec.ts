@@ -5,7 +5,7 @@ const APP_URL = '/site-diary';
 const EXPECT_TIMEOUT = 20_000;
 const SPINE_STEPS = ['source', 'daily', 'site', 'weather', 'workforce', 'notes', 'save'] as const;
 const SPINE_STATES = new Set(['complete', 'current', 'upcoming']);
-const CORE_PULSES = ['programme', 'remaining', 'day', 'now'] as const;
+const DASHBOARD_PULSES = ['programme', 'remaining', 'now', 'forecast'] as const;
 
 test.use({ timezoneId: 'Asia/Kuala_Lumpur' });
 
@@ -27,22 +27,26 @@ async function openCatat(page: Page, nav: 'desktop' | 'mobile'): Promise<Locator
   return navigation;
 }
 
-async function expectCoreHeader(page: Page) {
-  for (const pulse of CORE_PULSES) {
-    await expect(page.locator(`.ng-project-pulse--f45 [data-pulse='${pulse}']`)).toBeVisible({
-      timeout: EXPECT_TIMEOUT,
-    });
+async function expectFourFactDashboard(page: Page) {
+  const pulse = page.locator('.ng-project-pulse--f45');
+  await expect(pulse).toHaveAttribute('data-dashboard-facts', '4');
+
+  for (const fact of DASHBOARD_PULSES) {
+    await expect(pulse.locator(`[data-pulse='${fact}']`)).toBeVisible({ timeout: EXPECT_TIMEOUT });
   }
+  await expect(pulse.locator('[data-pulse]')).toHaveCount(4);
+  await expect(pulse.locator("[data-pulse='day']")).toHaveCount(0);
+  await expect(pulse.locator("[data-pulse='programme'] small")).toHaveText('PROGRAM KERJA');
+  await expect(pulse.locator("[data-pulse='remaining'] small")).toHaveText('TINGGAL');
+  await expect(pulse.locator("[data-pulse='remaining'] strong")).toContainText('HARI · SIAP');
+  await expect(pulse.locator("[data-pulse='now'] small")).toHaveText('SEMASA');
+  await expect(pulse.locator("[data-pulse='forecast'] small")).toHaveText('RAMALAN CUACA');
 
-  const coreFacts = page.locator(CORE_PULSES.map((pulse) =>
-    `.ng-project-pulse--f45 [data-pulse='${pulse}']`,
-  ).join(','));
-  await expect(coreFacts).toHaveCount(CORE_PULSES.length);
-
-  const readabilityViolations = await coreFacts.evaluateAll((nodes) => nodes.flatMap((node) => {
+  const facts = pulse.locator('[data-pulse]');
+  const readabilityViolations = await facts.evaluateAll((nodes) => nodes.flatMap((node) => {
     const item = node as HTMLElement;
     const itemRect = item.getBoundingClientRect();
-    const visibleText = Array.from(item.querySelectorAll('small, strong')).filter((child) => {
+    const visibleText = Array.from(item.querySelectorAll('small, strong, .ng-project-weather__sub')).filter((child) => {
       const element = child as HTMLElement;
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
@@ -81,31 +85,38 @@ async function expectCoreHeader(page: Page) {
   }));
   expect(
     readabilityViolations,
-    `Core header facts are clipped, ellipsized or unreadable:\n${JSON.stringify(readabilityViolations, null, 2)}`,
+    `Dashboard facts are clipped, ellipsized or unreadable:\n${JSON.stringify(readabilityViolations, null, 2)}`,
   ).toEqual([]);
 
-  const forecast = page.locator('.ng-project-pulse--f45 .ng-project-weather');
-  await expect(forecast).toBeVisible({ timeout: EXPECT_TIMEOUT });
+  const forecast = pulse.locator("[data-pulse='forecast']");
   await expect(forecast).toHaveAttribute('data-weather-state', /^(loading|unavailable|rain|dry)$/);
 
-  const geometry = await page.locator('.ng-project-pulse--f45').evaluate((pulse) => {
-    const core = ['programme', 'remaining', 'day', 'now'].map((key) =>
-      pulse.querySelector<HTMLElement>(`[data-pulse="${key}"]`)!.getBoundingClientRect(),
-    );
-    const weather = pulse.querySelector<HTMLElement>('.ng-project-weather')!.getBoundingClientRect();
-    return {
-      coreRight: Math.max(...core.map((rect) => rect.right)),
-      coreBottom: Math.max(...core.map((rect) => rect.bottom)),
-      weather: { left: weather.left, top: weather.top },
-    };
-  });
+  const rects = await facts.evaluateAll((nodes) => nodes.map((node) => {
+    const rect = node.getBoundingClientRect();
+    return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
+  }));
+  expect(rects).toHaveLength(4);
 
   const viewportWidth = page.viewportSize()?.width ?? 0;
-  if (viewportWidth >= 1200) {
-    expect(geometry.weather.left).toBeGreaterThanOrEqual(geometry.coreRight - 1);
+  if (viewportWidth >= 768) {
+    expect(Math.max(...rects.map((rect) => rect.top)) - Math.min(...rects.map((rect) => rect.top))).toBeLessThanOrEqual(1);
+    for (let index = 1; index < rects.length; index += 1) {
+      expect(rects[index]!.left).toBeGreaterThanOrEqual(rects[index - 1]!.right - 1);
+    }
   } else {
-    expect(geometry.weather.top).toBeGreaterThanOrEqual(geometry.coreBottom - 1);
+    expect(Math.abs(rects[0]!.top - rects[1]!.top)).toBeLessThanOrEqual(1);
+    expect(Math.abs(rects[2]!.top - rects[3]!.top)).toBeLessThanOrEqual(1);
+    expect(rects[2]!.top).toBeGreaterThanOrEqual(rects[0]!.bottom - 1);
+    expect(rects[1]!.left).toBeGreaterThanOrEqual(rects[0]!.right - 1);
+    expect(rects[3]!.left).toBeGreaterThanOrEqual(rects[2]!.right - 1);
   }
+
+  const forecastPresentation = await forecast.evaluate((node) => {
+    const style = getComputedStyle(node as HTMLElement);
+    return { boxShadow: style.boxShadow, backgroundColor: style.backgroundColor };
+  });
+  expect(forecastPresentation.boxShadow).toBe('none');
+  expect(forecastPresentation.backgroundColor).toBe('rgba(0, 0, 0, 0)');
 }
 
 async function expectOneSpineAxis(page: Page) {
@@ -194,7 +205,6 @@ async function expectSharpOperationalGeometry(page: Page) {
     "[data-workspace-nav='desktop'] button",
     "[data-workspace-nav='mobile'] button",
     ".ng-project-pulse--f45 [data-pulse]",
-    ".ng-project-pulse--f45 .ng-project-weather",
     '.ng-post-save',
     '.ng-post-save__actions',
     '.ng-post-save__actions button',
@@ -214,7 +224,7 @@ async function expectSharpOperationalGeometry(page: Page) {
   expect(offenders, `Rounded operational surfaces remain:\n${JSON.stringify(offenders, null, 2)}`).toEqual([]);
 }
 
-async function expectSharpPostSaveGeometry(page: Page) {
+async function expectCompletionSeal(page: Page) {
   const dialog = page.getByRole('dialog', { name: 'Disimpan' });
   await expect(dialog).toBeVisible({ timeout: EXPECT_TIMEOUT });
   await expect(dialog).toHaveAttribute('aria-modal', 'true');
@@ -222,9 +232,21 @@ async function expectSharpPostSaveGeometry(page: Page) {
   await expect(page.getByTestId('post-save-backdrop')).toBeVisible();
   await expect(page.getByTestId('post-save-show-records')).toBeVisible();
   await expect(page.getByTestId('post-save-add-activity')).toBeVisible();
+  await expect(page.getByTestId('post-save-close')).toBeVisible();
+
+  const node = dialog.locator('.ng-completion-seal__node');
+  await expect(node).toBeVisible();
+  const nodeGeometry = await node.evaluate((element) => {
+    const rect = (element as HTMLElement).getBoundingClientRect();
+    const style = getComputedStyle(element as HTMLElement);
+    return { width: rect.width, height: rect.height, radius: style.borderRadius, background: style.backgroundColor };
+  });
+  expect(Math.abs(nodeGeometry.width - nodeGeometry.height)).toBeLessThanOrEqual(1);
+  expect(nodeGeometry.radius).toBe('50%');
+  expect(nodeGeometry.background).toBe('rgb(63, 185, 80)');
 
   const offenders = await page.locator(
-    '.ng-post-save, .ng-post-save__actions, .ng-post-save__actions button',
+    '.ng-post-save, .ng-post-save__actions, .ng-post-save__actions button, .ng-completion-seal__close',
   ).evaluateAll((nodes) => nodes.flatMap((node) => {
     const element = node as HTMLElement;
     const style = getComputedStyle(element);
@@ -234,7 +256,7 @@ async function expectSharpPostSaveGeometry(page: Page) {
       ? [{ tag: element.tagName, className: element.className, radius: style.borderRadius }]
       : [];
   }));
-  expect(offenders, `Post-save geometry is not sharp:\n${JSON.stringify(offenders, null, 2)}`).toEqual([]);
+  expect(offenders, `Completion Seal geometry is not sharp:\n${JSON.stringify(offenders, null, 2)}`).toEqual([]);
 
   const box = await dialog.boundingBox();
   const viewport = page.viewportSize();
@@ -285,7 +307,7 @@ async function expectTopmostDialog(page: Page) {
 }
 
 test.describe('F4.5 operational UI authority browser gate', () => {
-  test('wide desktop preserves labelled navigation, locked states and Tactical Pulse geometry', async ({ page }) => {
+  test('wide desktop preserves labelled navigation, locked states and exact four-fact Tactical Pulse', async ({ page }) => {
     const fixture = await boot(page, 1280, 720);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -302,7 +324,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     await openCatat(page, 'desktop');
-    await expectCoreHeader(page);
+    await expectFourFactDashboard(page);
     await expectOneSpineAxis(page);
     await expectNoHorizontalOverflow(page);
 
@@ -323,13 +345,15 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await expect(page.locator('[data-testid="work-time-summary"]')).toContainText('08:00 → 17:00');
 
     await page.getByRole('button', { name: 'SIAP', exact: true }).click();
-    await expect(page.locator('[data-testid="same-day-start-complete"]')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'MULA', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: 'SIAP', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-testid="same-day-start-complete"]')).toHaveCount(0);
 
     await expectSharpOperationalGeometry(page);
     fixture.assertNoUnexpectedApiCalls();
   });
 
-  test('half-window keeps four core facts dominant, weather secondary, one Spine and topmost VO dialog', async ({ page }) => {
+  test('half-window keeps the same four facts on one row, one Spine and topmost VO dialog', async ({ page }) => {
     const fixture = await boot(page, 960, 900);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -346,7 +370,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
 
     await openCatat(page, 'desktop');
     await expect(page.getByRole('button', { name: 'Tutup navigasi', exact: true })).toBeHidden();
-    await expectCoreHeader(page);
+    await expectFourFactDashboard(page);
     await expectOneSpineAxis(page);
     await expectNoHorizontalOverflow(page);
     await expectSharpOperationalGeometry(page);
@@ -358,7 +382,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     fixture.assertNoUnexpectedApiCalls();
   });
 
-  test('phone keeps weather below core pulse, semantic Spine through SIMPAN and focused no-scroll completion', async ({ page }) => {
+  test('phone uses two-by-two dashboard, semantic Spine through SIMPAN and dismissible no-scroll Completion Seal', async ({ page }) => {
     const fixture = await boot(page, 390, 844);
 
     const desktop = page.locator("[data-workspace-nav='desktop']");
@@ -367,7 +391,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await expect(desktop).toBeHidden();
 
     await openCatat(page, 'mobile');
-    await expectCoreHeader(page);
+    await expectFourFactDashboard(page);
     await expectOneSpineAxis(page);
     await expectNoHorizontalOverflow(page);
     await expectSharpOperationalGeometry(page);
@@ -383,7 +407,7 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     }));
 
     await form.getByRole('button', { name: 'Simpan', exact: true }).click();
-    await expectSharpPostSaveGeometry(page);
+    await expectCompletionSeal(page);
 
     const afterSaveScroll = await page.evaluate(() => ({
       windowY: window.scrollY,
@@ -396,6 +420,19 @@ test.describe('F4.5 operational UI authority browser gate', () => {
     await expect(saveStep).toHaveCount(1);
     await expect(saveStep).toHaveAttribute('data-spine-state', 'complete');
     await expect(saveStep.getByRole('button', { name: 'Catatan telah disimpan', exact: true })).toBeDisabled();
+
+    await page.getByTestId('post-save-close').click();
+    await expect(page.getByTestId('post-save-confirmation')).toHaveCount(0);
+    await expect(page.getByTestId('post-save-backdrop')).toHaveCount(0);
+    await expect(saveStep).toHaveAttribute('data-spine-state', 'complete');
+    await expect(saveStep.getByRole('button', { name: 'Catatan telah disimpan', exact: true })).toBeDisabled();
+
+    const afterDismissScroll = await page.evaluate(() => ({
+      windowY: window.scrollY,
+      workspaceY: document.querySelector<HTMLElement>('.ng-workspace-content')?.scrollTop ?? 0,
+    }));
+    expect(Math.abs(afterDismissScroll.windowY - beforeSaveScroll.windowY)).toBeLessThanOrEqual(1);
+    expect(Math.abs(afterDismissScroll.workspaceY - beforeSaveScroll.workspaceY)).toBeLessThanOrEqual(1);
 
     await expectOneSpineAxis(page);
     await expectSharpOperationalGeometry(page);
