@@ -53,10 +53,10 @@ describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentatio
     expect(harmony).toContain('.ng-workforce__overall-icon');
   });
 
-  it('keeps four core project facts while the final F4.5 authority demotes forecast to a micro-signal', () => {
+  it('keeps four core project facts while the post-physical F4.5 authority makes forecast a stable secondary signal', () => {
     const shell = read('src/app/site-diary/DailyEntryShell.tsx');
     const layout = read('src/app/layout.tsx');
-    const authority = read('src/app/ngamsoi-f45-authority.css');
+    const postPhysical = read('src/app/ngamsoi-f45-post-physical.css');
 
     expect(shell).toContain('ng-project-pulse');
     expect(shell).toContain('<small>PROGRAM KERJA</small>');
@@ -70,11 +70,13 @@ describe('N05R.4 NGAMSOI harmony contract with N05R.5 superseding instrumentatio
     expect(shell).toContain('formatClock(now)');
     expect(shell).not.toContain('<style jsx global>');
 
-    expect(layout.indexOf('ngamsoi-f45-authority.css')).toBeGreaterThan(layout.indexOf('ngamsoi-f45-seal.css'));
-    expect(authority).toContain('grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.58fr) !important;');
-    expect(authority).toContain('grid-template-columns: .78fr .72fr .72fr 1.58fr !important;');
-    expect(authority).toContain(".ng-project-weather[data-weather-state='loading']");
-    expect(authority).toContain(".ng-project-weather[data-weather-state='unavailable']");
-    expect(authority).toContain('display: none !important;');
+    expect(layout.indexOf('ngamsoi-f45-post-physical.css')).toBeGreaterThan(layout.indexOf('ngamsoi-n07-navigation.css'));
+    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(13.5rem, 1.62fr) minmax(9rem, .82fr) !important;");
+    expect(postPhysical).toContain("grid-template-columns: .78fr .72fr .72fr minmax(12rem, 1.58fr) !important;");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='loading']");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='unavailable']");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='dry']");
+    expect(postPhysical).toContain(".ng-project-weather[data-weather-state='rain']");
+    expect(postPhysical).not.toMatch(/\.ng-project-weather[^\{]*\{[^\}]*display:\s*none\s*!important/s);
   });
 });
