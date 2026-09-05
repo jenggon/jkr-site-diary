@@ -78,7 +78,7 @@ export default function ProjectWeatherPulse() {
   if (state === 'loading') {
     return (
       <span className="ng-project-pulse__item ng-project-weather" data-weather-state="loading" aria-label="Ramalan cuaca sedang dimuatkan">
-        <small>RAMALAN</small>
+        <small>RAMALAN CUACA</small>
         <strong>Memuat</strong>
       </span>
     );
@@ -87,7 +87,7 @@ export default function ProjectWeatherPulse() {
   if (state === 'unavailable' || !snapshot) {
     return (
       <span className="ng-project-pulse__item ng-project-weather" data-weather-state="unavailable" aria-label="Ramalan cuaca tidak tersedia">
-        <small>RAMALAN</small>
+        <small>RAMALAN CUACA</small>
         <strong>Tiada data</strong>
       </span>
     );
@@ -107,7 +107,7 @@ export default function ProjectWeatherPulse() {
         data-weather-state="rain"
         aria-label={`Ramalan hujan${probabilityLabel}, ${detail}. Visual Crossing, dikemas kini ${updatedAt}.`}
       >
-        <small>RAMALAN</small>
+        <small>RAMALAN CUACA</small>
         <strong>HUJAN{probabilityText}</strong>
         <span className="ng-project-weather__sub">{detail}</span>
       </span>
@@ -122,7 +122,7 @@ export default function ProjectWeatherPulse() {
       data-weather-state="dry"
       aria-label={`Ramalan kering${temperatureLabel}. Tiada hujan dekat. Visual Crossing, dikemas kini ${updatedAt}.`}
     >
-      <small>RAMALAN</small>
+      <small>RAMALAN CUACA</small>
       <strong>KERING{temperatureText}</strong>
       <span className="ng-project-weather__sub">Tiada hujan dekat</span>
     </span>
