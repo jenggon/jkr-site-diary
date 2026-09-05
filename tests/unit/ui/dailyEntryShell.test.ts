@@ -83,17 +83,21 @@ describe('F2.1-A DailyEntryShell & Programme Context Authority', () => {
     expect(appIcon).toContain('aria-label="NGAMSOI mark"');
   });
 
-  it('locks header hierarchy to project identity plus the five F4.5 operational blocks', () => {
+  it('locks header hierarchy to project identity plus exactly four R2 operational facts', () => {
     const shellSource = read('src/app/site-diary/DailyEntryShell.tsx');
+    const forecastSource = read('src/app/site-diary/ProjectWeatherPulse.tsx');
     expect(shellSource).toContain('programmeShortName');
     expect(shellSource).toContain('ng-project-short-name');
     expect(shellSource).toContain('ng-project-title');
+    expect(shellSource).toContain('data-dashboard-facts="4"');
     expect(shellSource).toContain('<small>PROGRAM KERJA</small>');
     expect(shellSource).toContain('<small>TINGGAL</small>');
-    expect(shellSource).toContain('<small>HARI KE</small>');
+    expect(shellSource).not.toContain('<small>HARI KE</small>');
     expect(shellSource).toContain('<small>SEMASA</small>');
     expect(shellSource).toContain('<ProjectWeatherPulse />');
+    expect(forecastSource).toContain('<small>RAMALAN CUACA</small>');
     expect(shellSource).toContain('revisionLabel');
+    expect(shellSource).toContain('HARI · SIAP');
     expect(shellSource).toContain('formatDeviceDate(now)');
     expect(shellSource).toContain('formatClock(now)');
     expect(shellSource).toContain('ng-profile-trigger');
