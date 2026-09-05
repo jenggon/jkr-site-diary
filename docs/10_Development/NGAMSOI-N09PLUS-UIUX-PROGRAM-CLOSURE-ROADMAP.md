@@ -1,0 +1,317 @@
+# NGAMSOI N09+ — UI/UX PROGRAM CLOSURE ROADMAP
+
+**Project:** JKR Site Diary Digital Platform  
+**Repository:** `jenggon/jkr-site-diary`  
+**Status:** PRODUCT OWNER LOCKED  
+**Authority:** Product Owner + HQ / Chief Architect  
+**Captured:** 2026-09-06  
+**Starting seal commit:** `1ec8b467716f29d5111b553d20488adf658096bf`  
+**Immutable accepted F4.5 product datum:** `be5233fce209029cac97e080e8312113c94c4e08`
+
+## 1. Purpose
+
+This document is the durable roadmap for closing the remaining NGAMSOI UI/UX programme after F4.5 Round 3 was physically accepted and sealed.
+
+It prevents the team, HQ and interchangeable agentic helpers from treating the F4.5 CATAT seal as the end of the entire application UI programme or prematurely integrating the current branch into `develop`.
+
+The accepted F4.5 product datum remains immutable evidence. Downstream UI work must preserve it unless an explicit Product Owner / Chief Architect decision formally reopens a locked requirement.
+
+## 2. Current programme position
+
+The historical mission chain is treated as follows:
+
+| Mission | Current adjudication |
+| --- | --- |
+| N01 — NGAMSOI brand foundation | COMPLETE / inherited |
+| N02 — Mobile shell + selected-source primitive | COMPLETE / inherited |
+| N03 — Field/input language | COMPLETE / inherited |
+| N04 — Workforce rebuild | COMPLETE / inherited |
+| N05 / N05R — Spine grammar and integrated visual reset | COMPLETE / superseded into later authority |
+| N06 — Completion ritual | COMPLETE / inherited |
+| N07 — Homecoming + navigation | COMPLETE / inherited |
+| N08 — Mobile New Entry final visual gate | COMPLETE / superseded and strengthened by F4.5 |
+| F4.5 CATAT / New Entry authority | PHYSICALLY ACCEPTED / SEALED |
+| N09+ — Records -> Approval -> application-wide propagation | ACTIVE PROGRAMME CLOSURE |
+
+No earlier N01-N08 mission is to be resurrected as a separate redesign programme. Later work may only regression-protect or deliberately supersede it through governance.
+
+## 3. Locked sequence
+
+The remaining UI/UX programme executes in this order:
+
+```text
+N09A — REKOD current-state propagation and acceptance
+  -> N09B — SEMAK / Approval visual propagation
+  -> N09C — Cross-surface responsive / accessibility / onboarding / print-handoff closure
+  -> N09D — NGAMSOI application final visual gate
+  -> UI/UX PROGRAM SEAL
+  -> stacked PR reconciliation / close-as-superseded where appropriate
+  -> ONE canonical integration PR into develop
+```
+
+The order is intentional. A later stage must not be used to hide, bypass or defer a red earlier stage.
+
+## 4. N09A — REKOD current-state propagation and acceptance
+
+### Existing state
+
+A historical N09 Records propagation implementation and runtime gate already exist. That evidence is useful but is not sufficient to claim current-state Product Owner acceptance because the authoritative lineage moved substantially after the original N09 gate.
+
+### Scope
+
+Review REKOD on the current sealed lineage, including where applicable:
+
+- current vs historical Programme Revision clarity;
+- filters and request behaviour;
+- record rows / ledger scanability;
+- record detail;
+- workforce readback;
+- audit timeline presentation;
+- loading, error and empty states;
+- mobile, half-window and desktop presentation;
+- navigation into and out of REKOD.
+
+### Protected semantics
+
+Do not change merely to satisfy visual acceptance:
+
+- canonical Site Diary identity;
+- read-only superseded records;
+- exact edit authority;
+- append-only audit/history semantics;
+- Programme / Revision authority;
+- REKOD #7 daily aggregation / daily approval redesign;
+- print semantics.
+
+### Exit gate
+
+N09A is complete only after:
+
+1. governance preflight;
+2. agentic recon where non-trivial;
+3. bounded implementation/remediation if needed;
+4. exact-head automated proof, including real-browser evidence where applicable;
+5. authoritative reprove;
+6. Product Owner physical acceptance on the current lineage.
+
+Old N09 green CI alone does not satisfy N09A physical acceptance.
+
+## 5. N09B — SEMAK / Approval visual propagation
+
+### Scope
+
+Propagate the accepted NGAMSOI visual grammar to the existing approval/review workspace (`SEMAK` / backend workspace `APPROVALS`).
+
+The visual mission includes, where applicable:
+
+- approval queue hierarchy and scanability;
+- record/revision context;
+- reviewer detail surface;
+- decision/comment controls;
+- concurrency / terminal feedback presentation;
+- loading, error and empty states;
+- capability-aware navigation;
+- mobile, half-window and desktop presentation.
+
+### Hard boundary
+
+This is visual/interaction propagation, not approval-domain redesign.
+
+Preserve:
+
+- existing approval semantics;
+- RBAC/RLS and authentication/security;
+- separation of duty;
+- status transition rules;
+- comment rules;
+- concurrency rules;
+- database/migration ownership unless separately authorised;
+- audit/history integrity.
+
+Any finding that requires changing those semantics is an escalation, not a UI fix.
+
+### Exit gate
+
+N09B requires exact-head proof, authoritative reprove and Product Owner physical acceptance before N09C may be considered complete.
+
+## 6. N09C — Cross-surface application closure
+
+N09C is not permission to redesign already accepted CATAT.
+
+Its purpose is to prove that the application reads as one NGAMSOI product across the four canonical workspaces:
+
+- `Baharu` / CATAT;
+- `Aktiviti`;
+- `Rekod`;
+- `Semak`.
+
+### Required viewport coverage
+
+- wide desktop;
+- half-window / medium desktop-tablet width;
+- phone.
+
+### Required closure checks
+
+- shared shell, header and navigation grammar;
+- selected-state consistency;
+- typography and field-language consistency;
+- sharp-sleek geometry consistency;
+- no horizontal page overflow;
+- accessibility / keyboard / focus behaviour appropriate to the surface;
+- loading, empty, error and completed states belong to the same visual family;
+- no legacy workspace appears to come from another application;
+- accepted CATAT/F4.5 behaviour remains regression-safe;
+- first-use/onboarding guidance, where required by NGAMSOI UI Grammar, teaches the same normal-runtime labels, controls, colours and metaphors rather than tutorial-only concepts;
+- print handoff / entry into official output remains visually coherent while print content, aggregation and official print semantics remain protected and unchanged.
+
+### Exit gate
+
+N09C completes only when cross-surface runtime evidence is green and the Product Owner has no unresolved visual/interaction blocker across the required viewports.
+
+## 7. N09D — NGAMSOI application final visual gate
+
+N09D is the integrated application acceptance gate, not another redesign sprint.
+
+It shall prove the already-accepted programme as one product from normal user navigation.
+
+Minimum evidence:
+
+- production-runtime browser execution, not source-string substitution;
+- wide, half-window and phone;
+- `Baharu -> Aktiviti -> Rekod -> Semak` navigation reachability according to capability;
+- zero horizontal page overflow;
+- critical geometry / computed-style checks where deterministic;
+- acceptance-state recurrence protection from earlier missions;
+- zero Playwright retries;
+- full `pnpm run verify`;
+- exact candidate SHA recorded;
+- separate Product Owner physical acceptance.
+
+`CI GREEN` is not equivalent to `SEALED`.
+
+N09D becomes SEALED only after Product Owner physical acceptance of the exact proven candidate.
+
+## 8. Agentic operating model — shifted left
+
+Codex and Antigravity are an interchangeable engineering-helper pool. They are not mandatory ceremonial post-green auditors.
+
+Default authority:
+
+```text
+Agentic helper -> observe / investigate / challenge
+Klopp / HQ      -> understand context / adjudicate / implement / repair
+CI              -> prove
+Product Owner   -> physical acceptance
+```
+
+For non-trivial N09+ stages:
+
+```text
+LOCK
+-> AGENTIC RECON
+-> KLOPP IMPLEMENT
+-> AGENTIC PRE-PROVE REVIEW when useful for multi-file / state / responsive / legacy-CSS risk
+-> PROVE
+-> FREEZE SHA
+-> PROMOTE EXACT SHA
+-> AUTHORITATIVE REPROVE
+-> PHYSICAL ACCEPT
+-> SEAL
+```
+
+One agent is the default. A second independent agent is used only for high-risk or unresolved ambiguity. Agentic output never has authority to weaken a Product Owner lock or make CI green by bypass.
+
+## 9. Proving efficiency metric
+
+The programme tracks how many official CI reds occur before the first green candidate for each closure stage.
+
+Interpretation:
+
+- `0` official CI reds before green: excellent;
+- `1`: acceptable but classify the miss;
+- `2`: process miss — review recon/preflight coverage before continuing;
+- `3+`: stop repeated proving and improve the workflow before another attempt.
+
+The metric is a process-quality signal, not permission to hide or avoid legitimate red evidence.
+
+Local/agentic preflight failures that prevent a defective candidate from reaching official proving are considered successful shift-left discovery, provided no evidence is weakened.
+
+## 10. No-green-by-bypass
+
+The existing repository rule remains mandatory. Do not obtain green status by:
+
+- force-clicking required interactions;
+- skipping/deleting locked assertions;
+- weakening geometry, overflow, identity, authority or state thresholds;
+- hiding an overlay that is part of the real interaction;
+- arbitrary timeout inflation;
+- retries that mask deterministic failures;
+- internal URLs/state manipulation that bypass required user navigation;
+- replacing required browser evidence with source-text checks;
+- changing production behaviour only to satisfy a faulty harness.
+
+Repair a faulty harness only with equal-or-stronger evidence.
+
+## 11. Protected boundaries for the N09+ closure programme
+
+Unless separately approved through architecture/business governance, the UI/UX closure programme must not alter:
+
+- NGAMSOI canonical mark geometry;
+- Programme / Revision authority and no-cross-revision policy;
+- Activity and Site Diary domain ownership;
+- canonical Site Diary identity;
+- immutable historical/audit rules;
+- database/migrations solely for cosmetic convenience;
+- RLS/RBAC/authentication/security;
+- approval business semantics;
+- REKOD #7 daily aggregation / daily approval redesign;
+- official print aggregation/content semantics;
+- official weather/domain authority;
+- accepted F4.5 CATAT work-state semantics including MULA_DAN_SIAP.
+
+## 12. Develop integration is explicitly blocked until programme seal
+
+Do **not** merge the current F4.5/N09+ lineage into `develop` merely because F4.5 CATAT is sealed.
+
+Integration is authorised only after:
+
+1. N09A PASS;
+2. N09B PASS;
+3. N09C PASS;
+4. N09D exact-head proof PASS;
+5. Product Owner final application physical acceptance PASS;
+6. UI/UX programme seal recorded;
+7. stacked historical PRs reconciled so their disposition is clear.
+
+Then create one canonical PR into `develop`, preserving traceable ancestry of the accepted/sealed lineage. Do not independently merge the old stacked UI PRs merely because they remain open.
+
+`main` remains outside this closure roadmap and continues to require the separate release workflow.
+
+## 13. Stop / escalation conditions
+
+Stop before implementation if:
+
+- governance preflight or lockset verification mismatches;
+- work would require changing a protected semantic boundary;
+- the current candidate is not descended from the accepted F4.5 seal without an explicitly documented reason;
+- a later stage is being used to bypass an unresolved earlier stage;
+- a proposed change reopens a sealed F4.5 behaviour without explicit Product Owner authority;
+- implementation and evidence disagree on what the requirement means.
+
+## 14. Programme completion definition
+
+The NGAMSOI UI/UX programme is complete only when:
+
+```text
+N09A PASS
++ N09B PASS
++ N09C PASS
++ N09D PASS
++ Product Owner final physical acceptance
++ UI/UX PROGRAM SEAL
++ stacked PR disposition recorded
++ one canonical integration PR ready for develop
+```
+
+Until then, the programme is ACTIVE and `develop` integration remains blocked.
