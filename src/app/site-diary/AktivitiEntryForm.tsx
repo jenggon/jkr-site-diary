@@ -364,14 +364,13 @@ export default function AktivitiEntryForm({
             })}
           </div>
         </div>
-        {dailyStatus === 'MULA_DAN_SIAP' && <div className="ng-entry-note ng-entry-note--valid">Mula + Siap</div>}
         {canonicalActualStart ? (
           <div className="ng-entry-meta">Mula sebenar · <strong>{canonicalActualStart}</strong></div>
         ) : actualStartRequired ? (
           <div className="ng-entry-field ng-entry-field--compact">
             <label>Mula sebenar</label>
             <input type="date" value={knownStartDate} max={activityDate} onChange={(event) => setKnownStartDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} />
-            <small>Bukan tarikh MSP.</small>
+            <small>Tarikh sebenar kerja mula di tapak.</small>
           </div>
         ) : null}
       </div>
@@ -380,7 +379,7 @@ export default function AktivitiEntryForm({
         <div className="ng-entry-heading">TAPAK</div>
         <div className="ng-entry-grid ng-entry-grid--site">
           <div className="ng-entry-field"><label>Lokasi</label><input value={location} onChange={(event) => setLocation(event.target.value)} disabled={isSubmitting || Boolean(successId)} /></div>
-          <div className="ng-entry-field"><label>Skop</label><select value={contractorScope} onChange={(event) => setContractorScope(event.target.value as 'CONTRACTOR' | 'NSC')} disabled={isSubmitting || Boolean(successId)}><option value="CONTRACTOR">Utama</option><option value="NSC">NSC</option></select></div>
+          <div className="ng-entry-field"><label>PELAKSANA</label><select value={contractorScope} onChange={(event) => setContractorScope(event.target.value as 'CONTRACTOR' | 'NSC')} disabled={isSubmitting || Boolean(successId)}><option value="CONTRACTOR">Kontraktor Utama</option><option value="NSC">NSC</option></select></div>
         </div>
         <div className="ng-time-summary" data-testid="work-time-summary">
           <span><small>MASA</small><strong>{workStartTime} → {workEndTime}</strong></span>
