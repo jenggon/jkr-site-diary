@@ -42,7 +42,7 @@ export default function ProjectWeatherPulse() {
     let timer: number | null = null;
 
     const load = async () => {
-      if (active && !snapshot) setState('loading');
+      if (active) setState('loading');
       try {
         const response = await fetch('/api/weather/site?mode=forecast', {
           cache: 'no-store',
@@ -68,8 +68,6 @@ export default function ProjectWeatherPulse() {
       active = false;
       if (timer !== null) window.clearTimeout(timer);
     };
-    // Snapshot must not restart the polling lifecycle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.access_token]);
 
   const rainProbability = useMemo(
