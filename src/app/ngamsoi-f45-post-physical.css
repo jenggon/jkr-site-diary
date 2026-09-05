@@ -2,8 +2,9 @@
 
 /* ========================================================================== 
  * F4.5 POST-PHYSICAL REMEDIATION OWNER
- * Bounded authority: SPINE-002 / SAVE-003 / HDR-003 / DASH-002 / WX-005 /
- * COPY-001 / EXEC-001 presentation only.
+ * Bounded authority: SPINE-002 / SAVE-003 / SAVE-004 / HDR-003 / DASH-002 /
+ * WX-005 / WX-006 / COPY-002 / EXEC-001 / VIS-001 / SOURCE-001 / DLG-001 /
+ * CI-003 presentation evidence only.
  * The imported consolidated authority remains the baseline for unrelated
  * locked concerns. This file replaces the superseded Round 1 presentation in
  * place; do not add another F4.5 override generation after this entrypoint.
@@ -30,7 +31,7 @@ form[data-ui-authority='F45'][aria-label='Borang Buku Harian Tapak'][data-spine-
   top: calc(var(--ng-spine-node-y) - .38rem) !important;
 }
 
-/* ---------- COPY-001: SUMBER USES THE SHARED SUB-HEADER GRAMMAR ---------- */
+/* ---------- SOURCE-001: ONE OUTER SUMBER HIERARCHY ---------- */
 form[data-ui-authority='F45'] > .ng-entry-step--source {
   padding: .84rem .96rem !important;
   border: 1px solid var(--ng-f45-rule) !important;
@@ -51,11 +52,36 @@ form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-selected-so
   box-shadow: none !important;
 }
 
-form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-spike-panel > div:first-child > div:first-child {
+/* Retire the legacy internal generated SUMBER title even if old markup reappears. */
+form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-spike-panel > div:first-child h3::before,
+form[data-ui-authority='F45'] > .ng-entry-step--source .mobile-entry-spike-panel > div:first-child h3::after {
+  content: none !important;
   display: none !important;
 }
 
-/* ---------- SAVE-003: COMPLETION SEAL ---------- */
+/* ---------- COPY-002: HARIAN GUIDANCE / FIELD-FIT ---------- */
+.ng-daily-status {
+  display: grid !important;
+  min-width: 0 !important;
+  justify-items: end !important;
+  gap: .28rem !important;
+}
+
+.ng-daily-status__hint {
+  display: block !important;
+  max-width: 21rem !important;
+  color: var(--ng-f45-muted) !important;
+  font-size: .6rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  text-align: right !important;
+}
+
+.ng-entry-field--compact > small {
+  white-space: nowrap !important;
+}
+
+/* ---------- SAVE-003 / SAVE-004: COMPLETION SEAL + SAVED RECEIPT ---------- */
 form[data-ui-authority='F45'] > .ng-post-save-backdrop {
   position: fixed !important;
   inset: 0 !important;
@@ -91,29 +117,55 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   animation: ng-completion-seal-resolve 200ms ease-out both !important;
 }
 
-.ng-completion-seal__close {
-  position: absolute !important;
-  top: .55rem !important;
-  right: .55rem !important;
-  z-index: 2 !important;
+/* DLG-001: one square close-control geometry family. */
+.ng-dialog-close {
   display: grid !important;
   width: 2rem !important;
   height: 2rem !important;
+  min-width: 2rem !important;
+  min-height: 2rem !important;
+  flex: 0 0 2rem !important;
   place-items: center !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
   padding: 0 !important;
   border: 1px solid var(--ng-f45-rule) !important;
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--ng-f45-muted) !important;
   font-size: 1.05rem !important;
+  font-weight: 650 !important;
   line-height: 1 !important;
+  text-align: center !important;
 }
 
-.ng-completion-seal__close:hover,
-.ng-completion-seal__close:focus-visible {
+.ng-dialog-close:hover,
+.ng-dialog-close:focus-visible {
   border-color: var(--ng-current, #ff7a1a) !important;
   color: var(--ng-ivory-100, #f5f5f2) !important;
   outline: none !important;
+}
+
+.ng-completion-seal__close {
+  position: absolute !important;
+  top: .75rem !important;
+  right: .75rem !important;
+  z-index: 2 !important;
+}
+
+form[data-ui-authority='F45'] .ng-vo-dialog__header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: .75rem !important;
+}
+
+form[data-ui-authority='F45'] .ng-vo-dialog__header > div {
+  min-width: 0 !important;
+}
+
+form[data-ui-authority='F45'] .ng-vo-dialog__close.ng-dialog-close {
+  align-self: flex-start !important;
 }
 
 .ng-completion-seal__hero {
@@ -191,11 +243,103 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   background: transparent !important;
 }
 
-.ng-entry-step--saved .ng-save-action {
-  border-color: color-mix(in srgb, var(--ng-f45-success, #3fb950) 58%, var(--ng-f45-rule)) !important;
+.ng-save-complete-marker {
+  display: grid !important;
+  min-height: 2.75rem !important;
+  place-items: center !important;
+  border: 1px solid color-mix(in srgb, var(--ng-f45-success, #3fb950) 58%, var(--ng-f45-rule)) !important;
   background: color-mix(in srgb, var(--ng-f45-success, #3fb950) 9%, var(--ng-graphite-950, #090a0c)) !important;
   color: color-mix(in srgb, var(--ng-f45-success, #3fb950) 88%, white) !important;
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--ng-f45-success, #3fb950) 32%, transparent) !important;
+  font-size: .74rem !important;
+  font-weight: 760 !important;
+}
+
+.ng-saved-receipt {
+  overflow: hidden !important;
+  border: 1px solid color-mix(in srgb, var(--ng-f45-success, #3fb950) 58%, var(--ng-f45-rule)) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--ng-f45-success, #3fb950) 6%, var(--ng-graphite-950, #090a0c)) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.ng-saved-receipt__status {
+  display: flex !important;
+  align-items: center !important;
+  gap: .72rem !important;
+  min-height: 3.55rem !important;
+  padding: .65rem .8rem !important;
+}
+
+.ng-saved-receipt__node {
+  display: grid !important;
+  width: 1.55rem !important;
+  height: 1.55rem !important;
+  flex: 0 0 1.55rem !important;
+  place-items: center !important;
+  border: 1px solid var(--ng-f45-success, #3fb950) !important;
+  border-radius: 50% !important;
+  background: var(--ng-f45-success, #3fb950) !important;
+  color: var(--ng-graphite-950, #090a0c) !important;
+  font-size: .68rem !important;
+  font-weight: 900 !important;
+}
+
+.ng-saved-receipt__copy {
+  display: grid !important;
+  gap: .08rem !important;
+}
+
+.ng-saved-receipt__eyebrow {
+  color: var(--ng-current, #ff7a1a) !important;
+  font-size: .52rem !important;
+  font-weight: 780 !important;
+  letter-spacing: .11em !important;
+  text-transform: uppercase !important;
+}
+
+.ng-saved-receipt__copy strong {
+  color: var(--ng-ivory-100, #f5f5f2) !important;
+  font-size: .86rem !important;
+  font-weight: 800 !important;
+}
+
+.ng-saved-receipt__actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  border-top: 1px solid var(--ng-f45-rule) !important;
+}
+
+.ng-saved-receipt__actions button {
+  min-height: 2.75rem !important;
+  padding: .5rem .7rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-size: .68rem !important;
+  font-weight: 730 !important;
+}
+
+.ng-saved-receipt__actions button:first-child {
+  color: color-mix(in srgb, var(--ng-f45-success, #3fb950) 88%, white) !important;
+  background: color-mix(in srgb, var(--ng-f45-success, #3fb950) 6%, transparent) !important;
+}
+
+.ng-saved-receipt__actions button + button {
+  border-left: 1px solid var(--ng-f45-rule) !important;
+  color: var(--ng-current, #ff7a1a) !important;
+}
+
+/* Saved input state is immutable but visually subordinate to the explicit receipt. */
+form[data-ui-authority='F45'][data-save-state='saved'] > .ng-entry-step:not([data-entry-step='save']) {
+  opacity: .58 !important;
+}
+
+form[data-ui-authority='F45'][data-save-state='saved'] input:disabled,
+form[data-ui-authority='F45'][data-save-state='saved'] select:disabled,
+form[data-ui-authority='F45'][data-save-state='saved'] textarea:disabled,
+form[data-ui-authority='F45'][data-save-state='saved'] button:disabled {
+  cursor: default !important;
 }
 
 @keyframes ng-completion-seal-resolve {
@@ -203,7 +347,7 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ---------- HDR-003 / DASH-002 / WX-005: EXACT FOUR-FACT TACTICAL PULSE ---------- */
+/* ---------- HDR-003 / DASH-002 / WX-005 / WX-006 / VIS-001 ---------- */
 .ng-project-pulse--f45 {
   position: relative !important;
   display: grid !important;
@@ -212,6 +356,7 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   min-width: 0 !important;
   align-items: stretch !important;
   gap: 0 !important;
+  isolation: isolate !important;
   overflow: hidden !important;
   border: 1px solid var(--ng-f45-rule) !important;
   border-radius: 0 !important;
@@ -219,6 +364,15 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
     linear-gradient(90deg, color-mix(in srgb, var(--ng-current, #ff7a1a) 6%, transparent), transparent 30%),
     var(--ng-graphite-950, #090a0c) !important;
   box-shadow: inset 0 2px 0 color-mix(in srgb, var(--ng-current, #ff7a1a) 68%, transparent) !important;
+}
+
+/* Retire non-semantic legacy progress/accent pseudo-elements from the pulse. */
+.ng-project-pulse--f45::before,
+.ng-project-pulse--f45::after,
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse]::before,
+.ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse]::after {
+  content: none !important;
+  display: none !important;
 }
 
 .ng-project-pulse--f45 > .ng-project-pulse__item[data-pulse] {
@@ -238,8 +392,10 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   overflow: visible !important;
   border: 0 !important;
   border-left: 1px solid var(--ng-f45-rule) !important;
+  border-bottom: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
+  background-image: none !important;
   box-shadow: none !important;
   text-align: left !important;
   pointer-events: none !important;
@@ -275,8 +431,11 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   overflow: visible !important;
 }
 
+.ng-project-pulse--f45 [data-pulse='programme'],
 .ng-project-pulse--f45 [data-pulse='programme'] strong {
   color: var(--ng-ivory-100, #f5f5f2) !important;
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .ng-project-pulse--f45 .ng-project-pulse__sub,
@@ -290,6 +449,8 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
 
 .ng-project-pulse--f45 > .ng-project-weather[data-pulse='forecast'] {
   background: transparent !important;
+  background-image: none !important;
+  border-bottom: 0 !important;
   box-shadow: none !important;
 }
 
@@ -365,6 +526,24 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
     padding: .76rem .86rem !important;
   }
 
+  .ng-entry-row--status {
+    align-items: flex-start !important;
+    gap: .65rem !important;
+  }
+
+  .ng-daily-status {
+    justify-items: stretch !important;
+  }
+
+  .ng-daily-status__hint {
+    max-width: 17rem !important;
+    text-align: left !important;
+  }
+
+  .ng-entry-field--compact > small {
+    white-space: normal !important;
+  }
+
   form[data-ui-authority='F45'] > .ng-post-save-backdrop {
     align-items: center !important;
     padding:
@@ -382,6 +561,10 @@ form[data-ui-authority='F45'] > .ng-post-save-backdrop > .ng-post-save.ng-vo-dia
   .ng-completion-seal__hero {
     grid-template-columns: auto minmax(0, 1fr) !important;
     gap: .72rem !important;
+  }
+
+  .ng-saved-receipt__actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
   }
 }
 
