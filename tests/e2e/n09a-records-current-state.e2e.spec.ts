@@ -89,31 +89,88 @@ function canonicalDetail(historical = false) {
     revision_id: historical ? HISTORY_REVISION_ID : REVISION_ID,
     activity_id: historical ? HISTORY_ACTIVITY_ID : ACTIVITY_ID,
     activity_date: historical ? '2026-07-12' : '2026-09-02',
-    weather: 'ELOK',
+    weather: null,
     notes: historical ? 'Cerucuk disiapkan bagi zon rekod sejarah.' : 'Konkrit rasuk aras bawah diteruskan di Grid 4–8.',
     status: historical ? 'Completed' : 'In Progress',
+    daily_work_status: historical ? 'SIAP' : 'LAKSANA',
     manpower: historical
       ? [{ trade_name: 'Piling Worker', bumi_count: 1, non_bumi_count: 0, foreign_count: 4 }]
       : [
           { trade_name: 'Carpenter (Tukang Kayu)', bumi_count: 4, non_bumi_count: 2, foreign_count: 6 },
           { trade_name: 'Concretor (Tukang Konkrit)', bumi_count: 3, non_bumi_count: 1, foreign_count: 8 },
         ],
-    print_context: {
-      location: historical ? 'Blok Pentadbiran · Grid 1–4' : 'Blok Pentadbiran · Grid 4–8',
-      work_start_time: '08:00',
-      work_end_time: '17:00',
-      weather_condition: 'ELOK',
-      rain_start_time: null,
-      rain_end_time: null,
-      contractor_scope: historical ? 'NSC' : 'CONTRACTOR',
-    },
+    print_context: historical
+      ? {
+          location: 'Blok Pentadbiran · Grid 1–4',
+          work_start_time: '08:00',
+          work_end_time: '17:00',
+          weather_condition: 'ELOK',
+          daily_work_status: 'SIAP',
+          rain_start_time: null,
+          rain_end_time: null,
+          rain_intervals: [],
+          weather_suggested_intervals: [],
+          weather_source: 'MANUAL',
+          weather_provider: null,
+          weather_provider_fetched_at: null,
+          weather_provider_resolution: null,
+          weather_latitude: null,
+          weather_longitude: null,
+          weather_timezone: 'Asia/Kuala_Lumpur',
+          contractor_scope: 'NSC',
+        }
+      : {
+          location: 'Blok Pentadbiran · Grid 4–8',
+          work_start_time: null,
+          work_end_time: null,
+          weather_condition: 'HUJAN',
+          daily_work_status: 'LAKSANA',
+          rain_start_time: '15:00',
+          rain_end_time: '17:00',
+          rain_intervals: [{ start: '15:00', end: '17:00' }],
+          weather_suggested_intervals: [{ start: '15:00', end: '17:00' }],
+          weather_source: 'USER_CONFIRMED',
+          weather_provider: 'VISUAL_CROSSING',
+          weather_provider_fetched_at: '2026-09-02T06:30:00.000+08:00',
+          weather_provider_resolution: 'HOURLY',
+          weather_latitude: 3.983583,
+          weather_longitude: 101.061639,
+          weather_timezone: 'Asia/Kuala_Lumpur',
+          contractor_scope: 'CONTRACTOR',
+        },
     submitted_by: USER_ID,
     submitted_at: historical ? '2026-07-12T09:10:00.000Z' : '2026-09-02T09:10:00.000Z',
     updated_at: historical ? null : '2026-09-02T10:40:00.000Z',
   };
 }
 
+function currentActivity() {
+  return {
+    activity_id: ACTIVITY_ID,
+    programme_id: PROGRAMME_ID,
+    revision_id: REVISION_ID,
+    source_type: 'MSP',
+    task_id: '33333333-3333-4333-8333-333333333333',
+    activity_uid: '184',
+    ahi: '1.2.4',
+    ahi_display_name: 'WBS 1.2.4',
+    subtask: 'Kerja konkrit rasuk aras bawah · Zon B',
+    subtask_display_name: null,
+    activity_date: '2026-09-02',
+    actual_start_date: '2026-08-28',
+    completed_date: null,
+    status: 'In Progress',
+    weather: null,
+    notes: '',
+    submitted_by: USER_ID,
+    created_at: '2026-08-28T01:00:00.000Z',
+    updated_at: null,
+  };
+}
+
 async function installRoutes(page: Page): Promise<void> {
+  let current = canonicalDetail(false);
+
   await page.route('**/api/**', async (route) => json(route, { data: [] }));
   await installN05R2PreviewRoutes(page, { programmeId: PROGRAMME_ID, revisionId: REVISION_ID });
 
@@ -170,9 +227,41 @@ async function installRoutes(page: Page): Promise<void> {
     ],
   }));
 
+  await page.route(`**/api/activity/${ACTIVITY_ID}`, async (route) => json(route, { data: currentActivity() }));
   await page.route(`**/api/site-diary/revision/${REVISION_ID}**`, async (route) => json(route, { data: [projection(false)] }));
   await page.route(`**/api/site-diary/revision/${HISTORY_REVISION_ID}**`, async (route) => json(route, { data: [projection(true)] }));
-  await page.route(`**/api/site-diary/${SITE_DIARY_ID}`, async (route) => json(route, { data: canonicalDetail(false) }));
+
+  await page.route(`**/api/site-diary/${SITE_DIARY_ID}`, async (route) => {
+    if (route.request().method() === 'PATCH') {
+      const payload = route.request().postDataJSON() as {
+        expected_last_modified_at?: string;
+        notes?: string;
+        manpower?: typeof current.manpower;
+        print_context?: typeof current.print_context;
+      };
+      const actualToken = current.updated_at ?? current.submitted_at;
+      if (payload.expected_last_modified_at !== actualToken) {
+        await json(route, { error: 'Rekod telah berubah. Muat semula sebelum menyimpan.' }, 409);
+        return;
+      }
+      current = {
+        ...current,
+        notes: payload.notes ?? current.notes,
+        manpower: payload.manpower ?? current.manpower,
+        print_context: payload.print_context ?? current.print_context,
+        updated_at: '2026-09-02T11:15:00.000Z',
+      };
+      await json(route, {
+        data: {
+          ...current,
+          lastModifiedAt: current.updated_at,
+        },
+      });
+      return;
+    }
+    await json(route, { data: current });
+  });
+
   await page.route(`**/api/site-diary/${HISTORY_DIARY_ID}`, async (route) => json(route, { data: canonicalDetail(true) }));
   await page.route(`**/api/site-diary/${SITE_DIARY_ID}/history`, async (route) => json(route, {
     data: {
@@ -247,6 +336,20 @@ async function expectBalancedFilters(page: Page, width: number) {
     expect(Math.abs(rects[2]!.y - rects[3]!.y)).toBeLessThanOrEqual(1);
     expect(rects[2]!.y).toBeGreaterThan(rects[0]!.y + rects[0]!.height - 1);
   }
+
+  for (const label of ['Tarikh mula', 'Tarikh akhir']) {
+    const style = await page.getByLabel(label).evaluate((node) => {
+      const computed = getComputedStyle(node);
+      return {
+        radius: computed.borderRadius,
+        shadow: computed.boxShadow,
+        minHeight: computed.minHeight,
+      };
+    });
+    expect(style.radius).toBe('0px');
+    expect(style.shadow).toBe('none');
+    expect(parseFloat(style.minHeight)).toBeGreaterThanOrEqual(40);
+  }
 }
 
 async function expectCurrentLedger(page: Page, width: number) {
@@ -303,10 +406,10 @@ async function expectHistoricalDetail(page: Page) {
   await expect(detail).toContainText('Perubahan Skop (VO)');
   await expect(detail.getByRole('button', { name: 'Edit Rekod' })).toHaveCount(0);
   await expect(page.locator('[aria-label="Tukar konteks rekod dari butiran"]')).toHaveCount(0);
-  await expect(detail.getByRole('button', { name: 'Kembali ke Senarai' })).toHaveCount(1);
+  await expect(detail.getByRole('button', { name: 'Kembali ke Senarai Rekod' })).toHaveCount(1);
   const rail = await detail.locator('> header').evaluate((node) => getComputedStyle(node, '::before').backgroundColor);
   expect(rail).not.toBe(green);
-  await expect(detail.getByRole('link', { name: 'Cetak Buku Harian Tapak' })).toHaveAttribute('href', `/site-diary/print?id=${HISTORY_DIARY_ID}`);
+  await expect(detail.getByRole('link', { name: 'Cetak Rekod Ini' })).toHaveAttribute('href', `/site-diary/print?id=${HISTORY_DIARY_ID}`);
   await expectNoHorizontalOverflow(page);
 }
 
@@ -314,7 +417,7 @@ async function expectCurrentDetailAndEdit(page: Page) {
   const green = await completionGreen(page);
   const record = page.locator('[aria-label="Senarai rekod Buku Harian"] > article').first();
   await record.getByRole('button', { name: 'Lihat Butiran' }).click();
-  const detail = page.locator('[aria-label="Butiran Buku Harian Tapak"]');
+  let detail = page.locator('[aria-label="Butiran Buku Harian Tapak"]');
   await expect(detail).toBeVisible({ timeout: EXPECT_TIMEOUT });
   await expect(page.locator('[aria-label="Tukar konteks rekod dari butiran"]')).toHaveCount(0);
   await expect(detail).toContainText('Pelaksana');
@@ -330,7 +433,7 @@ async function expectCurrentDetailAndEdit(page: Page) {
   expect(detailRail).not.toBe(green);
   const auditDot = await detail.locator('[aria-labelledby="site-diary-history-heading"] ol > li').first().evaluate((node) => getComputedStyle(node, '::before').backgroundColor);
   expect(auditDot).not.toBe(green);
-  const print = detail.getByRole('link', { name: 'Cetak Buku Harian Tapak' });
+  const print = detail.getByRole('link', { name: 'Cetak Rekod Ini' });
   await expect(print).toHaveAttribute('href', `/site-diary/print?id=${SITE_DIARY_ID}`);
   const printStyle = await print.evaluate((node) => ({
     radius: getComputedStyle(node).borderRadius,
@@ -342,13 +445,20 @@ async function expectCurrentDetailAndEdit(page: Page) {
   expect(printStyle.border).not.toBe(green);
 
   await detail.getByRole('button', { name: 'Edit Rekod' }).click();
-  const editAuthority = page.locator('[data-record-edit-authority="N09A"]');
+  const editAuthority = page.locator('[data-record-edit-authority="N09A-R2A"]');
   await expect(editAuthority).toBeVisible({ timeout: EXPECT_TIMEOUT });
-  const form = editAuthority.locator('form[data-ui-context="RECORDS_EDIT"]');
+  const form = editAuthority.locator('form[data-ui-context="RECORDS_EDIT_R2A"]');
   await expect(form).toBeVisible();
-  await expect(form.getByText('Pelaksana *', { exact: true })).toBeVisible();
+  await expect(form.getByTestId('record-edit-date')).toContainText('2026-09-02');
+  await expect(form.getByTestId('record-edit-actual-start')).toContainText('2026-08-28');
+  await expect(form.getByTestId('record-edit-daily-status')).toContainText('LAKSANA');
+  await expect(form.locator('[data-record-edit-section="daily"] input')).toHaveCount(0);
+  await expect(form.getByLabel('PELAKSANA')).toHaveValue('CONTRACTOR');
   await expect(form.getByRole('option', { name: 'Kontraktor Utama' })).toHaveCount(1);
   await expect(form).not.toContainText('CONTRACTOR');
+  await expect(form.getByTestId('record-edit-work-time-summary')).toContainText('— → —');
+  await expect(form.getByText('VISUAL CROSSING · JAM')).toBeVisible();
+  await expect(form).toContainText('15:00–17:00');
 
   const roundedOffenders = await form.locator('section, input, select, textarea, button').evaluateAll((nodes) => nodes.flatMap((node) => {
     const element = node as HTMLElement;
@@ -360,9 +470,55 @@ async function expectCurrentDetailAndEdit(page: Page) {
   }));
   expect(roundedOffenders, `Rounded REKOD edit surfaces remain:\n${JSON.stringify(roundedOffenders, null, 2)}`).toEqual([]);
 
-  await form.getByRole('button', { name: 'Batal' }).click();
-  await expect(page.locator('[data-record-edit-authority="N09A"]')).toHaveCount(0);
-  await expect(page.locator('[aria-label="Butiran Buku Harian Tapak"]')).toContainText('Konkrit rasuk aras bawah diteruskan');
+  await form.getByLabel('Lokasi').fill('Blok Pentadbiran · Grid 5–8');
+  await form.getByLabel('PELAKSANA').selectOption('NSC');
+  await form.getByLabel('Catatan rekod').fill('Catatan R2A selepas suntingan terkawal.');
+
+  const patchRequestPromise = page.waitForRequest((request) =>
+    request.method() === 'PATCH' && new URL(request.url()).pathname === `/api/site-diary/${SITE_DIARY_ID}`
+  );
+  await form.getByRole('button', { name: 'Simpan Perubahan' }).click();
+  const patchRequest = await patchRequestPromise;
+  const payload = patchRequest.postDataJSON() as {
+    expected_last_modified_at: string;
+    notes: string;
+    manpower: Array<{ trade_name: string; bumi_count: number; non_bumi_count: number; foreign_count: number }>;
+    print_context: Record<string, unknown>;
+  };
+
+  expect(payload.expected_last_modified_at).toBe('2026-09-02T10:40:00.000Z');
+  expect(payload.notes).toBe('Catatan R2A selepas suntingan terkawal.');
+  expect(payload.manpower).toEqual([
+    { trade_name: 'Carpenter (Tukang Kayu)', bumi_count: 4, non_bumi_count: 2, foreign_count: 6 },
+    { trade_name: 'Concretor (Tukang Konkrit)', bumi_count: 3, non_bumi_count: 1, foreign_count: 8 },
+  ]);
+  expect(payload.print_context).toMatchObject({
+    location: 'Blok Pentadbiran · Grid 5–8',
+    contractor_scope: 'NSC',
+    work_start_time: null,
+    work_end_time: null,
+    weather_condition: 'HUJAN',
+    daily_work_status: 'LAKSANA',
+    rain_start_time: '15:00',
+    rain_end_time: '17:00',
+    rain_intervals: [{ start: '15:00', end: '17:00' }],
+    weather_suggested_intervals: [{ start: '15:00', end: '17:00' }],
+    weather_source: 'USER_CONFIRMED',
+    weather_provider: 'VISUAL_CROSSING',
+    weather_provider_fetched_at: '2026-09-02T06:30:00.000+08:00',
+    weather_provider_resolution: 'HOURLY',
+    weather_latitude: 3.983583,
+    weather_longitude: 101.061639,
+    weather_timezone: 'Asia/Kuala_Lumpur',
+  });
+
+  await expect(editAuthority).toHaveCount(0);
+  detail = page.locator('[aria-label="Butiran Buku Harian Tapak"]');
+  await expect(detail).toBeVisible({ timeout: EXPECT_TIMEOUT });
+  await expect(detail).toContainText('Blok Pentadbiran · Grid 5–8');
+  await expect(detail).toContainText('Catatan R2A selepas suntingan terkawal.');
+  await expect(detail).toContainText('NSC');
+  await expect(detail.getByRole('link', { name: 'Cetak Rekod Ini' })).toHaveAttribute('href', `/site-diary/print?id=${SITE_DIARY_ID}`);
   await expectNoHorizontalOverflow(page);
 }
 
@@ -388,7 +544,7 @@ test('N09A historical REKOD opens through normal UI as read-only with one back p
   }
 });
 
-test('N09A current detail preserves canonical print/edit authority and sharp REKOD edit presentation at phone/half/wide', async ({ page }) => {
+test('N09A current detail preserves canonical print/edit authority and R2A mutation-readback at phone/half/wide', async ({ page }) => {
   for (const viewport of VIEWPORTS) {
     await boot(page, viewport.width, viewport.height);
     await expectCurrentDetailAndEdit(page);
