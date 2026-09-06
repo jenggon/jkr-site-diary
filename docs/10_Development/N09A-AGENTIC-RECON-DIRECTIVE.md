@@ -17,6 +17,10 @@ The purpose is to discover visual, interaction, responsive, accessibility, stale
 
 Do not implement. Do not edit files. Do not commit. Do not push. Do not open or merge a PR. Do not modify the lockset to fit the code.
 
+### Local workspace safety
+
+The developer workstation may contain pre-existing untracked local evidence, especially `docs/evidence/f4.5-datum-01/`. Treat it as user-owned evidence. Do not add, delete, edit, stash, reset, clean, move or otherwise touch it. Do not run `git clean`, destructive reset, or any command intended to erase untracked/local work. If unrelated local modifications prevent safe checkout/recon, STOP and report them rather than mutating the workspace.
+
 ## 2. Mandatory governance preflight
 
 Before analysis, read in this order:
