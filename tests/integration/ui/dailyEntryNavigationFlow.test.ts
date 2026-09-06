@@ -50,8 +50,8 @@ describe('F2.1-F Daily Entry Navigation & Flow Behavioural Suite', () => {
       })
     );
 
-    // Should render selected source summary
-    expect(html).toContain('MSP');
+    // Should render selected source summary using the locked field-language copy.
+    expect(html).toContain('Skop Kontrak');
     expect(html).toContain('Kerja Asas Bangunan (Footing)');
     expect(html).toContain('WBS 1.1');
     expect(html).toContain('Tukar');

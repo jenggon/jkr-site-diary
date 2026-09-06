@@ -34,8 +34,8 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
       })
     );
 
-    expect(html).toContain('MSP');
-    expect(html).toContain('VO');
+    expect(html).toContain('Skop Kontrak');
+    expect(html).toContain('Perubahan Skop (VO)');
     expect(html).toContain('Sumber');
     expect(html).not.toContain('MSP_TASK');
     expect(html).not.toContain('VO_ITEM');
@@ -56,7 +56,7 @@ describe('F2.1-B OperationalSourceSelector (MSP XOR VO)', () => {
     );
 
     expect(html).toContain('Kerja-kerja Struktur Bawah (Substructure)');
-    expect(html).toContain('MSP');
+    expect(html).toContain('Skop Kontrak');
     expect(html).toContain('WBS: 1.1.2');
     expect(html).toContain('UID: 12');
     expect(html).toContain('Tukar');

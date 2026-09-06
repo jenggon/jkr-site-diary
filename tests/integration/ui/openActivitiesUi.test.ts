@@ -598,8 +598,8 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
       })
     );
 
-    expect(html).toContain('MSP');
-    expect(html).toContain('VO');
+    expect(html).toContain('Skop Kontrak');
+    expect(html).toContain('Perubahan Skop (VO)');
     expect(html).toContain('Harian');
     expect(html).toContain('Pekerja');
   });
@@ -612,8 +612,8 @@ describe('F2.2-B03 — Open Activities UI + Continuation Handoff Suite (28 Point
       })
     );
 
-    expect(html).toContain('MSP');
-    expect(html).toContain('VO');
+    expect(html).toContain('Skop Kontrak');
+    expect(html).toContain('Perubahan Skop (VO)');
   });
 
   // 25. Completed Activity disappears after canonical re-fetch
