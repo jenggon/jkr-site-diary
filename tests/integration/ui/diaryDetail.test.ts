@@ -55,7 +55,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
   }
 
   function printLink(): HTMLAnchorElement | null {
-    return [...container.querySelectorAll('a')].find((item) => item.textContent?.includes('Cetak Buku Harian Tapak')) ?? null;
+    return [...container.querySelectorAll('a')].find((item) => item.textContent?.includes('Cetak Rekod Ini')) ?? null;
   }
 
   it('renders canonical current evidence, Pelaksana and workforce readback, then revalidates exact edit handoff', async () => {
@@ -73,6 +73,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     expect(container.textContent).toContain('JUMLAH 6');
     expect(container.querySelector('[data-record-workforce-matrix]')).toBeTruthy();
     expect(container.textContent).toContain('Edit Rekod');
+    expect(container.textContent).toContain('← Kembali ke Senarai Rekod');
     expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary-A');
     await click('Edit Rekod');
     expect(onEdit).toHaveBeenCalledTimes(1);
@@ -90,6 +91,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     expect(container.textContent).toContain('Tiada rekod tenaga kerja');
     expect(container.textContent).toContain('Tidak tersedia');
     expect(container.textContent).not.toContain('Edit Rekod');
+    expect(container.textContent).toContain('← Kembali ke Senarai Rekod');
     expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary-A');
     expect(onEdit).not.toHaveBeenCalled();
   });
