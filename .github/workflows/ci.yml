@@ -11,8 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1. Checkout repository
+      - name: 1. Checkout exact N09A candidate
         uses: actions/checkout@v4
+        with:
+          ref: 47d3152102b3296351f93826a3c809f8b6bcc6e0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -25,16 +27,34 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
-      - name: 1. Install dependencies (frozen lockfile)
+      - name: 2. Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: 2. Unified verification contract
+      - name: 3. Unified verification contract
         run: pnpm run verify
 
-      - name: 3. Upload Artifact
+      - name: 4. Install Chromium for exact-head N09A prove
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 5. Real-browser N09A REKOD prove
+        run: pnpm exec playwright test tests/e2e/n09a-records-current-state.e2e.spec.ts --project=chromium --retries=0
+
+      - name: 6. Upload browser failure evidence
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifact
+          name: n09a-browser-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: 7. Upload build artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n09a-build-artifact
           path: |
             .next/
             public/
