@@ -11,6 +11,9 @@ let context = { programmeId: 'programme-A' };
 vi.mock('@/app/site-diary/DailyEntryShell', () => ({
   useDailyEntryContext: () => context,
 }));
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ session: null }),
+}));
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -133,12 +136,26 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     expect(container.textContent).not.toContain('Kerja Saliran VO');
   });
 
-  it('hands exact canonical diary identity into the existing DailyEntryForm edit mode with bounded cancel', async () => {
+  it('hands exact canonical diary identity into the dedicated R2A PATCH editor with bounded cancel', async () => {
     const canonical = {
       site_diary_id: 'raw-site-diary-uuid', programme_id: 'programme-A', revision_id: 'revision-current',
       activity_id: 'raw-activity-uuid', activity_date: '2026-08-17', weather: null, notes: 'Canonical edit evidence',
-      status: 'In Progress', manpower: [], print_context: { location: 'Pier P3', work_start_time: '08:00', work_end_time: '17:00', weather_condition: 'ELOK', rain_start_time: null, rain_end_time: null, contractor_scope: 'CONTRACTOR' }, submitted_by: 'actor',
-      submitted_at: '2026-08-17T08:00:00.000Z', updated_at: null,
+      status: 'In Progress', daily_work_status: 'LAKSANA', manpower: [],
+      print_context: {
+        location: 'Pier P3', work_start_time: null, work_end_time: null, daily_work_status: 'LAKSANA',
+        weather_condition: 'ELOK', rain_start_time: null, rain_end_time: null, rain_intervals: [],
+        weather_suggested_intervals: [], weather_source: 'MANUAL', weather_provider: null,
+        weather_provider_fetched_at: null, weather_provider_resolution: null, weather_latitude: null,
+        weather_longitude: null, weather_timezone: 'Asia/Kuala_Lumpur', contractor_scope: 'CONTRACTOR',
+      },
+      submitted_by: 'actor', submitted_at: '2026-08-17T08:00:00.000Z', updated_at: null,
+    };
+    const activity = {
+      activity_id: 'raw-activity-uuid', programme_id: 'programme-A', revision_id: 'revision-current',
+      source_type: 'MSP', task_id: 'task-1', activity_uid: '184', ahi: '1.2.4', ahi_display_name: 'WBS 1.2.4',
+      subtask: 'Pemasangan Galang Jambatan', subtask_display_name: null, activity_date: '2026-08-17',
+      actual_start_date: '2026-08-15', completed_date: null, status: 'In Progress', weather: null, notes: '',
+      submitted_by: 'actor', created_at: '2026-08-15T08:00:00.000Z', updated_at: null,
     };
     const detailReads: string[] = [];
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -150,24 +167,27 @@ describe('F2.3-B03 mounted Diary Management list', () => {
         detailReads.push(url);
         return json({ data: canonical });
       }
+      if (url === '/api/activity/raw-activity-uuid') return json({ data: activity });
       if (url.includes('/api/programme-revision')) return json({ data: [current, historyA] });
       return json({ data: [diary()] });
-    });
+    }) as any;
     await mount();
     await click('Lihat Butiran');
     expect(container.textContent).toContain('Canonical edit evidence');
     expect(container.querySelector('[aria-label="Tukar konteks rekod dari butiran"]')).toBeNull();
-    expect([...container.querySelectorAll('button')].filter((item) => item.textContent?.includes('Kembali ke Senarai'))).toHaveLength(1);
-    await click('Kembali ke Senarai');
+    expect([...container.querySelectorAll('button')].filter((item) => item.textContent?.includes('Kembali ke Senarai Rekod'))).toHaveLength(1);
+    await click('Kembali ke Senarai Rekod');
     await click('Semakan Terdahulu');
     expect(container.textContent).not.toContain('Canonical edit evidence');
     await click('Rekod Semasa');
     await click('Lihat Butiran');
     await click('Edit Rekod');
-    expect(container.querySelector('[data-record-edit-authority="N09A"]')).toBeTruthy();
-    expect(container.querySelector('form[aria-label="Borang Buku Harian Tapak"][data-ui-context="RECORDS_EDIT"]')).toBeTruthy();
-    expect(container.textContent).toContain('Pelaksana *');
+    expect(container.querySelector('[data-record-edit-authority="N09A-R2A"]')).toBeTruthy();
+    expect(container.querySelector('form[aria-label="Edit Rekod Buku Harian Tapak"][data-ui-context="RECORDS_EDIT_R2A"]')).toBeTruthy();
+    expect(container.textContent).toContain('PELAKSANA');
     expect(container.textContent).toContain('Kontraktor Utama');
+    expect(container.textContent).toContain('2026-08-15');
+    expect(container.textContent).toContain('LAKSANA');
     expect(container.textContent).toContain('Batal');
     expect(detailReads).toHaveLength(3);
     expect(detailReads.every((url) => url === '/api/site-diary/raw-site-diary-uuid')).toBe(true);
