@@ -21,10 +21,10 @@ import "./ngamsoi-n05r5-acceptance.css";
 import "./ngamsoi-n05r5-desktop-acceptance.css";
 import "./ngamsoi-n09-records.css";
 import "./ngamsoi-n07-navigation.css";
-// SINGLE F4.5 layout entrypoint. It imports the consolidated baseline and owns the bounded post-physical remediation.
-import "./ngamsoi-f45-post-physical.css";
-// N09A R2A is the final bounded owner for Records edit/date/back/exact-print presentation only.
+// N09A R2A owns only scoped REKOD edit/date/back/exact-record presentation.
 import "./ngamsoi-n09-r2a.css";
+// SINGLE F4.5 layout entrypoint remains final. It imports the consolidated baseline and owns bounded F4.5 post-physical remediation.
+import "./ngamsoi-f45-post-physical.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
