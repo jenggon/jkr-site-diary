@@ -23,6 +23,8 @@ import "./ngamsoi-n09-records.css";
 import "./ngamsoi-n07-navigation.css";
 // SINGLE F4.5 layout entrypoint. It imports the consolidated baseline and owns the bounded post-physical remediation.
 import "./ngamsoi-f45-post-physical.css";
+// N09A R2A is the final bounded owner for Records edit/date/back/exact-print presentation only.
+import "./ngamsoi-n09-r2a.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
