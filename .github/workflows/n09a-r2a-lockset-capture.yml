@@ -42,13 +42,13 @@ jobs:
           if (lockset.activeProgramme?.currentStage !== 'N09A_PHYSICAL_R1_REMEDIATION') {
             throw new Error(`Unexpected currentStage: ${lockset.activeProgramme?.currentStage}`);
           }
-          if (lockset.requirements.some((item) => item.id === 'NGUI-R2A-001')) {
-            throw new Error('NGUI-R2A-001 already exists');
+          if (lockset.requirements.some((item) => item.id === 'NGUI-EDIT-001')) {
+            throw new Error('NGUI-EDIT-001 already exists');
           }
 
           lockset.locksetVersion = '2026.09.06.3';
           lockset.requirements.push({
-            id: 'NGUI-R2A-001',
+            id: 'NGUI-EDIT-001',
             title: 'N09A Physical R2A edit truthfulness and exact-record handoff',
             state: 'LOCKED',
             statement: 'N09A Physical R2A is a bounded REKOD remediation. EDIT uses a dedicated canonical Site Diary PATCH controller rather than CATAT creation/lifecycle control; Site Diary/source/revision identity, diary date, Activity Actual Start and saved daily work status are read-only facts. Editable location, Pelaksana, working time, supported official ELOK/HUJAN weather evidence, workforce and notes must hydrate exact persisted values, preserve untouched weather/provenance/daily-status/workforce metadata and preserve null/empty values without fabricated defaults, while retaining exact site_diary_id authority and optimistic concurrency. REKOD date-range controls retain inclusive clearable past/today semantics and reuse the accepted HARIAN date visual family. Detail/edit parent navigation uses an explicit strong back affordance. Exact-record print keeps the exact site_diary_id handoff and uses truthful CTA copy Cetak Rekod Ini; date-wide official Buku Harian aggregation, REKOD #7 redesign, browser/device history architecture and protected domain/security/print semantics remain deferred and unchanged.',
