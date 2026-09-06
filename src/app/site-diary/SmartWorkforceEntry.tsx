@@ -19,6 +19,10 @@ export interface SmartWorkforceEntryProps {
   readonly manpower: ManpowerRow[];
   readonly onChange: (rows: ManpowerRow[]) => void;
   readonly disabled?: boolean;
+  /** Optional field-language helper for bounded reuse outside CATAT. */
+  readonly helperOverride?: string | null;
+  /** CATAT owns Spine geometry; Records edit reuses presentation without a second Spine observer. */
+  readonly observeSpine?: boolean;
 }
 
 function cleanTrade(value: string): string {
@@ -47,6 +51,8 @@ export default function SmartWorkforceEntry({
   manpower,
   onChange,
   disabled = false,
+  helperOverride = null,
+  observeSpine = true,
 }: SmartWorkforceEntryProps) {
   const { programmeId, revisionId } = useDailyEntryContext();
   const [recommended, setRecommended] = useState<string[]>([]);
@@ -112,13 +118,13 @@ export default function SmartWorkforceEntry({
     setQuery('');
   };
 
-  const helper = selectedSource
+  const helper = helperOverride ?? (selectedSource
     ? (loading ? 'Cari tred…' : (resolutionSource ? `TRE · ${resolutionSource}` : 'Pilih tred'))
-    : 'Pilih kerja';
+    : 'Pilih kerja');
 
   return (
     <section className="ng-entry-panel ng-workforce-smart" aria-label="Pekerja tapak" data-testid="smart-workforce-entry">
-      <F45SpineGeometryObserver />
+      {observeSpine && <F45SpineGeometryObserver />}
       <div className="ng-entry-row ng-workforce-smart__head">
         <div>
           <div className="ng-entry-heading">PEKERJA</div>
