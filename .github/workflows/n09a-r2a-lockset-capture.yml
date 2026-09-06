@@ -1,0 +1,84 @@
+name: N09A R2A lockset capture
+
+on:
+  push:
+    branches:
+      - isolate/N09A-physical-r2a-remediation
+    paths:
+      - .github/workflows/n09a-r2a-lockset-capture.yml
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: isolate/N09A-physical-r2a-remediation
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Capture R2A authority in ACTIVE_LOCKSET
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'docs/00_Governance/ACTIVE_LOCKSET.json';
+          const lockset = JSON.parse(fs.readFileSync(path, 'utf8'));
+
+          if (lockset.locksetVersion !== '2026.09.06.2') {
+            throw new Error(`Unexpected locksetVersion: ${lockset.locksetVersion}`);
+          }
+          if (lockset.activeProgramme?.currentStage !== 'N09A_PHYSICAL_R1_REMEDIATION') {
+            throw new Error(`Unexpected currentStage: ${lockset.activeProgramme?.currentStage}`);
+          }
+          if (lockset.requirements.some((item) => item.id === 'NGUI-R2A-001')) {
+            throw new Error('NGUI-R2A-001 already exists');
+          }
+
+          lockset.locksetVersion = '2026.09.06.3';
+          lockset.requirements.push({
+            id: 'NGUI-R2A-001',
+            title: 'N09A Physical R2A edit truthfulness and exact-record handoff',
+            state: 'LOCKED',
+            statement: 'N09A Physical R2A is a bounded REKOD remediation. EDIT uses a dedicated canonical Site Diary PATCH controller rather than CATAT creation/lifecycle control; Site Diary/source/revision identity, diary date, Activity Actual Start and saved daily work status are read-only facts. Editable location, Pelaksana, working time, supported official ELOK/HUJAN weather evidence, workforce and notes must hydrate exact persisted values, preserve untouched weather/provenance/daily-status/workforce metadata and preserve null/empty values without fabricated defaults, while retaining exact site_diary_id authority and optimistic concurrency. REKOD date-range controls retain inclusive clearable past/today semantics and reuse the accepted HARIAN date visual family. Detail/edit parent navigation uses an explicit strong back affordance. Exact-record print keeps the exact site_diary_id handoff and uses truthful CTA copy Cetak Rekod Ini; date-wide official Buku Harian aggregation, REKOD #7 redesign, browser/device history architecture and protected domain/security/print semantics remain deferred and unchanged.',
+            enforcement: [
+              { type: 'source', path: 'docs/10_Development/N09A-PHYSICAL-ACCEPTANCE-R2A-LOCKS.md' },
+              { type: 'source', path: 'src/app/site-diary/RecordsEditForm.tsx' },
+              { type: 'test', path: 'tests/unit/ui/recordsEditR2A.test.ts' },
+              { type: 'test', path: 'tests/unit/ui/n09aR2AVisualContract.test.ts' },
+              { type: 'browser', path: 'tests/e2e/n09a-records-current-state.e2e.spec.ts' },
+              { type: 'manual', note: 'Product Owner must resume N09A physical acceptance after exact-head proof/reprove of the R2A candidate.' }
+            ]
+          });
+          lockset.activeProgramme.currentStage = 'N09A_PHYSICAL_R2A_REMEDIATION';
+          lockset.activeProgramme.physicalAcceptanceStatus = 'REMEDIATION_REQUIRED';
+
+          fs.writeFileSync(path, `${JSON.stringify(lockset, null, 2)}\n`);
+          NODE
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify lockset
+        run: pnpm run lockset:verify
+
+      - name: Commit captured lockset
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/00_Governance/ACTIVE_LOCKSET.json
+          git diff --cached --quiet && exit 1
+          git commit -m "docs(N09A): capture physical R2A lockset authority"
+          git push origin HEAD:isolate/N09A-physical-r2a-remediation
