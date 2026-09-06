@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDailyEntryContext } from './DailyEntryShell';
 import { SiteDiaryManagementProjection, SiteDiaryManagementRevision } from '@/types/siteDiaryManagement';
 import DiaryDetail from './DiaryDetail';
-import DailyEntryForm from './DailyEntryForm';
+import RecordsEditForm from './RecordsEditForm';
 import { operationalSourceLabel } from './sourcePresentation';
 
 type ViewMode = 'CURRENT' | 'HISTORY';
@@ -220,13 +220,15 @@ export default function DiaryManagementList() {
   };
 
   if (editingSiteDiaryId) {
-    return <section aria-label="Sunting Rekod Buku Harian" data-record-edit-authority="N09A">
-      <DailyEntryForm
-        initialTab="NEW_ACTIVITY"
-        initialSiteDiaryId={editingSiteDiaryId}
-        hideModeNavigation
-        uiContext="RECORDS_EDIT"
-        className="ng-record-edit-form"
+    if (!selectedDiary || selectedDiary.siteDiaryId !== editingSiteDiaryId || selectedDiary.isReadOnly) {
+      return <div role="alert" data-record-edit-state="error" className="rounded-none border border-red-800 bg-red-950/40 p-4">
+        Konteks rekod suntingan tidak sah. Suntingan ditutup untuk keselamatan.
+        <button type="button" onClick={() => setEditingSiteDiaryId(null)} className="ml-3 min-h-[44px] font-bold underline">← Kembali</button>
+      </div>;
+    }
+    return <section aria-label="Sunting Rekod Buku Harian" data-record-edit-authority="N09A-R2A">
+      <RecordsEditForm
+        projection={selectedDiary}
         onCancel={() => setEditingSiteDiaryId(null)}
         onSuccess={() => {
           setEditingSiteDiaryId(null);
@@ -303,11 +305,11 @@ export default function DiaryManagementList() {
           </label>
           <label className="text-xs text-zinc-300">Tarikh mula
             <input aria-label="Tarikh mula" type="date" value={dateFrom} max={currentLocalDate} data-record-date="from" onChange={(event) => setDateFrom(boundToToday(event.target.value, currentLocalDate))}
-              className="ng-entry-date mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2" />
+              className="ng-entry-date" />
           </label>
           <label className="text-xs text-zinc-300">Tarikh akhir
             <input aria-label="Tarikh akhir" type="date" value={dateTo} max={currentLocalDate} data-record-date="to" onChange={(event) => setDateTo(boundToToday(event.target.value, currentLocalDate))}
-              className="ng-entry-date mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2" />
+              className="ng-entry-date" />
           </label>
           <label className="text-xs text-zinc-300">Sumber
             <select aria-label="Tapis sumber" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as SourceFilter)}
