@@ -86,11 +86,18 @@ export default function WeatherEvidenceSection({
   value,
   onChange,
   disabled = false,
+  initializationMode = 'AUTO',
 }: {
   readonly date: string;
   readonly value: WeatherEvidenceValue;
   readonly onChange: (value: WeatherEvidenceValue) => void;
   readonly disabled?: boolean;
+  /**
+   * AUTO is the sealed CATAT behaviour. PRESERVE is used only by canonical
+   * Records edit so mounting the accepted weather UI cannot reset/fetch over
+   * already-persisted evidence before the user changes it.
+   */
+  readonly initializationMode?: 'AUTO' | 'PRESERVE';
 }) {
   const { session } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -102,6 +109,12 @@ export default function WeatherEvidenceSection({
     let active = true;
     setProviderError(null);
     setEditing(false);
+
+    if (initializationMode === 'PRESERVE') {
+      setLoading(false);
+      return () => { active = false; };
+    }
+
     if (!date || !historical) {
       onChange({ ...EMPTY_WEATHER_EVIDENCE });
       return () => { active = false; };
@@ -146,7 +159,7 @@ export default function WeatherEvidenceSection({
       .finally(() => { if (active) setLoading(false); });
 
     return () => { active = false; };
-  }, [date, historical, onChange, session?.access_token]);
+  }, [date, historical, initializationMode, onChange, session?.access_token]);
 
   const condition = value.intervals.length > 0 ? 'HUJAN' : value.condition;
   const needsConfirmation = value.source === 'AUTO';
