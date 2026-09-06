@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDailyEntryContext } from './DailyEntryShell';
 import { Task } from '@/types/task';
+import { operationalSourceLabel, operationalSourceMark } from './sourcePresentation';
 
 export type OperationalSourceType = 'MSP' | 'VO';
 
@@ -99,12 +100,12 @@ export default function OperationalSourceSelector({
       const res = await fetch(`/api/task/revision/${encodeURIComponent(targetRevisionId)}`);
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error || 'Gagal memuatkan tugasan jadual (MSP)');
+        throw new Error(errJson?.error || 'Gagal memuatkan Skop Kontrak');
       }
       const json = await res.json();
       setMspTasks(Array.isArray(json.data) ? json.data : []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ralat memuatkan kerja jadual (MSP)');
+      setError(err instanceof Error ? err.message : 'Ralat memuatkan Skop Kontrak');
     } finally {
       setLoadingTasks(false);
     }
@@ -119,12 +120,12 @@ export default function OperationalSourceSelector({
       );
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error || 'Gagal memuatkan rekod VO / APK');
+        throw new Error(errJson?.error || 'Gagal memuatkan Perubahan Skop (VO)');
       }
       const json = await res.json();
       setVoItems(Array.isArray(json.data) ? json.data : []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ralat memuatkan item VO / APK');
+      setError(err instanceof Error ? err.message : 'Ralat memuatkan Perubahan Skop (VO)');
     } finally {
       setLoadingVo(false);
     }
@@ -233,13 +234,13 @@ export default function OperationalSourceSelector({
         <div className="mobile-entry-selected-source flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center text-xs font-bold">
-              {currentSelection.sourceType}
+              {operationalSourceMark(currentSelection.sourceType)}
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] uppercase font-bold">
-                  {currentSelection.sourceType === 'MSP' ? 'Jadual MSP' : 'VO / APK'}
+                  {operationalSourceLabel(currentSelection.sourceType)}
                 </span>
                 {currentSelection.code && (
                   <span className="text-[10px] font-mono text-zinc-400">{currentSelection.code}</span>
@@ -308,7 +309,7 @@ export default function OperationalSourceSelector({
               disabled={disabled}
               className="mobile-entry-source-control min-h-[44px] px-3 text-xs font-semibold"
             >
-              MSP
+              Skop Kontrak
             </button>
             <button
               type="button"
@@ -319,7 +320,7 @@ export default function OperationalSourceSelector({
               disabled={disabled}
               className="mobile-entry-source-control min-h-[44px] px-3 text-xs font-semibold"
             >
-              VO / APK
+              Perubahan Skop (VO)
             </button>
           </div>
 
@@ -329,7 +330,7 @@ export default function OperationalSourceSelector({
                 type="text"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                aria-label={activeTab === 'MSP' ? 'Cari tugasan MSP' : 'Cari kerja VO atau APK'}
+                aria-label={activeTab === 'MSP' ? 'Cari kerja Skop Kontrak' : 'Cari Perubahan Skop (VO)'}
                 placeholder="Cari"
                 className="mobile-entry-search-input w-full px-3 py-2 text-xs"
               />
@@ -381,7 +382,7 @@ export default function OperationalSourceSelector({
                 <div className="py-8 text-center text-xs text-zinc-500">Muat…</div>
               ) : filteredMspTasks.length === 0 ? (
                 <div className="border-y border-zinc-800 py-8 text-center text-xs text-zinc-400">
-                  Tiada tugasan MSP ditemui.
+                  Tiada kerja Skop Kontrak ditemui.
                 </div>
               ) : (
                 <div className="mobile-entry-task-list max-h-72 overflow-y-auto">
@@ -421,7 +422,7 @@ export default function OperationalSourceSelector({
                 <div className="py-8 text-center text-xs text-zinc-500">Muat…</div>
               ) : filteredVoItems.length === 0 ? (
                 <div className="border-y border-zinc-800 py-8 text-center text-xs text-zinc-400">
-                  Tiada VO / APK ditemui. Daftar hanya jika kerja itu memang di luar jadual MSP semasa.
+                  Tiada Perubahan Skop (VO) ditemui. Daftar hanya jika kerja itu memang di luar Skop Kontrak semasa.
                 </div>
               ) : (
                 <div className="mobile-entry-task-list max-h-72 overflow-y-auto">
@@ -466,8 +467,8 @@ export default function OperationalSourceSelector({
           >
             <div className="ng-vo-dialog__header">
               <div>
-                <span className="ng-vo-dialog__eyebrow">Sumber luar MSP</span>
-                <h4 id="ng-vo-dialog-title" className="ng-vo-dialog__title">VO / APK Baharu</h4>
+                <span className="ng-vo-dialog__eyebrow">Di luar Skop Kontrak</span>
+                <h4 id="ng-vo-dialog-title" className="ng-vo-dialog__title">Perubahan Skop (VO) Baharu</h4>
               </div>
               <button
                 type="button"
@@ -495,7 +496,7 @@ export default function OperationalSourceSelector({
                   required
                   value={newVoRef}
                   onChange={(event) => setNewVoRef(event.target.value)}
-                  placeholder="Contoh: VO-03 / APK-01"
+                  placeholder="Contoh: VO-03"
                   disabled={creatingVo}
                 />
               </div>

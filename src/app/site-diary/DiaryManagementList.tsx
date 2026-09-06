@@ -5,6 +5,7 @@ import { useDailyEntryContext } from './DailyEntryShell';
 import { SiteDiaryManagementProjection, SiteDiaryManagementRevision } from '@/types/siteDiaryManagement';
 import DiaryDetail from './DiaryDetail';
 import DailyEntryForm from './DailyEntryForm';
+import { operationalSourceLabel } from './sourcePresentation';
 
 type ViewMode = 'CURRENT' | 'HISTORY';
 type SourceFilter = 'ALL' | 'MSP' | 'VO';
@@ -38,6 +39,18 @@ function displayPelaksana(value: string | null | undefined): string {
   return value?.trim() || FALLBACK;
 }
 
+function todayIsoLocal(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function boundToToday(value: string, today: string): string {
+  return value && value > today ? today : value;
+}
+
 export default function DiaryManagementList() {
   const { programmeId } = useDailyEntryContext();
   const [revisions, setRevisions] = useState<SiteDiaryManagementRevision[]>([]);
@@ -56,6 +69,7 @@ export default function DiaryManagementList() {
   const [selectedDiary, setSelectedDiary] = useState<SiteDiaryManagementProjection | null>(null);
   const [editingSiteDiaryId, setEditingSiteDiaryId] = useState<string | null>(null);
   const [detailRefresh, setDetailRefresh] = useState(0);
+  const currentLocalDate = todayIsoLocal();
 
   const revisionAbortRef = useRef<AbortController | null>(null);
   const diaryAbortRef = useRef<AbortController | null>(null);
@@ -288,17 +302,17 @@ export default function DiaryManagementList() {
               placeholder="Tajuk, rujukan atau aktiviti" className="mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm" />
           </label>
           <label className="text-xs text-zinc-300">Tarikh mula
-            <input aria-label="Tarikh mula" type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)}
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2" />
+            <input aria-label="Tarikh mula" type="date" value={dateFrom} max={currentLocalDate} data-record-date="from" onChange={(event) => setDateFrom(boundToToday(event.target.value, currentLocalDate))}
+              className="ng-entry-date mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2" />
           </label>
           <label className="text-xs text-zinc-300">Tarikh akhir
-            <input aria-label="Tarikh akhir" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)}
-              className="mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2" />
+            <input aria-label="Tarikh akhir" type="date" value={dateTo} max={currentLocalDate} data-record-date="to" onChange={(event) => setDateTo(boundToToday(event.target.value, currentLocalDate))}
+              className="ng-entry-date mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2" />
           </label>
           <label className="text-xs text-zinc-300">Sumber
             <select aria-label="Tapis sumber" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as SourceFilter)}
               className="mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2">
-              <option value="ALL">Semua</option><option value="MSP">MSP</option><option value="VO">VO</option>
+              <option value="ALL">Semua</option><option value="MSP">Skop Kontrak</option><option value="VO">Perubahan Skop (VO)</option>
             </select>
           </label>
           <label className="text-xs text-zinc-300">Pelaksana
@@ -347,7 +361,7 @@ export default function DiaryManagementList() {
                   {diary.activityTitle ?? 'Maklumat aktiviti tidak tersedia'}
                 </h3>
               </div>
-              {diary.sourceType && <span className="rounded-lg bg-zinc-800 px-2 py-1 text-xs font-bold">{diary.sourceType}</span>}
+              {diary.sourceType && <span className="rounded-lg bg-zinc-800 px-2 py-1 text-xs font-bold">{operationalSourceLabel(diary.sourceType)}</span>}
             </div>
             {viewMode === 'HISTORY' && (
               <p className="mt-2 text-xs font-bold text-amber-300">Sejarah / Baca Sahaja</p>

@@ -8,6 +8,7 @@ const shell = source('src/app/site-diary/DailyEntryShell.tsx');
 const catat = source('src/app/site-diary/CatatEntryForm.tsx');
 const aktiviti = source('src/app/site-diary/AktivitiEntryForm.tsx');
 const sourceSelector = source('src/app/site-diary/OperationalSourceSelector.tsx');
+const sourcePresentation = source('src/app/site-diary/sourcePresentation.ts');
 const workspace = source('src/app/site-diary/SiteDiaryWorkspace.tsx');
 const postSave = source('src/app/site-diary/PostSaveConfirmation.tsx');
 const workforce = source('src/app/site-diary/SmartWorkforceEntry.tsx');
@@ -79,12 +80,17 @@ describe('F4.5 final NGAMSOI visual reconciliation', () => {
     expect(catat).toContain('className="ng-daily-status__hint"');
   });
 
-  it('keeps one visible SUMBER hierarchy while preserving MSP and VO/APK source identity', () => {
+  it('keeps one visible SUMBER hierarchy while presenting field-language source labels over unchanged MSP/VO semantics', () => {
     expect(catat).toContain('ng-source-section-heading">SUMBER');
     expect(sourceSelector).not.toContain('Sumber Aktiviti');
     expect(sourceSelector).not.toContain('>Sumber<');
-    expect(sourceSelector).toContain('MSP');
-    expect(sourceSelector).toContain('VO / APK');
+    expect(sourcePresentation).toContain("MSP: 'Skop Kontrak'");
+    expect(sourcePresentation).toContain("VO: 'Perubahan Skop (VO)'");
+    expect(sourceSelector).toContain('operationalSourceLabel');
+    expect(sourceSelector).not.toContain('VO / APK');
+    expect(sourceSelector).not.toContain('Jadual MSP');
+    expect(catat).toContain('max={todayIso()}');
+    expect(catat).toContain('data-date-authority="HARIAN"');
     expect(postPhysical).toContain('ONE OUTER SUMBER HIERARCHY');
     expect(postPhysical).toContain('h3::after');
     expect(postPhysical).toContain('content: none !important;');

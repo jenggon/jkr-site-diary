@@ -254,6 +254,17 @@ async function expectCurrentLedger(page: Page, width: number) {
   await expect(records).toContainText('Pelaksana');
   await expect(records).toContainText('Kontraktor Utama');
   await expect(records).not.toContainText('CONTRACTOR');
+  await expect(page.getByLabel('Tapis sumber').locator('option[value="MSP"]')).toHaveText('Skop Kontrak');
+  await expect(page.getByLabel('Tapis sumber').locator('option[value="VO"]')).toHaveText('Perubahan Skop (VO)');
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
+  for (const label of ['Tarikh mula', 'Tarikh akhir']) {
+    const input = page.getByLabel(label);
+    await expect(input).toHaveAttribute('max', today);
+    await expect(input).toHaveClass(/ng-entry-date/);
+  }
   await expect(page.locator('[data-testid="current-revision-label"]')).toContainText('Semakan 3');
   await expectBalancedFilters(page, width);
 
@@ -265,6 +276,7 @@ async function expectCurrentLedger(page: Page, width: number) {
   await expect(record).toHaveAttribute('data-record-mode', 'current');
   await expect(record).toContainText('Kerja konkrit rasuk aras bawah');
   await expect(record).toContainText('Kontraktor Utama');
+  await expect(record).toContainText('Skop Kontrak');
   const recordStyle = await record.evaluate((node) => ({
     radius: getComputedStyle(node).borderRadius,
     shadow: getComputedStyle(node).boxShadow,
@@ -288,6 +300,7 @@ async function expectHistoricalDetail(page: Page) {
   const detail = page.locator('[aria-label="Butiran Buku Harian Tapak"]');
   await expect(detail).toBeVisible({ timeout: EXPECT_TIMEOUT });
   await expect(detail).toContainText('Sejarah / Baca Sahaja');
+  await expect(detail).toContainText('Perubahan Skop (VO)');
   await expect(detail.getByRole('button', { name: 'Edit Rekod' })).toHaveCount(0);
   await expect(page.locator('[aria-label="Tukar konteks rekod dari butiran"]')).toHaveCount(0);
   await expect(detail.getByRole('button', { name: 'Kembali ke Senarai' })).toHaveCount(1);
@@ -306,6 +319,7 @@ async function expectCurrentDetailAndEdit(page: Page) {
   await expect(page.locator('[aria-label="Tukar konteks rekod dari butiran"]')).toHaveCount(0);
   await expect(detail).toContainText('Pelaksana');
   await expect(detail).toContainText('Kontraktor Utama');
+  await expect(detail).toContainText('Skop Kontrak');
   await expect(detail).not.toContainText('CONTRACTOR');
   await expect(detail.locator('[data-record-workforce-matrix]').first()).toContainText('B');
   await expect(detail.locator('[data-record-workforce-matrix]').first()).toContainText('BB');

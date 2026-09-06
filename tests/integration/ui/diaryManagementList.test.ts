@@ -110,6 +110,16 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     expect(container.textContent).not.toContain('raw-site-diary-uuid');
     expect(container.textContent).not.toContain('raw-activity-uuid');
     expect(container.textContent).not.toContain('CONTRACTOR');
+    expect(container.textContent).toContain('Skop Kontrak');
+    expect(container.textContent).toContain('Perubahan Skop (VO)');
+    const today = new Date();
+    const todayLocal = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const dateFromInput = container.querySelector('[aria-label="Tarikh mula"]') as HTMLInputElement;
+    const dateToInput = container.querySelector('[aria-label="Tarikh akhir"]') as HTMLInputElement;
+    expect(dateFromInput.max).toBe(todayLocal);
+    expect(dateToInput.max).toBe(todayLocal);
+    expect(dateFromInput.className).toContain('ng-entry-date');
+    expect(dateToInput.className).toContain('ng-entry-date');
 
     await change('Tapis sumber', 'VO');
     expect(container.textContent).not.toContain('Pemasangan Galang Jambatan');

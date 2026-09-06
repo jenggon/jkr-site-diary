@@ -126,7 +126,7 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
     setError(null);
 
     if (!programmeId || !revisionId) return setError('Program Kerja semasa belum tersedia.');
-    if (!selectedSource) return setError('Pilih kerja MSP atau VO dahulu.');
+    if (!selectedSource) return setError('Pilih Skop Kontrak atau Perubahan Skop (VO) dahulu.');
     if (!activityDate) return setError('Tarikh catatan diperlukan.');
     if (knownStartRequired && !knownStartDate) return setError('Tarikh mula sebenar diperlukan untuk status ini.');
     if (!location.trim()) return setError('Lokasi kerja diperlukan.');
@@ -239,7 +239,7 @@ export default function CatatEntryForm({ onShowRecords = () => undefined }: Cata
         <div className="ng-entry-row ng-entry-row--status">
           <div>
             <div className="ng-entry-heading">HARIAN</div>
-            <input type="date" value={activityDate} onChange={(event) => setActivityDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} aria-label="Tarikh catatan" className="ng-entry-date" />
+            <input type="date" value={activityDate} max={todayIso()} data-date-authority="HARIAN" onChange={(event) => setActivityDate(event.target.value)} disabled={isSubmitting || Boolean(successId)} aria-label="Tarikh catatan" className="ng-entry-date" />
           </div>
           <div className="ng-daily-status">
             <div className="ng-segmented" aria-label="Status kerja hari ini">
