@@ -35,6 +35,8 @@ jobs:
           test ! -e .github/workflows/n09a-r1-stale-source-copy-test-repair.yml
           changed="$(git diff --name-only | sort)"
           expected="$(printf '%s\n' \
+            .github/workflows/n09a-r1-stale-source-copy-test-repair.yml \
+            scripts/repair-n09a-r1-stale-source-copy-tests.mjs \
             tests/integration/ui/dailyEntryNavigationFlow.test.ts \
             tests/integration/ui/openActivitiesUi.test.ts \
             tests/unit/ui/operationalSourceSelector.test.ts | sort)"
