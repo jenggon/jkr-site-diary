@@ -1,0 +1,71 @@
+name: N09A NGAMSOI Records Current-State Gate
+
+on:
+  push:
+    branches:
+      - feature/N09A-ngamsoi-records-current-state
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  n09a-records:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: 1. Checkout exact frozen N09A product datum
+        uses: actions/checkout@v4
+        with:
+          ref: 47d3152102b3296351f93826a3c809f8b6bcc6e0
+
+      - name: 2. Record exact candidate
+        run: git rev-parse HEAD
+
+      - name: 3. Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.4
+
+      - name: 4. Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 5. Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 6. Unified verification contract
+        run: |
+          git diff --check
+          pnpm run verify
+
+      - name: 7. Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 8. Real-browser N09A REKOD authoritative reprove
+        run: pnpm exec playwright test tests/e2e/n09a-records-current-state.e2e.spec.ts --project=chromium --retries=0
+
+      - name: 9. Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n09a-authoritative-browser-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: 10. Upload verified build artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n09a-authoritative-build-${{ github.run_id }}
+          path: |
+            .next/
+            public/
+            package.json
+          retention-days: 7
