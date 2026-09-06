@@ -1,5 +1,13 @@
 import type { Session, User } from '@supabase/supabase-js';
 import type { SiteDiaryHistoryEvent } from '@/types/siteDiaryHistory';
+import type {
+  SiteDiaryDailyWorkStatus,
+  SiteDiaryPrintContext,
+  SiteDiaryRainInterval,
+  SiteDiaryWeatherProvider,
+  SiteDiaryWeatherResolution,
+  SiteDiaryWeatherSource,
+} from '@/types/siteDiary';
 
 const PROGRAMME_ID = '11111111-1111-4111-8111-111111111111';
 const REVISION_ID = '22222222-2222-4222-8222-222222222222';
@@ -38,15 +46,6 @@ let voItems: PreviewVoItem[] = [
 
 type PreviewSourceType = 'MSP' | 'VO';
 type PreviewManpower = { trade_name: string; bumi_count: number; non_bumi_count: number; foreign_count: number };
-type PreviewPrintContext = {
-  location: string;
-  work_start_time: string | null;
-  work_end_time: string | null;
-  weather_condition: string | null;
-  rain_start_time: string | null;
-  rain_end_time: string | null;
-  contractor_scope: 'CONTRACTOR' | 'NSC';
-};
 type PreviewDiary = {
   site_diary_id: string;
   programme_id: string;
@@ -55,9 +54,10 @@ type PreviewDiary = {
   activity_date: string;
   weather: string | null;
   status: 'In Progress' | 'Completed';
+  daily_work_status: SiteDiaryDailyWorkStatus | null;
   notes: string;
   manpower: PreviewManpower[];
-  print_context: PreviewPrintContext;
+  print_context: SiteDiaryPrintContext;
   submitted_by: string;
   submitted_at: string;
   updated_at: string | null;
@@ -75,6 +75,8 @@ let previewActivityTitle = 'Kerja konkrit rasuk aras bawah · Zon B';
 let previewSourceType: PreviewSourceType = 'MSP';
 let previewSourceReference = 'WBS 1.2.4';
 let previewActivityStatus: 'In Progress' | 'Completed' = 'In Progress';
+let previewActualStartDate: string | null = previewTodayIso();
+let previewCompletedDate: string | null = null;
 
 let currentDiary: PreviewDiary = {
   site_diary_id: SITE_DIARY_ID,
@@ -84,15 +86,26 @@ let currentDiary: PreviewDiary = {
   activity_date: previewTodayIso(),
   weather: 'Sunny',
   status: 'In Progress',
+  daily_work_status: 'LAKSANA',
   notes: 'Rekod semasa untuk penerimaan fizikal NGAMSOI.',
   manpower: [{ trade_name: 'Pembengkok Besi', bumi_count: 0, non_bumi_count: 0, foreign_count: 3 }],
   print_context: {
     location: 'Blok Pentadbiran · Grid 4–8',
     work_start_time: '08:00',
     work_end_time: '17:00',
+    daily_work_status: 'LAKSANA',
     weather_condition: 'ELOK',
     rain_start_time: null,
     rain_end_time: null,
+    rain_intervals: [],
+    weather_suggested_intervals: [],
+    weather_source: 'MANUAL',
+    weather_provider: null,
+    weather_provider_fetched_at: null,
+    weather_provider_resolution: null,
+    weather_latitude: null,
+    weather_longitude: null,
+    weather_timezone: 'Asia/Kuala_Lumpur',
     contractor_scope: 'CONTRACTOR',
   },
   submitted_by: VISUAL_USER_ID,
@@ -108,15 +121,26 @@ const historicalDiary: PreviewDiary = {
   activity_date: '2026-07-12',
   weather: 'Sunny',
   status: 'Completed',
+  daily_work_status: 'SIAP',
   notes: 'Rekod sejarah Semakan 02 untuk penerimaan fizikal baca sahaja.',
   manpower: [{ trade_name: 'Pekerja Cerucuk', bumi_count: 1, non_bumi_count: 0, foreign_count: 4 }],
   print_context: {
     location: 'Blok Pentadbiran · Grid 1–4',
     work_start_time: '08:00',
     work_end_time: '17:00',
+    daily_work_status: 'SIAP',
     weather_condition: 'ELOK',
     rain_start_time: null,
     rain_end_time: null,
+    rain_intervals: [],
+    weather_suggested_intervals: [],
+    weather_source: 'MANUAL',
+    weather_provider: null,
+    weather_provider_fetched_at: null,
+    weather_provider_resolution: null,
+    weather_latitude: null,
+    weather_longitude: null,
+    weather_timezone: 'Asia/Kuala_Lumpur',
     contractor_scope: 'NSC',
   },
   submitted_by: VISUAL_USER_ID,
@@ -197,16 +221,66 @@ function previewManpower(value: unknown): PreviewManpower[] {
   });
 }
 
-function previewPrintContext(value: unknown): PreviewPrintContext {
+function previewIntervals(value: unknown, fallback: SiteDiaryRainInterval[] | undefined): SiteDiaryRainInterval[] {
+  if (!Array.isArray(value)) return (fallback ?? []).map((item) => ({ ...item }));
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const record = item as Record<string, unknown>;
+    if (typeof record.start !== 'string' || typeof record.end !== 'string') return [];
+    return [{ start: record.start, end: record.end }];
+  });
+}
+
+function nullableString(record: Record<string, unknown>, key: string, fallback: string | null | undefined): string | null {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return fallback ?? null;
+  return typeof record[key] === 'string' ? record[key] as string : null;
+}
+
+function previewPrintContext(value: unknown, fallback: SiteDiaryPrintContext = currentDiary.print_context): SiteDiaryPrintContext {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const status = Object.prototype.hasOwnProperty.call(record, 'daily_work_status')
+    && ['MULA', 'LAKSANA', 'SIAP', 'MULA_DAN_SIAP'].includes(String(record.daily_work_status))
+      ? record.daily_work_status as SiteDiaryDailyWorkStatus
+      : (Object.prototype.hasOwnProperty.call(record, 'daily_work_status') ? null : (fallback.daily_work_status ?? null));
+  const condition = Object.prototype.hasOwnProperty.call(record, 'weather_condition')
+    && (record.weather_condition === 'ELOK' || record.weather_condition === 'HUJAN')
+      ? record.weather_condition
+      : (Object.prototype.hasOwnProperty.call(record, 'weather_condition') ? null : fallback.weather_condition);
+  const source = Object.prototype.hasOwnProperty.call(record, 'weather_source')
+    && ['AUTO', 'USER_CONFIRMED', 'MANUAL'].includes(String(record.weather_source))
+      ? record.weather_source as SiteDiaryWeatherSource
+      : (Object.prototype.hasOwnProperty.call(record, 'weather_source') ? null : (fallback.weather_source ?? null));
+  const provider = Object.prototype.hasOwnProperty.call(record, 'weather_provider') && record.weather_provider === 'VISUAL_CROSSING'
+    ? record.weather_provider as SiteDiaryWeatherProvider
+    : (Object.prototype.hasOwnProperty.call(record, 'weather_provider') ? null : (fallback.weather_provider ?? null));
+  const resolution = Object.prototype.hasOwnProperty.call(record, 'weather_provider_resolution') && record.weather_provider_resolution === 'HOURLY'
+    ? record.weather_provider_resolution as SiteDiaryWeatherResolution
+    : (Object.prototype.hasOwnProperty.call(record, 'weather_provider_resolution') ? null : (fallback.weather_provider_resolution ?? null));
+
   return {
-    location: String(record.location ?? currentDiary.print_context.location),
-    work_start_time: typeof record.work_start_time === 'string' ? record.work_start_time : null,
-    work_end_time: typeof record.work_end_time === 'string' ? record.work_end_time : null,
-    weather_condition: typeof record.weather_condition === 'string' ? record.weather_condition : null,
-    rain_start_time: typeof record.rain_start_time === 'string' ? record.rain_start_time : null,
-    rain_end_time: typeof record.rain_end_time === 'string' ? record.rain_end_time : null,
-    contractor_scope: record.contractor_scope === 'NSC' ? 'NSC' : 'CONTRACTOR',
+    location: Object.prototype.hasOwnProperty.call(record, 'location') ? String(record.location ?? '') : fallback.location,
+    work_start_time: nullableString(record, 'work_start_time', fallback.work_start_time),
+    work_end_time: nullableString(record, 'work_end_time', fallback.work_end_time),
+    daily_work_status: status,
+    weather_condition: condition,
+    rain_start_time: nullableString(record, 'rain_start_time', fallback.rain_start_time),
+    rain_end_time: nullableString(record, 'rain_end_time', fallback.rain_end_time),
+    rain_intervals: previewIntervals(record.rain_intervals, fallback.rain_intervals),
+    weather_suggested_intervals: previewIntervals(record.weather_suggested_intervals, fallback.weather_suggested_intervals),
+    weather_source: source,
+    weather_provider: provider,
+    weather_provider_fetched_at: nullableString(record, 'weather_provider_fetched_at', fallback.weather_provider_fetched_at),
+    weather_provider_resolution: resolution,
+    weather_latitude: Object.prototype.hasOwnProperty.call(record, 'weather_latitude')
+      ? (typeof record.weather_latitude === 'number' ? record.weather_latitude : null)
+      : (fallback.weather_latitude ?? null),
+    weather_longitude: Object.prototype.hasOwnProperty.call(record, 'weather_longitude')
+      ? (typeof record.weather_longitude === 'number' ? record.weather_longitude : null)
+      : (fallback.weather_longitude ?? null),
+    weather_timezone: nullableString(record, 'weather_timezone', fallback.weather_timezone),
+    contractor_scope: Object.prototype.hasOwnProperty.call(record, 'contractor_scope')
+      ? (record.contractor_scope === 'NSC' ? 'NSC' : 'CONTRACTOR')
+      : fallback.contractor_scope,
   };
 }
 
@@ -404,22 +478,57 @@ export async function ngamsoiPreviewFetch(
         previewSourceReference = 'WBS 1.2.4';
       }
       previewActivityStatus = 'In Progress';
+      previewActualStartDate = null;
+      previewCompletedDate = null;
       return jsonResponse({ data: { activityId: ACTIVITY_ID } }, 201);
     }
     return jsonResponse({ data: [] });
   }
 
   if (path === `/api/activities/${ACTIVITY_ID}/start`) {
+    const payload = await requestJson(input, init);
     previewActivityStatus = 'In Progress';
+    previewActualStartDate = typeof payload.actualStartDate === 'string' ? payload.actualStartDate : previewTodayIso();
+    previewCompletedDate = null;
     return jsonResponse({
-      data: { activity_id: ACTIVITY_ID, status: 'In Progress', actual_start_date: previewTodayIso() },
+      data: { activity_id: ACTIVITY_ID, status: 'In Progress', actual_start_date: previewActualStartDate },
     });
   }
 
   if (path === `/api/activities/${ACTIVITY_ID}/complete`) {
+    const payload = await requestJson(input, init);
     previewActivityStatus = 'Completed';
+    previewActualStartDate = typeof payload.actualStartDate === 'string' ? payload.actualStartDate : (previewActualStartDate ?? previewTodayIso());
+    previewCompletedDate = typeof payload.completedDate === 'string' ? payload.completedDate : previewTodayIso();
     return jsonResponse({
-      data: { activity_id: ACTIVITY_ID, status: 'Completed', completed_date: previewTodayIso() },
+      data: { activity_id: ACTIVITY_ID, status: 'Completed', actual_start_date: previewActualStartDate, completed_date: previewCompletedDate },
+    });
+  }
+
+  if (path === `/api/activity/${ACTIVITY_ID}` && method === 'GET') {
+    return jsonResponse({
+      data: {
+        activity_id: ACTIVITY_ID,
+        programme_id: PROGRAMME_ID,
+        revision_id: REVISION_ID,
+        source_type: previewSourceType,
+        task_id: previewSourceType === 'MSP' ? TASK_ID : null,
+        vo_item_id: previewSourceType === 'VO' ? PREVIEW_VO_ID : null,
+        activity_uid: 'PREVIEW-184',
+        ahi: null,
+        ahi_display_name: null,
+        subtask: previewActivityTitle,
+        subtask_display_name: previewActivityTitle,
+        activity_date: currentDiary.activity_date,
+        actual_start_date: previewActualStartDate,
+        completed_date: previewCompletedDate,
+        status: previewActivityStatus,
+        weather: null,
+        notes: '',
+        submitted_by: VISUAL_USER_ID,
+        created_at: currentDiary.submitted_at,
+        updated_at: currentDiary.updated_at,
+      },
     });
   }
 
@@ -450,9 +559,10 @@ export async function ngamsoiPreviewFetch(
       const updatedAt = new Date().toISOString();
       currentDiary = {
         ...currentDiary,
+        weather: typeof payload.weather === 'string' || payload.weather === null ? payload.weather as string | null : currentDiary.weather,
         notes: typeof payload.notes === 'string' ? payload.notes : currentDiary.notes,
         manpower: payload.manpower === undefined ? currentDiary.manpower : previewManpower(payload.manpower),
-        print_context: payload.print_context === undefined ? currentDiary.print_context : previewPrintContext(payload.print_context),
+        print_context: payload.print_context === undefined ? currentDiary.print_context : previewPrintContext(payload.print_context, currentDiary.print_context),
         updated_at: updatedAt,
       };
       currentHistoryEvents = [...currentHistoryEvents, {
@@ -476,6 +586,7 @@ export async function ngamsoiPreviewFetch(
     if (method === 'POST') {
       const payload = await requestJson(input, init);
       const submittedAt = new Date().toISOString();
+      const nextContext = previewPrintContext(payload.print_context, currentDiary.print_context);
       currentDiary = {
         ...currentDiary,
         programme_id: String(payload.programme_id ?? PROGRAMME_ID),
@@ -484,9 +595,10 @@ export async function ngamsoiPreviewFetch(
         activity_date: String(payload.activity_date ?? previewTodayIso()),
         weather: typeof payload.weather === 'string' ? payload.weather : null,
         status: previewActivityStatus,
+        daily_work_status: nextContext.daily_work_status ?? null,
         notes: String(payload.notes ?? ''),
         manpower: previewManpower(payload.manpower),
-        print_context: previewPrintContext(payload.print_context),
+        print_context: nextContext,
         submitted_by: VISUAL_USER_ID,
         submitted_at: submittedAt,
         updated_at: null,
