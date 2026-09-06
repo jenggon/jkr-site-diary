@@ -18,7 +18,7 @@ jobs:
       - name: 1. Checkout exact frozen N09A product datum
         uses: actions/checkout@v4
         with:
-          ref: 47d3152102b3296351f93826a3c809f8b6bcc6e0
+          ref: f9d7d9b3dc30559d037da49dc9c6889961e53d25
 
       - name: 2. Record exact candidate
         run: git rev-parse HEAD
