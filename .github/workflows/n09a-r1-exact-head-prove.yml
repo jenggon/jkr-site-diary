@@ -1,0 +1,64 @@
+name: N09A Physical R1 Exact-Head Prove
+
+on:
+  push:
+    branches:
+      - prove/n09a-r1-f9d7d9b
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n09a-r1-exact-head-prove
+  cancel-in-progress: false
+
+env:
+  CANDIDATE_SHA: f9d7d9b3dc30559d037da49dc9c6889961e53d25
+
+jobs:
+  prove-exact-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout frozen N09A R1 candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+
+      - name: Assert exact candidate and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git status --short
+          git diff --check
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        shell: bash
+        run: corepack enable
+
+      - name: Frozen install
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify active lockset
+        shell: bash
+        run: pnpm run lockset:verify
+
+      - name: Full repository verify
+        shell: bash
+        run: pnpm run verify
+
+      - name: Install Chromium
+        shell: bash
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: N09A R1 real-browser exact-head gate
+        shell: bash
+        run: pnpm exec playwright test tests/e2e/n09a-records-current-state.e2e.spec.ts --project=chromium --retries=0
