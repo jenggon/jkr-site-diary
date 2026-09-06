@@ -58,13 +58,20 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     return [...container.querySelectorAll('a')].find((item) => item.textContent?.includes('Cetak Buku Harian Tapak')) ?? null;
   }
 
-  it('renders canonical current evidence and revalidates exact edit handoff', async () => {
+  it('renders canonical current evidence, Pelaksana and workforce readback, then revalidates exact edit handoff', async () => {
     global.fetch = vi.fn(async (input) => String(input).includes('/site-diary/') ? json({ data: detail() }) : json({ data: [currentRevision] }));
     await render();
     expect(container.textContent).toContain('Kerja berjalan lancar');
     expect(container.textContent).toContain('Tukang Besi');
     expect(container.textContent).toContain('Sejarah Perubahan');
-    expect(container.textContent).toContain('Jumlah 6');
+    expect(container.textContent).toContain('Pelaksana');
+    expect(container.textContent).toContain('Kontraktor Utama');
+    expect(container.textContent).not.toContain('CONTRACTOR');
+    expect(container.textContent).toContain('B');
+    expect(container.textContent).toContain('BB');
+    expect(container.textContent).toContain('A');
+    expect(container.textContent).toContain('JUMLAH 6');
+    expect(container.querySelector('[data-record-workforce-matrix]')).toBeTruthy();
     expect(container.textContent).toContain('Edit Rekod');
     expect(printLink()?.getAttribute('href')).toBe('/site-diary/print?id=diary-A');
     await click('Edit Rekod');
@@ -87,7 +94,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     expect(onEdit).not.toHaveBeenCalled();
   });
 
-  it('does not expose a print handoff before a canonical exact ID is validated', async () => {
+  it('does not expose a print handoff before a canonical exact ID is validated and marks loading sharp', async () => {
     const pending = deferred<Response>();
     global.fetch = vi.fn((input) => String(input).includes('/site-diary/')
       ? pending.promise
@@ -97,6 +104,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
 
     expect(printLink()).toBeNull();
     expect(container.textContent).toContain('Memuatkan butiran rekod');
+    expect(container.querySelector('[data-record-detail-state="loading"]')).toBeTruthy();
   });
 
   it('fails closed for identity mismatch and supports 401/network retry', async () => {
@@ -109,6 +117,7 @@ describe('F2.3-B04 mounted canonical Diary detail', () => {
     });
     await render();
     expect(container.textContent).toContain('Sesi telah tamat');
+    expect(container.querySelector('[data-record-detail-state="error"]')).toBeTruthy();
     await click('Cuba Semula');
     expect(container.textContent).toContain('Identiti rekod tidak sepadan');
     expect(container.textContent).not.toContain('Edit Rekod');

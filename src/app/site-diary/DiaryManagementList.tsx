@@ -11,6 +11,7 @@ type SourceFilter = 'ALL' | 'MSP' | 'VO';
 type ScopeFilter = 'ALL' | 'CONTRACTOR' | 'NSC';
 
 const SESSION_MESSAGE = 'Sesi telah tamat. Sila log masuk semula.';
+const FALLBACK = 'Tidak tersedia';
 
 function formatDate(value: string): string {
   const [year, month, day] = value.split('-').map(Number);
@@ -29,6 +30,12 @@ function formatTimestamp(value: string): string {
 
 function revisionLabel(revision: SiteDiaryManagementRevision): string {
   return `Semakan ${revision.revisionNumber} — ${revision.revisionTitle}`;
+}
+
+function displayPelaksana(value: string | null | undefined): string {
+  if (value === 'CONTRACTOR') return 'Kontraktor Utama';
+  if (value === 'NSC') return 'NSC';
+  return value?.trim() || FALLBACK;
 }
 
 export default function DiaryManagementList() {
@@ -199,39 +206,31 @@ export default function DiaryManagementList() {
   };
 
   if (editingSiteDiaryId) {
-    return <DailyEntryForm
-      initialTab="NEW_ACTIVITY"
-      initialSiteDiaryId={editingSiteDiaryId}
-      hideModeNavigation
-      onCancel={() => setEditingSiteDiaryId(null)}
-      onSuccess={() => {
-        setEditingSiteDiaryId(null);
-        setDetailRefresh((value) => value + 1);
-        if (programmeId && activeRevisionId) void loadDiaries(programmeId, activeRevisionId, search);
-      }}
-    />;
+    return <section aria-label="Sunting Rekod Buku Harian" data-record-edit-authority="N09A">
+      <DailyEntryForm
+        initialTab="NEW_ACTIVITY"
+        initialSiteDiaryId={editingSiteDiaryId}
+        hideModeNavigation
+        uiContext="RECORDS_EDIT"
+        className="ng-record-edit-form"
+        onCancel={() => setEditingSiteDiaryId(null)}
+        onSuccess={() => {
+          setEditingSiteDiaryId(null);
+          setDetailRefresh((value) => value + 1);
+          if (programmeId && activeRevisionId) void loadDiaries(programmeId, activeRevisionId, search);
+        }}
+      />
+    </section>;
   }
 
   if (selectedDiary && programmeId) {
-    return <div className="space-y-4">
-      <div role="tablist" aria-label="Tukar konteks rekod dari butiran" className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-2">
-        <button type="button" role="tab" aria-selected={viewMode === 'CURRENT'} onClick={chooseCurrent}
-          className={`min-h-[44px] rounded-xl px-3 text-sm font-bold transition-colors ${viewMode === 'CURRENT' ? 'bg-accent-operational text-white' : 'bg-zinc-800 text-zinc-300'}`}>
-          Rekod Semasa
-        </button>
-        <button type="button" role="tab" aria-selected={viewMode === 'HISTORY'} onClick={() => { setSelectedDiary(null); setViewMode('HISTORY'); }}
-          className={`min-h-[44px] rounded-xl px-3 text-sm font-bold transition-colors ${viewMode === 'HISTORY' ? 'bg-accent-operational text-white' : 'bg-zinc-800 text-zinc-300'}`}>
-          Semakan Terdahulu
-        </button>
-      </div>
-      <DiaryDetail
-        key={`${selectedDiary.siteDiaryId}-${detailRefresh}`}
-        projection={selectedDiary}
-        programmeId={programmeId}
-        onBack={() => setSelectedDiary(null)}
-        onEdit={(siteDiaryId) => setEditingSiteDiaryId(siteDiaryId)}
-      />
-    </div>;
+    return <DiaryDetail
+      key={`${selectedDiary.siteDiaryId}-${detailRefresh}`}
+      projection={selectedDiary}
+      programmeId={programmeId}
+      onBack={() => setSelectedDiary(null)}
+      onEdit={(siteDiaryId) => setEditingSiteDiaryId(siteDiaryId)}
+    />;
   }
 
   return (
@@ -282,8 +281,8 @@ export default function DiaryManagementList() {
       </div>
 
       {activeRevisionId && (
-        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-3">
-          <label className="col-span-2 text-xs text-zinc-300 sm:col-span-3">
+        <div data-record-filters className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:grid-cols-4">
+          <label className="col-span-2 text-xs text-zinc-300 sm:col-span-4">
             Cari aktiviti
             <input aria-label="Cari aktiviti" value={search} onChange={(event) => setSearch(event.target.value)}
               placeholder="Tajuk, rujukan atau aktiviti" className="mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm" />
@@ -302,10 +301,10 @@ export default function DiaryManagementList() {
               <option value="ALL">Semua</option><option value="MSP">MSP</option><option value="VO">VO</option>
             </select>
           </label>
-          <label className="text-xs text-zinc-300">Skop kontraktor
-            <select aria-label="Tapis skop kontraktor" value={scopeFilter} onChange={(event) => setScopeFilter(event.target.value as ScopeFilter)}
+          <label className="text-xs text-zinc-300">Pelaksana
+            <select aria-label="Tapis pelaksana" value={scopeFilter} onChange={(event) => setScopeFilter(event.target.value as ScopeFilter)}
               className="mt-1 min-h-[44px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-2">
-              <option value="ALL">Semua</option><option value="CONTRACTOR">Kontraktor</option><option value="NSC">NSC</option>
+              <option value="ALL">Semua</option><option value="CONTRACTOR">Kontraktor Utama</option><option value="NSC">NSC</option>
             </select>
           </label>
         </div>
@@ -334,9 +333,13 @@ export default function DiaryManagementList() {
 
       <div className="space-y-3" aria-label="Senarai rekod Buku Harian">
         {activeRevisionId && filteredDiaries.map((diary) => (
-          <article key={diary.siteDiaryId} className={`rounded-2xl border p-4 shadow-sm ${
-            viewMode === 'HISTORY' ? 'border-amber-800/70 bg-amber-950/20' : 'border-zinc-800 bg-zinc-900'
-          }`}>
+          <article
+            key={diary.siteDiaryId}
+            data-record-mode={viewMode === 'HISTORY' ? 'historical' : 'current'}
+            className={`rounded-2xl border p-4 shadow-sm ${
+              viewMode === 'HISTORY' ? 'border-amber-800/70 bg-amber-950/20' : 'border-zinc-800 bg-zinc-900'
+            }`}
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <time dateTime={diary.activityDate} className="text-xs font-bold text-blue-300">{formatDate(diary.activityDate)}</time>
@@ -350,9 +353,9 @@ export default function DiaryManagementList() {
               <p className="mt-2 text-xs font-bold text-amber-300">Sejarah / Baca Sahaja</p>
             )}
             <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-              <div><dt className="text-zinc-500">Rujukan</dt><dd className="text-zinc-200">{diary.sourceReference ?? 'Tidak tersedia'}</dd></div>
-              <div><dt className="text-zinc-500">Lokasi</dt><dd className="text-zinc-200">{diary.location ?? 'Tidak tersedia'}</dd></div>
-              <div><dt className="text-zinc-500">Skop</dt><dd className="text-zinc-200">{diary.contractorScope ?? 'Tidak tersedia'}</dd></div>
+              <div><dt className="text-zinc-500">Rujukan</dt><dd className="text-zinc-200">{diary.sourceReference ?? FALLBACK}</dd></div>
+              <div><dt className="text-zinc-500">Lokasi</dt><dd className="text-zinc-200">{diary.location ?? FALLBACK}</dd></div>
+              <div><dt className="text-zinc-500">Pelaksana</dt><dd className="text-zinc-200">{displayPelaksana(diary.contractorScope)}</dd></div>
               <div><dt className="text-zinc-500">Status</dt><dd className="text-zinc-200">{diary.diaryStatus ?? diary.activityStatus ?? 'Rekod Harian'}</dd></div>
             </dl>
             {viewMode === 'HISTORY' && selectedRevision && (

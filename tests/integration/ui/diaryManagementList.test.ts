@@ -91,7 +91,7 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     });
   }
 
-  it('resolves current by flag, renders human data, filters, and suppresses raw UUIDs', async () => {
+  it('resolves current by flag, renders human data, uses Pelaksana language, filters, and suppresses raw UUIDs', async () => {
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/api/programme-revision')) return json({ data: [historyA, current, historyB] });
@@ -105,17 +105,20 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     expect(container.textContent).toContain('Pemasangan Galang Jambatan');
     expect(container.textContent).toContain('WBS 1.2.4');
     expect(container.textContent).toContain('Pier P3');
+    expect(container.textContent).toContain('Pelaksana');
+    expect(container.textContent).toContain('Kontraktor Utama');
     expect(container.textContent).not.toContain('raw-site-diary-uuid');
     expect(container.textContent).not.toContain('raw-activity-uuid');
+    expect(container.textContent).not.toContain('CONTRACTOR');
 
     await change('Tapis sumber', 'VO');
     expect(container.textContent).not.toContain('Pemasangan Galang Jambatan');
     expect(container.textContent).toContain('Kerja Saliran VO');
-    await change('Tapis skop kontraktor', 'CONTRACTOR');
+    await change('Tapis pelaksana', 'CONTRACTOR');
     expect(container.textContent).toContain('Tiada rekod sepadan dengan tapisan.');
     await change('Tapis sumber', 'ALL');
     await change('Tarikh mula', '2026-08-15');
-    await change('Tapis skop kontraktor', 'ALL');
+    await change('Tapis pelaksana', 'ALL');
     expect(container.textContent).toContain('Pemasangan Galang Jambatan');
     expect(container.textContent).not.toContain('Kerja Saliran VO');
   });
@@ -124,7 +127,7 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     const canonical = {
       site_diary_id: 'raw-site-diary-uuid', programme_id: 'programme-A', revision_id: 'revision-current',
       activity_id: 'raw-activity-uuid', activity_date: '2026-08-17', weather: null, notes: 'Canonical edit evidence',
-      status: 'In Progress', manpower: [], print_context: null, submitted_by: 'actor',
+      status: 'In Progress', manpower: [], print_context: { location: 'Pier P3', work_start_time: '08:00', work_end_time: '17:00', weather_condition: 'ELOK', rain_start_time: null, rain_end_time: null, contractor_scope: 'CONTRACTOR' }, submitted_by: 'actor',
       submitted_at: '2026-08-17T08:00:00.000Z', updated_at: null,
     };
     const detailReads: string[] = [];
@@ -143,12 +146,18 @@ describe('F2.3-B03 mounted Diary Management list', () => {
     await mount();
     await click('Lihat Butiran');
     expect(container.textContent).toContain('Canonical edit evidence');
+    expect(container.querySelector('[aria-label="Tukar konteks rekod dari butiran"]')).toBeNull();
+    expect([...container.querySelectorAll('button')].filter((item) => item.textContent?.includes('Kembali ke Senarai'))).toHaveLength(1);
+    await click('Kembali ke Senarai');
     await click('Semakan Terdahulu');
     expect(container.textContent).not.toContain('Canonical edit evidence');
     await click('Rekod Semasa');
     await click('Lihat Butiran');
     await click('Edit Rekod');
-    expect(container.querySelector('form[aria-label="Borang Buku Harian Tapak"]')).toBeTruthy();
+    expect(container.querySelector('[data-record-edit-authority="N09A"]')).toBeTruthy();
+    expect(container.querySelector('form[aria-label="Borang Buku Harian Tapak"][data-ui-context="RECORDS_EDIT"]')).toBeTruthy();
+    expect(container.textContent).toContain('Pelaksana *');
+    expect(container.textContent).toContain('Kontraktor Utama');
     expect(container.textContent).toContain('Batal');
     expect(detailReads).toHaveLength(3);
     expect(detailReads.every((url) => url === '/api/site-diary/raw-site-diary-uuid')).toBe(true);
