@@ -4,6 +4,17 @@ const ACTIVITY_ID = '44444444-4444-4444-8444-444444444444';
 const SITE_DIARY_ID = '55555555-5555-4555-8555-555555555555';
 const PREVIEW_VO_ID = '88888888-8888-4888-8888-888888888888';
 
+type PreviewVoItem = {
+  vo_item_id: string;
+  programme_id: string;
+  revision_id: string;
+  vo_reference: string;
+  line_item: string;
+  description: string | null;
+  is_omission: boolean;
+  created_at: string;
+};
+
 async function json(route: Route, body: unknown, status = 200) {
   await route.fulfill({
     status,
@@ -16,7 +27,7 @@ export async function installN05R2PreviewRoutes(
   page: Page,
   context: { programmeId: string; revisionId: string },
 ): Promise<void> {
-  let voItems = [
+  let voItems: PreviewVoItem[] = [
     {
       vo_item_id: PREVIEW_VO_ID,
       programme_id: context.programmeId,
@@ -39,7 +50,7 @@ export async function installN05R2PreviewRoutes(
         description?: string;
         isOmission?: boolean;
       };
-      const created = {
+      const created: PreviewVoItem = {
         vo_item_id: `preview-vo-${voItems.length + 1}`,
         programme_id: payload.programmeId,
         revision_id: payload.revisionId,
