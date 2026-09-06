@@ -1,4 +1,5 @@
 import type { Session, User } from '@supabase/supabase-js';
+import type { SiteDiaryHistoryEvent } from '@/types/siteDiaryHistory';
 
 const PROGRAMME_ID = '11111111-1111-4111-8111-111111111111';
 const REVISION_ID = '22222222-2222-4222-8222-222222222222';
@@ -123,10 +124,10 @@ const historicalDiary: PreviewDiary = {
   updated_at: null,
 };
 
-let currentHistoryEvents = [
+let currentHistoryEvents: SiteDiaryHistoryEvent[] = [
   { logId: '88888888-8888-4888-8888-888888888880', eventType: 'NEW', loggedAt: currentDiary.submitted_at, actorLabel: 'Pegawai Tapak', snapshotAvailable: true, changes: [] },
 ];
-const historicalHistoryEvents = [
+const historicalHistoryEvents: SiteDiaryHistoryEvent[] = [
   { logId: '99999999-8888-4888-8888-888888888880', eventType: 'NEW', loggedAt: historicalDiary.submitted_at, actorLabel: 'Pegawai Tapak', snapshotAvailable: true, changes: [] },
 ];
 
