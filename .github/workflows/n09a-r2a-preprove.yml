@@ -1,0 +1,48 @@
+name: N09A R2A pre-prove
+
+on:
+  push:
+    branches:
+      - isolate/N09A-physical-r2a-remediation
+    paths:
+      - .github/workflows/n09a-r2a-preprove.yml
+
+permissions:
+  contents: read
+
+jobs:
+  preprove:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: isolate/N09A-physical-r2a-remediation
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lockset verify
+        run: pnpm run lockset:verify
+
+      - name: Full engineering verify
+        run: pnpm run verify
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: N09A R2A real-browser gate retries zero
+        run: pnpm exec playwright test tests/e2e/n09a-records-current-state.e2e.spec.ts --project=chromium --retries=0
