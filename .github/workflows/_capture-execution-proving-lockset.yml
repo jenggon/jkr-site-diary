@@ -12,7 +12,6 @@ permissions:
 
 jobs:
   capture:
-    if: github.event.head_commit.message == 'chore(governance): stage execution proving lockset capture'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact R2A branch
