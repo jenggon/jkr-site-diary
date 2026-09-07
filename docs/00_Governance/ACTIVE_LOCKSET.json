@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "locksetVersion": "2026.09.07.1",
+  "locksetVersion": "2026.09.07.2",
   "status": "ACTIVE",
   "authority": {
     "productOwner": "Product Owner",
@@ -999,6 +999,30 @@
         {
           "type": "source",
           "path": "playwright.config.ts"
+        }
+      ]
+    },
+    {
+      "id": "NGUI-EXEC-001",
+      "title": "Safe workspace alignment before governance ACK",
+      "state": "LOCKED",
+      "statement": "Before governed implementation/remediation produces a LOCKSET COMPLIANCE ACK, the attached local executor must prove alignment to the expected governed branch and exact remote HEAD supplied by Klopp/HQ. Same-head requires no mutation. A stale local HEAD may auto-align only when it is an exact ancestor of the governed target, there are no unsafe unauthorised tracked modifications, declared protected local paths remain untouched by the incoming range, and the update completes by fast-forward only after fetch. Local-ahead, diverged, protected-path-collision, unresolved-target, unsafe-dirty-state or ambiguous conditions must STOP to HQ. Generic pull, reset, clean, stash, forced checkout/ref movement, automatic rebase and merge-commit recovery are forbidden alignment mechanisms. After any remote governance mutation, local/remote equality must be reproved and lockset verification rerun from the aligned local HEAD before implementation.",
+      "enforcement": [
+        {
+          "type": "source",
+          "path": "docs/00_Governance/EXECUTION-PROVING-BASELINE.md"
+        },
+        {
+          "type": "source",
+          "path": "docs/00_Governance/AGENT_LOCKSET_PROTOCOL.md"
+        },
+        {
+          "type": "source",
+          "path": "docs/10_Development/NGAMSOI-N09PLUS-UIUX-PROGRAM-CLOSURE-ROADMAP.md"
+        },
+        {
+          "type": "manual",
+          "note": "Execution contracts must carry EXPECTED_BRANCH, EXPECTED_GOVERNED_HEAD and protected local paths; executor reports must record local-before, governed-target, local-after and alignment mode."
         }
       ]
     },
