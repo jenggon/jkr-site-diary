@@ -96,7 +96,7 @@ jobs:
           if (!roadmap.includes('**Execution/proving baseline supersession:** 2026-09-07')) {
             roadmap = roadmap.replace(
               '**Captured:** 2026-09-06  \n',
-              '**Captured:** 2026-09-06  \n**Execution/proving baseline supersession:** 2026-09-07  \n',
+              '**Captured:** 2026-09-06  \n**Execution/proving baseline supersession:** 2026-09-07\n',
             );
           }
 
@@ -129,9 +129,16 @@ jobs:
         shell: bash
         run: |
           git diff --check
-          changed="$(git diff --name-only)"
-          printf '%s\n' "$changed"
-          test "$changed" = $'docs/00_Governance/ACTIVE_LOCKSET.json\ndocs/10_Development/NGAMSOI-N09PLUS-UIUX-PROGRAM-CLOSURE-ROADMAP.md'
+          mapfile -t changed < <(git diff --name-only | sort)
+          expected=(
+            'docs/00_Governance/ACTIVE_LOCKSET.json'
+            'docs/10_Development/NGAMSOI-N09PLUS-UIUX-PROGRAM-CLOSURE-ROADMAP.md'
+          )
+          printf 'changed: %s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq "${#expected[@]}"
+          for i in "${!expected[@]}"; do
+            test "${changed[$i]}" = "${expected[$i]}"
+          done
 
       - name: Remove one-shot transformer and commit capture
         shell: bash
