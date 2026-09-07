@@ -17,6 +17,8 @@ const VIEWPORTS = [
   { name: 'wide', width: 1280, height: 900 },
 ] as const;
 
+const resetCurrentFixture = new WeakMap<Page, () => void>();
+
 test.use({ timezoneId: 'Asia/Kuala_Lumpur' });
 
 function supabaseAuthStorageKey(): string {
@@ -170,6 +172,9 @@ function currentActivity() {
 
 async function installRoutes(page: Page): Promise<void> {
   let current = canonicalDetail(false);
+  resetCurrentFixture.set(page, () => {
+    current = canonicalDetail(false);
+  });
 
   await page.route('**/api/**', async (route) => json(route, { data: [] }));
   await installN05R2PreviewRoutes(page, { programmeId: PROGRAMME_ID, revisionId: REVISION_ID });
@@ -283,6 +288,7 @@ async function installRoutes(page: Page): Promise<void> {
 }
 
 async function boot(page: Page, width: number, height: number) {
+  resetCurrentFixture.get(page)?.();
   await page.setViewportSize({ width, height });
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('.ng-workspace')).toHaveAttribute('data-workspace-tab', 'RECORDS', { timeout: EXPECT_TIMEOUT });

@@ -99,6 +99,14 @@
   color: var(--ng-ivory-100, #f5f5f2) !important;
 }
 
+.ng-record-edit-r2a [aria-label='Bahagian Tenaga Kerja Tapak'] input:not([type='checkbox']) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border-color: var(--ng-f45-rule-strong, var(--ng-rule)) !important;
+  background: var(--ng-graphite-950, #090a0c) !important;
+  color: var(--ng-ivory-100, #f5f5f2) !important;
+}
+
 .ng-record-edit-r2a input,
 .ng-record-edit-r2a select {
   min-height: 2.5rem !important;
