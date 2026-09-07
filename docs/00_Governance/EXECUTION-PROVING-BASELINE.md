@@ -1,8 +1,9 @@
 # EXECUTION AND PROVING BASELINE
 
-**Status:** PRODUCT OWNER LOCKED — BASELINE v1  
+**Status:** PRODUCT OWNER LOCKED — BASELINE v1.1  
 **Authority:** Product Owner + HQ / Chief Architect  
 **Captured:** 2026-09-07  
+**Adjusted:** 2026-09-07 — mandatory safe workspace alignment before governance ACK  
 **Applies to:** Active NGAMSOI N09+ programme and subsequent governed implementation/remediation work unless explicitly superseded.
 
 ## 1. Purpose
@@ -31,7 +32,7 @@ The Product Owner is not expected to manually edit source files, run PowerShell 
 
 Klopp/HQ owns governance and engineering orchestration:
 
-- establish the exact branch/HEAD and lockset handshake;
+- establish the governed branch/expected remote HEAD and lockset target;
 - identify affected and protected requirement IDs;
 - produce the LOCKED REQUIREMENT IMPACT MATRIX;
 - understand context and adjudicate findings;
@@ -49,6 +50,7 @@ Codex is the default local working-tree executor for governed implementation/rem
 
 Codex executes the contract issued by Klopp/HQ and may:
 
+- perform the authorised safe workspace-alignment preflight;
 - edit only authorised files;
 - run targeted tests;
 - run the canonical/equivalent preprove contract;
@@ -82,8 +84,24 @@ Physical acceptance remains Product Owner authority. Automated green evidence is
 ## 3. Default execution pipeline
 
 ```text
+MISSION / GOVERNED HEAD ISSUED BY KLOPP
+
+↓
+
+WORKSPACE ALIGNMENT PREFLIGHT
+├─ confirm expected branch
+├─ fetch origin
+├─ inspect local tracked/untracked state
+├─ preserve declared protected local paths
+├─ compare LOCAL_HEAD vs EXPECTED_GOVERNED_HEAD
+├─ SAME -> no alignment required
+├─ LOCAL BEHIND + exact ancestor + safe incoming diff -> fast-forward only
+└─ AHEAD / DIVERGED / unsafe dirty state / protected-path collision -> STOP to HQ
+
+↓
+
 GOVERNANCE PREFLIGHT
-├─ exact branch / HEAD
+├─ exact aligned branch / HEAD
 ├─ ACTIVE_LOCKSET verification
 ├─ active programme / stage
 ├─ affected requirement IDs
@@ -156,7 +174,85 @@ SEAL
 
 `ONE PROMOTION PUSH` means the first official-proving push of the frozen candidate should already be fully preproved. It does not mean the repository may literally never receive another push. The objective is to eliminate fix-push-red-fix-push loops from official proving.
 
-## 4. Red-loop behaviour
+## 4. Workspace alignment preflight
+
+Workspace alignment is mandatory before the normal governance ACK whenever a governed mission expects a specific branch/remote HEAD. A remote governance capture or other authorised remote mutation must be assumed capable of making an attached local executor stale until alignment is proved.
+
+The execution contract uses `EXPECTED_GOVERNED_HEAD`, not an assumption that the local workspace already has that commit.
+
+The executor first records:
+
+```text
+EXPECTED_BRANCH=<branch>
+LOCAL_HEAD_BEFORE=<sha>
+EXPECTED_GOVERNED_HEAD=<sha>
+PROTECTED_LOCAL_PATHS=<paths or NONE>
+```
+
+Then it may align automatically only when all of the following are true:
+
+1. the current branch matches the expected branch;
+2. `git fetch origin` succeeds;
+3. the expected governed remote HEAD resolves exactly;
+4. there are no unauthorised tracked working-tree modifications that would make alignment unsafe;
+5. every declared protected local path is identified and must remain untouched;
+6. the incoming commit range does not add, modify or delete anything under a protected local path;
+7. local HEAD is either already the expected governed HEAD or is an exact ancestor of it;
+8. the update can be completed with a fast-forward-only operation.
+
+Permitted alignment mechanism:
+
+```text
+git fetch origin
+# inspect branch/status/incoming diff/ancestry
+git merge --ff-only origin/<expected-branch>
+```
+
+The executor must not substitute a generic `git pull` because local Git configuration may introduce merge/rebase behaviour outside the governed contract.
+
+The following remain forbidden during automatic alignment:
+
+- `git reset` / `git reset --hard`;
+- `git clean`;
+- `git stash`;
+- forced checkout or forced branch movement;
+- automatic rebase;
+- merge commits;
+- deleting, moving, adding or normalising protected local evidence merely to make alignment succeed.
+
+The executor MUST STOP to Klopp/HQ instead of self-repairing when:
+
+- the local branch is wrong;
+- local HEAD is ahead of the governed target;
+- local and governed histories diverge;
+- unauthorised tracked local modifications exist;
+- an incoming change touches a protected local path;
+- the expected governed SHA cannot be resolved exactly;
+- `--ff-only` cannot complete;
+- any alignment safety fact is ambiguous.
+
+After successful/no-op alignment, the executor reruns governance preflight and lockset verification from the aligned local HEAD. Only that post-alignment state may produce `LOCKSET COMPLIANCE ACK` and become the base for implementation.
+
+Required alignment report fields:
+
+```text
+WORKSPACE_ALIGNMENT=<PASS|NONE_REQUIRED|STOP>
+LOCAL_HEAD_BEFORE=<sha>
+EXPECTED_GOVERNED_HEAD=<sha>
+LOCAL_HEAD_AFTER=<sha>
+ALIGNMENT_MODE=<FAST_FORWARD|NONE|STOP>
+PROTECTED_PATH_STATUS=<UNCHANGED|STOP>
+```
+
+The desired steady-state convenience interface is:
+
+```text
+pnpm run exec:preflight
+```
+
+Until that command is implemented, the equivalent safety checks remain mandatory explicitly.
+
+## 5. Red-loop behaviour
 
 ### Targeted test red
 
@@ -214,7 +310,7 @@ Existing N09+ efficiency interpretation remains:
 - 2: process miss requiring workflow/recon review;
 - 3+: stop repeated proving and improve the mechanism before another attempt.
 
-## 5. Canonical preprove contract
+## 6. Canonical preprove contract
 
 The desired steady-state interface is one stage-aware command, for example:
 
@@ -228,7 +324,7 @@ Until that canonical command is implemented for a stage, the executor must run t
 
 A canonical preprove must not become a green-by-bypass wrapper. It must preserve or strengthen the applicable authoritative evidence.
 
-## 6. Exact-candidate discipline
+## 7. Exact-candidate discipline
 
 A candidate is eligible to freeze only when:
 
@@ -240,14 +336,16 @@ A candidate is eligible to freeze only when:
 
 After freeze, code is not silently changed before promotion. If the candidate changes, its SHA changes and the relevant proving cycle resumes.
 
-## 7. Execution contract minimum
+## 8. Execution contract minimum
 
-Before a local executor edits, Klopp/HQ provides a bounded execution contract containing at least:
+Before a local executor aligns or edits, Klopp/HQ provides a bounded execution contract containing at least:
 
 ```text
 ROLE=<IMPLEMENTATION|REMEDIATION>
 ACTIVE_STAGE=<stage>
-BASE_HEAD=<sha>
+EXPECTED_BRANCH=<branch>
+EXPECTED_GOVERNED_HEAD=<sha>
+PROTECTED_LOCAL_PATHS=<paths or NONE>
 AFFECTED_IDS=<ids>
 PROTECTED_IDS=<ids>
 ALLOWED_FILES=<paths>
@@ -260,13 +358,14 @@ COMMIT_PUSH_AUTHORITY=NOT_GRANTED unless explicitly authorised
 
 Executor rules:
 
-- do not touch files outside `ALLOWED_FILES`;
+- complete workspace alignment before governance ACK;
+- do not touch files outside `ALLOWED_FILES` during implementation;
 - do not weaken tests/assertions/retries to manufacture green;
 - do not stash, reset, clean or otherwise disturb protected evidence/worktree paths;
 - stop and report if required repair crosses a protected requirement or no-change boundary;
 - report unexpected dirty files instead of deleting or normalising them.
 
-## 8. Current R2A application
+## 9. Current R2A application
 
 For the current N09A Physical R2A remediation, the first product implementation under this baseline is the already-adjudicated one-file bounded CSS repair for the six workforce compatibility inputs that compute a `6px` radius inside REKOD EDIT.
 
@@ -274,17 +373,20 @@ The intended implementation boundary is:
 
 ```text
 ALLOWED_FILES=src/app/ngamsoi-n09-r2a.css
+PROTECTED_LOCAL_PATHS=docs/evidence/f4.5-datum-01/
 ```
 
 The repair must not alter CATAT, global legacy ownership, workforce semantics, tests/assertions, Programme/Revision authority, canonical Site Diary identity, database/auth/security, approval semantics, REKOD #7, official print semantics or other protected product behaviour.
 
-The product repair does not begin until this process baseline and its required lockset capture are established.
+The first execution under baseline v1.0 exposed a stale-local-workspace condition: the governed remote branch had advanced through process/lockset capture while the attached Codex workspace remained on the earlier product HEAD. Codex correctly stopped on handshake mismatch. Baseline v1.1 therefore makes safe workspace alignment an explicit gate before governance ACK instead of treating local/remote equality as an assumption.
 
-## 9. Supersession / readjustment rule
+## 10. Supersession / readjustment rule
 
 This baseline may be readjusted when actual process evidence demonstrates a better or necessary mechanism.
 
-Any readjustment that changes an accepted locked process requirement must follow normal supersession lineage:
+Any readjustment that changes an accepted locked process requirement must follow normal supersession lineage. An additive process hardening that does not contradict an existing locked requirement may instead be captured as a new LOCKED requirement with an incremented lockset version.
+
+For supersession:
 
 1. retain the old accepted requirement/history;
 2. mark it superseded where represented in the active lockset;
