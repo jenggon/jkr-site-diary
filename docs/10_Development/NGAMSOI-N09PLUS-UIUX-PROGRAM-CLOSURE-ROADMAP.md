@@ -5,7 +5,8 @@
 **Status:** PRODUCT OWNER LOCKED  
 **Authority:** Product Owner + HQ / Chief Architect  
 **Captured:** 2026-09-06  
-**Execution/proving baseline supersession:** 2026-09-07
+**Execution/proving baseline supersession:** 2026-09-07  
+**Workspace-alignment adjustment:** 2026-09-07  
 **Starting seal commit:** `1ec8b467716f29d5111b553d20488adf658096bf`  
 **Immutable accepted F4.5 product datum:** `be5233fce209029cac97e080e8312113c94c4e08`
 
@@ -88,7 +89,7 @@ Do not change merely to satisfy visual acceptance:
 
 N09A is complete only after:
 
-1. governance preflight and LOCKED REQUIREMENT IMPACT MATRIX;
+1. safe workspace alignment to the governed branch/expected HEAD, followed by governance preflight and LOCKED REQUIREMENT IMPACT MATRIX;
 2. bounded implementation/remediation by the authorised local executor if needed;
 3. the smallest authoritative targeted test/browser gate is green;
 4. agentic recon/challenge is used where ambiguity or risk warrants it and all findings are adjudicated before freeze;
@@ -202,20 +203,24 @@ Default ownership:
 
 ```text
 Product Owner   -> product/process authority + promotion authority where required + physical acceptance
-Klopp / HQ      -> governance / context / impact matrix / bounded contract / adjudication / review / gate control
-Codex           -> default local working-tree executor under the bounded contract
+Klopp / HQ      -> governance / governed branch+HEAD / impact matrix / bounded contract / adjudication / review / gate control
+Codex           -> default local working-tree executor, including safe fast-forward-only alignment under contract
 Agentic helper  -> recon when ambiguity warrants; read-only challenge after targeted green when risk warrants
 CI              -> confirm/prove the already-preproved exact candidate
 ```
 
 The Product Owner is not the routine shell, patch, test or Git operator. Lack of direct local-write access by Klopp/HQ must not be converted into a default requirement for the Product Owner to edit or run commands manually.
 
+A governed remote mutation must be assumed capable of making an attached local executor stale. Therefore local/remote equality is never merely assumed: the executor first proves workspace alignment to the expected governed branch/HEAD. Same-head is a no-op; a behind exact ancestor may fast-forward only after dirty-state and protected-path safety checks; ahead/diverged/unsafe states stop to HQ. Reset, clean, stash, force, auto-rebase and merge-commit recovery are not authorised alignment mechanisms.
+
 When Codex implements, Antigravity is preferred as the independent challenger when available. A challenger does not self-authorise a patch; findings return to Klopp/HQ for adjudication and, when required, a new bounded executor pass. One helper remains the default and a second independent agent is reserved for high-risk unresolved ambiguity.
 
 For governed implementation/remediation, the default gate order is:
 
 ```text
-GOVERNANCE PREFLIGHT
+MISSION / EXPECTED GOVERNED HEAD
+-> WORKSPACE ALIGNMENT PREFLIGHT
+-> GOVERNANCE PREFLIGHT
 -> LOCKED REQUIREMENT IMPACT MATRIX
 -> IMPLEMENT (authorised local executor)
 -> TARGETED TEST
@@ -251,7 +256,7 @@ Before freeze, the complete stage-aware PREPROVE must mirror the applicable offi
 - `git diff --check`;
 - bounded-scope/diff review against the impact matrix.
 
-The desired steady state is one canonical `pnpm run preprove:<stage>` contract called by both the local executor and official CI. Until that command exists, the same required gates must be executed explicitly; absence of the convenience command removes no gate.
+The desired steady state is one canonical `pnpm run preprove:<stage>` contract called by both the local executor and official CI. The desired execution-preflight companion is `pnpm run exec:preflight`. Until those commands exist, the same required gates must be executed explicitly; absence of convenience commands removes no gate.
 
 Only an ALL GREEN exact candidate may freeze and become eligible for promotion. After the required Product Owner promotion authority, the proven candidate receives one promotion push. This means the first official push of that frozen candidate, not a prohibition on later governed replacements if an external or newly discovered issue genuinely requires a new candidate. Blind fix -> push -> red -> fix -> push loops are forbidden.
 
@@ -270,7 +275,7 @@ Official red-loop process signal remains:
 - `2`: process miss — review recon/preflight/preprove coverage before continuing;
 - `3+`: stop repeated proving and improve the mechanism before another attempt.
 
-Local targeted-test, challenger or preprove failures that prevent a defective candidate from reaching official proving are successful shift-left discovery provided evidence is not weakened.
+Local alignment stops, targeted-test failures, challenger findings or preprove failures that prevent an unsafe/defective candidate from reaching official proving are successful shift-left discovery provided evidence is not weakened.
 
 ## 10. No-green-by-bypass
 
@@ -327,7 +332,9 @@ Then create one canonical PR into `develop`, preserving traceable ancestry of th
 
 Stop before implementation if:
 
-- governance preflight or lockset verification mismatches;
+- workspace alignment cannot prove the local executor is safely on the expected governed branch/HEAD;
+- local HEAD is ahead/diverged, unsafe tracked changes exist, or an incoming governed change collides with a protected local path;
+- governance preflight or lockset verification mismatches after alignment;
 - work would require changing a protected semantic boundary;
 - the current candidate is not descended from the accepted F4.5 seal without an explicitly documented reason;
 - a later stage is being used to bypass an unresolved earlier stage;
