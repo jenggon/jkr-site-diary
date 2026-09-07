@@ -5,6 +5,7 @@
 **Status:** PRODUCT OWNER LOCKED  
 **Authority:** Product Owner + HQ / Chief Architect  
 **Captured:** 2026-09-06  
+**Execution/proving baseline supersession:** 2026-09-07
 **Starting seal commit:** `1ec8b467716f29d5111b553d20488adf658096bf`  
 **Immutable accepted F4.5 product datum:** `be5233fce209029cac97e080e8312113c94c4e08`
 
@@ -87,12 +88,13 @@ Do not change merely to satisfy visual acceptance:
 
 N09A is complete only after:
 
-1. governance preflight;
-2. agentic recon where non-trivial;
-3. bounded implementation/remediation if needed;
-4. exact-head automated proof, including real-browser evidence where applicable;
-5. authoritative reprove;
-6. Product Owner physical acceptance on the current lineage.
+1. governance preflight and LOCKED REQUIREMENT IMPACT MATRIX;
+2. bounded implementation/remediation by the authorised local executor if needed;
+3. the smallest authoritative targeted test/browser gate is green;
+4. agentic recon/challenge is used where ambiguity or risk warrants it and all findings are adjudicated before freeze;
+5. complete exact-head stage-aware PREPROVE is green, including real-browser evidence with zero retries where applicable;
+6. the exact candidate SHA is frozen, promoted under the required Product Owner authority and authoritatively reproved;
+7. Product Owner physical acceptance passes on that exact lineage.
 
 Old N09 green CI alone does not satisfy N09A physical acceptance.
 
@@ -192,50 +194,83 @@ Minimum evidence:
 
 N09D becomes SEALED only after Product Owner physical acceptance of the exact proven candidate.
 
-## 8. Agentic operating model — shifted left
+## 8. Execution ownership and agentic operating model — shifted left
 
-Codex and Antigravity are an interchangeable engineering-helper pool. They are not mandatory ceremonial post-green auditors.
+Canonical operating authority is `docs/00_Governance/EXECUTION-PROVING-BASELINE.md`.
 
-Default authority:
+Default ownership:
 
 ```text
-Agentic helper -> observe / investigate / challenge
-Klopp / HQ      -> understand context / adjudicate / implement / repair
-CI              -> prove
-Product Owner   -> physical acceptance
+Product Owner   -> product/process authority + promotion authority where required + physical acceptance
+Klopp / HQ      -> governance / context / impact matrix / bounded contract / adjudication / review / gate control
+Codex           -> default local working-tree executor under the bounded contract
+Agentic helper  -> recon when ambiguity warrants; read-only challenge after targeted green when risk warrants
+CI              -> confirm/prove the already-preproved exact candidate
 ```
 
-For non-trivial N09+ stages:
+The Product Owner is not the routine shell, patch, test or Git operator. Lack of direct local-write access by Klopp/HQ must not be converted into a default requirement for the Product Owner to edit or run commands manually.
+
+When Codex implements, Antigravity is preferred as the independent challenger when available. A challenger does not self-authorise a patch; findings return to Klopp/HQ for adjudication and, when required, a new bounded executor pass. One helper remains the default and a second independent agent is reserved for high-risk unresolved ambiguity.
+
+For governed implementation/remediation, the default gate order is:
 
 ```text
-LOCK
--> AGENTIC RECON
--> KLOPP IMPLEMENT
--> AGENTIC PRE-PROVE REVIEW when useful for multi-file / state / responsive / legacy-CSS risk
--> PROVE
--> FREEZE SHA
--> PROMOTE EXACT SHA
--> AUTHORITATIVE REPROVE
+GOVERNANCE PREFLIGHT
+-> LOCKED REQUIREMENT IMPACT MATRIX
+-> IMPLEMENT (authorised local executor)
+-> TARGETED TEST
+-> AGENTIC CHALLENGE when risk warrants
+-> PREPROVE — EXACT CI MIRROR
+-> ALL GREEN
+-> FREEZE EXACT SHA
+-> PRODUCT OWNER PROMOTION AUTHORITY where required
+-> ONE PROMOTION PUSH of the proven candidate
+-> OFFICIAL CI CONFIRMATION
+-> AUTHORITATIVE REPROVE where required
 -> PHYSICAL ACCEPT
 -> SEAL
 ```
 
-One agent is the default. A second independent agent is used only for high-risk or unresolved ambiguity. Agentic output never has authority to weaken a Product Owner lock or make CI green by bypass.
+Agentic output never has authority to weaken a Product Owner lock, broaden an executor contract or make CI green by bypass.
 
-## 9. Proving efficiency metric
+## 9. First-pass-green proving contract and efficiency metric
 
-The programme tracks how many official CI reds occur before the first green candidate for each closure stage.
+Official CI is confirmation/proof of an already-preproved exact candidate. Deterministic product, harness, governance or environment-parity defects should be discovered before official promotion wherever technically possible.
 
-Interpretation:
+Before freeze, the complete stage-aware PREPROVE must mirror the applicable official proof and include, where applicable:
 
-- `0` official CI reds before green: excellent;
-- `1`: acceptable but classify the miss;
-- `2`: process miss — review recon/preflight coverage before continuing;
-- `3+`: stop repeated proving and improve the workflow before another attempt.
+- lockset verification;
+- frozen dependency/install parity;
+- required typechecks;
+- lint;
+- Vitest / required automated suites;
+- production build;
+- Linux/path/case portability audit;
+- applicable production-runtime Playwright/browser gate;
+- zero Playwright retries;
+- `git diff --check`;
+- bounded-scope/diff review against the impact matrix.
 
-The metric is a process-quality signal, not permission to hide or avoid legitimate red evidence.
+The desired steady state is one canonical `pnpm run preprove:<stage>` contract called by both the local executor and official CI. Until that command exists, the same required gates must be executed explicitly; absence of the convenience command removes no gate.
 
-Local/agentic preflight failures that prevent a defective candidate from reaching official proving are considered successful shift-left discovery, provided no evidence is weakened.
+Only an ALL GREEN exact candidate may freeze and become eligible for promotion. After the required Product Owner promotion authority, the proven candidate receives one promotion push. This means the first official push of that frozen candidate, not a prohibition on later governed replacements if an external or newly discovered issue genuinely requires a new candidate. Blind fix -> push -> red -> fix -> push loops are forbidden.
+
+Every official red must be classified before another candidate promotion as one of:
+
+- `PRODUCT_DEFECT`;
+- `HARNESS_DEFECT`;
+- `ENVIRONMENT_PARITY`;
+- `GOVERNANCE_PREFLIGHT`;
+- `INFRASTRUCTURE`.
+
+Official red-loop process signal remains:
+
+- `0` official CI reds before green: excellent / target;
+- `1`: classify the miss;
+- `2`: process miss — review recon/preflight/preprove coverage before continuing;
+- `3+`: stop repeated proving and improve the mechanism before another attempt.
+
+Local targeted-test, challenger or preprove failures that prevent a defective candidate from reaching official proving are successful shift-left discovery provided evidence is not weakened.
 
 ## 10. No-green-by-bypass
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "locksetVersion": "2026.09.06.3",
+  "locksetVersion": "2026.09.07.1",
   "status": "ACTIVE",
   "authority": {
     "productOwner": "Product Owner",
@@ -923,7 +923,7 @@
     {
       "id": "NGUI-AGENT-001",
       "title": "Shift-left interchangeable agentic helper model",
-      "state": "LOCKED",
+      "state": "SUPERSEDED",
       "statement": "For non-trivial N09+ stages, one interchangeable Codex or Antigravity helper is used by default for agentic recon after LOCK and before first official PROVE; a pre-PROVE review is used when multi-file, state-machine, responsive or legacy-CSS risk warrants it. A second independent agent is reserved for high-risk unresolved ambiguity. Agentic helpers observe, investigate and challenge; Klopp/HQ adjudicates and implements; CI proves; Product Owner physically accepts. Agentic output cannot weaken locks or become a ceremonial post-green requirement.",
       "enforcement": [
         {
@@ -934,12 +934,13 @@
           "type": "source",
           "path": "docs/00_Governance/AGENT_LOCKSET_PROTOCOL.md"
         }
-      ]
+      ],
+      "supersededBy": "NGUI-AGENT-002"
     },
     {
       "id": "NGUI-CI-001",
       "title": "Exact-head proving and red-loop efficiency control",
-      "state": "LOCKED",
+      "state": "SUPERSEDED",
       "statement": "Each non-trivial N09+ stage must shift discovery left before official proving and use exact-head proof that mirrors the applicable authoritative runtime reprove, including real-browser evidence and zero retries where required. Official CI red count before first green is tracked as a process signal: 0 excellent; 1 classify; 2 process miss requiring recon/preflight review; 3 or more requires stopping repeated proving and improving the workflow before another attempt. No green-by-bypass is permitted.",
       "enforcement": [
         {
@@ -949,6 +950,51 @@
         {
           "type": "source",
           "path": "docs/00_Governance/AGENT_LOCKSET_PROTOCOL.md"
+        },
+        {
+          "type": "source",
+          "path": "playwright.config.ts"
+        }
+      ],
+      "supersededBy": "NGUI-CI-002"
+    },
+    {
+      "id": "NGUI-AGENT-002",
+      "title": "PO-HQ-executor-challenger ownership baseline",
+      "state": "LOCKED",
+      "statement": "For governed N09+ implementation/remediation, the Product Owner is product/process authority and physical-acceptance authority, not the routine shell, patch, test or Git operator. Klopp/HQ owns governance preflight, impact analysis, bounded execution contracts, adjudication, review and gate control. Codex is the default local working-tree executor when attached to the repository and may edit/run only the authorised contract. Agentic recon may be used before implementation when ambiguity warrants it; after targeted green, a read-only challenger is used when risk warrants it, with Antigravity preferred for independence when Codex implemented. Challenger findings return to Klopp/HQ for adjudication and never self-authorise patches. CI confirms/proves the already-preproved exact candidate. No executor or challenger may weaken locks or self-elevate into Product Owner/Chief Architect authority.",
+      "enforcement": [
+        {
+          "type": "source",
+          "path": "docs/00_Governance/EXECUTION-PROVING-BASELINE.md"
+        },
+        {
+          "type": "source",
+          "path": "docs/00_Governance/AGENT_LOCKSET_PROTOCOL.md"
+        },
+        {
+          "type": "source",
+          "path": "docs/10_Development/NGAMSOI-N09PLUS-UIUX-PROGRAM-CLOSURE-ROADMAP.md"
+        }
+      ]
+    },
+    {
+      "id": "NGUI-CI-002",
+      "title": "Targeted-to-preprove first-pass-green proving contract",
+      "state": "LOCKED",
+      "statement": "Each governed N09+ candidate progresses through targeted authoritative testing, risk-appropriate read-only agentic challenge, then a complete stage-aware PREPROVE that mirrors the applicable official CI/runtime proof before freeze. PREPROVE includes lockset verification, frozen dependency/install parity, required typechecks, lint, Vitest/automated suites, production build, Linux/path/case portability checks, the applicable production-runtime browser gate with zero retries, git diff --check and bounded-scope/diff review. The desired steady state is one canonical preprove:<stage> command shared by local execution and official CI; until implemented, equivalent gates are mandatory explicitly. Only ALL GREEN may freeze an exact SHA. Promotion requires Product Owner authority where governance requires it, followed by one promotion push of the proven candidate; official CI is confirmation rather than the routine first deterministic-defect discovery environment. Every official red is classified as PRODUCT_DEFECT, HARNESS_DEFECT, ENVIRONMENT_PARITY, GOVERNANCE_PREFLIGHT or INFRASTRUCTURE before another candidate promotion. Red-loop thresholds remain 0 excellent, 1 classify, 2 process miss/review, 3+ stop and improve the mechanism. No green-by-bypass is permitted.",
+      "enforcement": [
+        {
+          "type": "source",
+          "path": "docs/00_Governance/EXECUTION-PROVING-BASELINE.md"
+        },
+        {
+          "type": "source",
+          "path": "docs/00_Governance/AGENT_LOCKSET_PROTOCOL.md"
+        },
+        {
+          "type": "source",
+          "path": "docs/10_Development/NGAMSOI-N09PLUS-UIUX-PROGRAM-CLOSURE-ROADMAP.md"
         },
         {
           "type": "source",
@@ -1132,6 +1178,7 @@
     "acceptedF45ProductDatum": "be5233fce209029cac97e080e8312113c94c4e08",
     "developIntegrationBlockedUntil": "NGUI-FINAL-001",
     "currentStage": "N09A_PHYSICAL_R2A_REMEDIATION",
-    "physicalAcceptanceStatus": "REMEDIATION_REQUIRED"
+    "physicalAcceptanceStatus": "REMEDIATION_REQUIRED",
+    "executionBaseline": "docs/00_Governance/EXECUTION-PROVING-BASELINE.md"
   }
 }
